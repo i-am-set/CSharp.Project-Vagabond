@@ -15,7 +15,7 @@ namespace ProjectVagabond.Battle.Abilities
 
         public void OnEvent(GameEvent e, BattleContext context)
         {
-            if (e is ReactionEvent reaction && reaction.TriggeringAction.ChosenMove.FinalAbilities.Contains(this))
+            if (e is ReactionEvent reaction && reaction.TriggeringAction.ChosenMove.Abilities.Contains(this))
             {
                 if (reaction.Result.WasGraze) return;
 
@@ -73,7 +73,7 @@ namespace ProjectVagabond.Battle.Abilities
 
         public void OnEvent(GameEvent e, BattleContext context)
         {
-            if (e is ReactionEvent reaction && reaction.TriggeringAction.ChosenMove.FinalAbilities.Contains(this))
+            if (e is ReactionEvent reaction && reaction.TriggeringAction.ChosenMove.Abilities.Contains(this))
             {
                 if (reaction.Result.WasGraze) return;
 
@@ -111,7 +111,7 @@ namespace ProjectVagabond.Battle.Abilities
 
         public void OnEvent(GameEvent e, BattleContext context)
         {
-            if (e is ReactionEvent reaction && reaction.TriggeringAction.ChosenMove.FinalAbilities.Contains(this))
+            if (e is ReactionEvent reaction && reaction.TriggeringAction.ChosenMove.Abilities.Contains(this))
             {
                 if (reaction.Result.WasGraze) return;
 
@@ -177,7 +177,7 @@ namespace ProjectVagabond.Battle.Abilities
 
         public void OnEvent(GameEvent e, BattleContext context)
         {
-            if (e is ActionDeclaredEvent decl && decl.Move.FinalAbilities.Contains(this))
+            if (e is ActionDeclaredEvent decl && decl.Move.Abilities.Contains(this))
             {
                 if (decl.Actor.HasUsedFirstAttack)
                 {
@@ -186,12 +186,12 @@ namespace ProjectVagabond.Battle.Abilities
                     {
                         Actor = decl.Actor,
                         Reason = "failed",
-                        MoveName = decl.Move.BaseTemplate.MoveName
+                        MoveName = decl.Move.MoveName
                     });
                     EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "[DriftWave]But it failed![/]" });
                 }
             }
-            else if (e is ReactionEvent reaction && reaction.TriggeringAction.ChosenMove.FinalAbilities.Contains(this))
+            else if (e is ReactionEvent reaction && reaction.TriggeringAction.ChosenMove.Abilities.Contains(this))
             {
                 if (reaction.Result.DamageAmount > 0)
                 {
@@ -213,7 +213,7 @@ namespace ProjectVagabond.Battle.Abilities
 
         public void OnEvent(GameEvent e, BattleContext context)
         {
-            if (e is ReactionEvent reaction && reaction.TriggeringAction.ChosenMove.FinalAbilities.Contains(this))
+            if (e is ReactionEvent reaction && reaction.TriggeringAction.ChosenMove.Abilities.Contains(this))
             {
                 reaction.Actor.ApplyDamage(_amount);
                 EventBus.Publish(new GameEvents.CombatantRecoiled { Actor = reaction.Actor, RecoilDamage = _amount });
@@ -232,7 +232,7 @@ namespace ProjectVagabond.Battle.Abilities
 
         public void OnEvent(GameEvent e, BattleContext context)
         {
-            if (e is CalculateDamageEvent dmgEvent && dmgEvent.Move.FinalAbilities.Contains(this))
+            if (e is CalculateDamageEvent dmgEvent && dmgEvent.Move.Abilities.Contains(this))
             {
                 dmgEvent.DamageMultiplier *= (1.0f + (_percent / 100f));
                 dmgEvent.FinalDamage = (int)(dmgEvent.FinalDamage * (1.0f + (_percent / 100f)));
@@ -251,7 +251,7 @@ namespace ProjectVagabond.Battle.Abilities
 
         public void OnEvent(GameEvent e, BattleContext context)
         {
-            if (e is ReactionEvent reaction && reaction.TriggeringAction.ChosenMove.FinalAbilities.Contains(this))
+            if (e is ReactionEvent reaction && reaction.TriggeringAction.ChosenMove.Abilities.Contains(this))
             {
                 if (reaction.Result.DamageAmount > 0)
                 {
@@ -286,7 +286,7 @@ namespace ProjectVagabond.Battle.Abilities
 
         public void OnEvent(GameEvent e, BattleContext context)
         {
-            if (e is CalculateDamageEvent dmgEvent && dmgEvent.Move.FinalAbilities.Contains(this))
+            if (e is CalculateDamageEvent dmgEvent && dmgEvent.Move.Abilities.Contains(this))
             {
                 dmgEvent.FinalDamage = _amount;
                 dmgEvent.IsHandled = true;
@@ -305,7 +305,7 @@ namespace ProjectVagabond.Battle.Abilities
 
         public void OnEvent(GameEvent e, BattleContext context)
         {
-            if (e is ReactionEvent reaction && reaction.TriggeringAction.ChosenMove.FinalAbilities.Contains(this))
+            if (e is ReactionEvent reaction && reaction.TriggeringAction.ChosenMove.Abilities.Contains(this))
             {
                 if (reaction.Result.DamageAmount > 0)
                 {
@@ -332,7 +332,7 @@ namespace ProjectVagabond.Battle.Abilities
 
         public void OnEvent(GameEvent e, BattleContext context)
         {
-            if (e is CalculateDamageEvent dmgEvent && dmgEvent.Move.FinalAbilities.Contains(this))
+            if (e is CalculateDamageEvent dmgEvent && dmgEvent.Move.Abilities.Contains(this))
             {
                 if (dmgEvent.Target.Tags.Has(GameplayTags.States.Protected))
                 {
@@ -355,7 +355,7 @@ namespace ProjectVagabond.Battle.Abilities
 
         public void OnEvent(GameEvent e, BattleContext context)
         {
-            if (e is ReactionEvent reaction && reaction.TriggeringAction.ChosenMove.FinalAbilities.Contains(this))
+            if (e is ReactionEvent reaction && reaction.TriggeringAction.ChosenMove.Abilities.Contains(this))
             {
                 var target = reaction.Target;
                 var negativeTypes = new[] { StatusEffectType.Poison, StatusEffectType.Burn, StatusEffectType.Frostbite, StatusEffectType.Stun, StatusEffectType.Silence, StatusEffectType.Bleeding };
@@ -386,7 +386,7 @@ namespace ProjectVagabond.Battle.Abilities
 
         public void OnEvent(GameEvent e, BattleContext context)
         {
-            if (e is ReactionEvent reaction && reaction.TriggeringAction.ChosenMove.FinalAbilities.Contains(this))
+            if (e is ReactionEvent reaction && reaction.TriggeringAction.ChosenMove.Abilities.Contains(this))
             {
                 var target = reaction.Target;
                 if (target.CurrentGuard < target.MaxGuard)
@@ -413,7 +413,7 @@ namespace ProjectVagabond.Battle.Abilities
 
         public void OnEvent(GameEvent e, BattleContext context)
         {
-            if (e is ReactionEvent reaction && reaction.TriggeringAction.ChosenMove.FinalAbilities.Contains(this))
+            if (e is ReactionEvent reaction && reaction.TriggeringAction.ChosenMove.Abilities.Contains(this))
             {
                 if (!reaction.Result.WasGraze)
                 {
@@ -434,7 +434,7 @@ namespace ProjectVagabond.Battle.Abilities
 
         public void OnEvent(GameEvent e, BattleContext context)
         {
-            if (e is ReactionEvent reaction && reaction.TriggeringAction.ChosenMove.FinalAbilities.Contains(this))
+            if (e is ReactionEvent reaction && reaction.TriggeringAction.ChosenMove.Abilities.Contains(this))
             {
                 var target = reaction.Target;
                 if (target.CurrentGuard > 0)
@@ -466,7 +466,7 @@ namespace ProjectVagabond.Battle.Abilities
 
         public void OnEvent(GameEvent e, BattleContext context)
         {
-            if (e is ReactionEvent reaction && reaction.TriggeringAction.ChosenMove.FinalAbilities.Contains(this))
+            if (e is ReactionEvent reaction && reaction.TriggeringAction.ChosenMove.Abilities.Contains(this))
             {
                 int hpBefore = (int)reaction.Target.VisualHP;
                 reaction.Target.ApplyHealing(_amount);
@@ -503,7 +503,7 @@ namespace ProjectVagabond.Battle.Abilities
 
         public void OnEvent(GameEvent e, BattleContext context)
         {
-            if (e is ReactionEvent reaction && reaction.TriggeringAction.ChosenMove.FinalAbilities.Contains(this))
+            if (e is ReactionEvent reaction && reaction.TriggeringAction.ChosenMove.Abilities.Contains(this))
             {
                 if (reaction.Result.WasGraze) return;
 
@@ -530,7 +530,7 @@ namespace ProjectVagabond.Battle.Abilities
 
         public void OnEvent(GameEvent e, BattleContext context)
         {
-            if (e is ReactionEvent reaction && reaction.TriggeringAction.ChosenMove.FinalAbilities.Contains(this))
+            if (e is ReactionEvent reaction && reaction.TriggeringAction.ChosenMove.Abilities.Contains(this))
             {
                 var user = reaction.Actor;
                 if (user.CurrentGuard > 0)
@@ -559,7 +559,7 @@ namespace ProjectVagabond.Battle.Abilities
 
         public void OnEvent(GameEvent e, BattleContext context)
         {
-            if (e is ReactionEvent reaction && reaction.TriggeringAction.ChosenMove.FinalAbilities.Contains(this))
+            if (e is ReactionEvent reaction && reaction.TriggeringAction.ChosenMove.Abilities.Contains(this))
             {
                 if (reaction.Result.WasGraze) return;
 
@@ -595,7 +595,7 @@ namespace ProjectVagabond.Battle.Abilities
 
         public void OnEvent(GameEvent e, BattleContext context)
         {
-            if (e is ReactionEvent reaction && reaction.TriggeringAction.ChosenMove.FinalAbilities.Contains(this))
+            if (e is ReactionEvent reaction && reaction.TriggeringAction.ChosenMove.Abilities.Contains(this))
             {
                 if (reaction.Result.WasGraze) return;
 
@@ -628,7 +628,7 @@ namespace ProjectVagabond.Battle.Abilities
 
         public void OnEvent(GameEvent e, BattleContext context)
         {
-            if (e is CalculateDamageEvent dmgEvent && dmgEvent.Move.FinalAbilities.Contains(this))
+            if (e is CalculateDamageEvent dmgEvent && dmgEvent.Move.Abilities.Contains(this))
             {
                 if (dmgEvent.Target.HasStatusEffect(_statusType))
                 {
@@ -650,7 +650,7 @@ namespace ProjectVagabond.Battle.Abilities
 
         public void OnEvent(GameEvent e, BattleContext context)
         {
-            if (e is ReactionEvent reaction && reaction.TriggeringAction.ChosenMove.FinalAbilities.Contains(this))
+            if (e is ReactionEvent reaction && reaction.TriggeringAction.ChosenMove.Abilities.Contains(this))
             {
                 if (!reaction.Result.WasGraze && Random.Shared.Next(1, 101) <= _chance)
                 {
@@ -669,7 +669,7 @@ namespace ProjectVagabond.Battle.Abilities
 
         public void OnEvent(GameEvent e, BattleContext context)
         {
-            if (e is ReactionEvent reaction && reaction.TriggeringAction.ChosenMove.FinalAbilities.Contains(this))
+            if (e is ReactionEvent reaction && reaction.TriggeringAction.ChosenMove.Abilities.Contains(this))
             {
                 if (reaction.Result.WasGraze || context.AllCombatants == null) return;
 

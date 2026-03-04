@@ -2,15 +2,14 @@
 {
     public class MoveEntry
     {
-        public CompiledMove CompiledMove { get; set; }
+        public string MoveID { get; set; }
         public int TimesUsed { get; set; }
         public int TurnsUntilReady { get; set; }
 
         public MoveEntry() { }
-
-        public MoveEntry(CompiledMove compiledMove, int timesUsed)
+        public MoveEntry(string moveId, int timesUsed)
         {
-            CompiledMove = compiledMove;
+            MoveID = moveId;
             TimesUsed = timesUsed;
             TurnsUntilReady = 0;
         }
@@ -19,7 +18,7 @@
         {
             return new MoveEntry
             {
-                CompiledMove = this.CompiledMove,
+                MoveID = this.MoveID,
                 TimesUsed = this.TimesUsed,
                 TurnsUntilReady = this.TurnsUntilReady
             };

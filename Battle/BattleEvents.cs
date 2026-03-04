@@ -35,11 +35,11 @@ namespace ProjectVagabond.Battle
     public class ActionDeclaredEvent : GameEvent
     {
         public BattleCombatant Actor { get; }
-        public CompiledMove Move { get; }
+        public MoveData Move { get; }
         public BattleCombatant Target { get; }
-        public QueuedActionType ActionType { get; }
+        public QueuedActionType ActionType { get; } // Added this property
 
-        public ActionDeclaredEvent(BattleCombatant actor, CompiledMove move, BattleCombatant target, QueuedActionType actionType)
+        public ActionDeclaredEvent(BattleCombatant actor, MoveData move, BattleCombatant target, QueuedActionType actionType)
         {
             Actor = actor;
             Move = move;
@@ -68,7 +68,7 @@ namespace ProjectVagabond.Battle
     {
         public BattleCombatant Actor { get; }
         public BattleCombatant Target { get; }
-        public CompiledMove Move { get; }
+        public MoveData Move { get; }
         public float BaseDamage { get; }
         public bool IsCritical { get; }
         public bool IsGraze { get; }
@@ -82,7 +82,7 @@ namespace ProjectVagabond.Battle
         public bool WasProtected { get; set; }
         public bool WasVulnerable { get; set; }
 
-        public CalculateDamageEvent(BattleCombatant actor, BattleCombatant target, CompiledMove move, float baseDamage, bool isCritical, bool isGraze)
+        public CalculateDamageEvent(BattleCombatant actor, BattleCombatant target, MoveData move, float baseDamage, bool isCritical, bool isGraze)
         {
             Actor = actor;
             Target = target;
@@ -98,11 +98,11 @@ namespace ProjectVagabond.Battle
     {
         public BattleCombatant Actor { get; }
         public BattleCombatant Target { get; }
-        public CompiledMove Move { get; }
+        public MoveData Move { get; }
         public int BaseAccuracy { get; }
         public int FinalAccuracy { get; set; }
 
-        public CheckHitChanceEvent(BattleCombatant actor, BattleCombatant target, CompiledMove move, int baseAccuracy)
+        public CheckHitChanceEvent(BattleCombatant actor, BattleCombatant target, MoveData move, int baseAccuracy)
         {
             Actor = actor;
             Target = target;

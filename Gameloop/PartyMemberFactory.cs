@@ -22,6 +22,7 @@ namespace ProjectVagabond.Battle
             var member = new PartyMember
             {
                 Name = data.Name,
+                // Convert the raw JSON stat (Hearts) into Battle HP (Hearts * 2) immediately
                 MaxHP = data.MaxHP * 2,
                 CurrentHP = data.MaxHP * 2,
                 Strength = data.Strength,
@@ -37,26 +38,26 @@ namespace ProjectVagabond.Battle
                 member.IntrinsicAbilities = new Dictionary<string, string>(selectedPassive);
             }
 
-            if (!string.IsNullOrEmpty(data.BasicMoveId) && BattleDataCache.Moves.TryGetValue(data.BasicMoveId, out var bMove))
+            if (!string.IsNullOrEmpty(data.BasicMoveId) && BattleDataCache.Moves.ContainsKey(data.BasicMoveId))
             {
-                member.BasicMove = new MoveEntry(new CompiledMove(bMove, new List<ModifierToken>()), 0);
+                member.BasicMove = new MoveEntry(data.BasicMoveId, 0);
             }
 
-            if (!string.IsNullOrEmpty(data.StartSpellSlot1MoveId) && BattleDataCache.Moves.TryGetValue(data.StartSpellSlot1MoveId, out var s1Move))
+            if (!string.IsNullOrEmpty(data.StartSpellSlot1MoveId) && BattleDataCache.Moves.ContainsKey(data.StartSpellSlot1MoveId))
             {
-                member.Spell1 = new MoveEntry(new CompiledMove(s1Move, new List<ModifierToken>()), 0);
+                member.Spell1 = new MoveEntry(data.StartSpellSlot1MoveId, 0);
                 member.KnownMovesHistory.Add(data.StartSpellSlot1MoveId);
             }
 
-            if (!string.IsNullOrEmpty(data.StartSpellSlot2MoveId) && BattleDataCache.Moves.TryGetValue(data.StartSpellSlot2MoveId, out var s2Move))
+            if (!string.IsNullOrEmpty(data.StartSpellSlot2MoveId) && BattleDataCache.Moves.ContainsKey(data.StartSpellSlot2MoveId))
             {
-                member.Spell2 = new MoveEntry(new CompiledMove(s2Move, new List<ModifierToken>()), 0);
+                member.Spell2 = new MoveEntry(data.StartSpellSlot2MoveId, 0);
                 member.KnownMovesHistory.Add(data.StartSpellSlot2MoveId);
             }
 
-            if (!string.IsNullOrEmpty(data.StartSpellSlot3MoveId) && BattleDataCache.Moves.TryGetValue(data.StartSpellSlot3MoveId, out var s3Move))
+            if (!string.IsNullOrEmpty(data.StartSpellSlot3MoveId) && BattleDataCache.Moves.ContainsKey(data.StartSpellSlot3MoveId))
             {
-                member.Spell3 = new MoveEntry(new CompiledMove(s3Move, new List<ModifierToken>()), 0);
+                member.Spell3 = new MoveEntry(data.StartSpellSlot3MoveId, 0);
                 member.KnownMovesHistory.Add(data.StartSpellSlot3MoveId);
             }
 

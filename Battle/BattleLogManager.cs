@@ -107,7 +107,7 @@ namespace ProjectVagabond.Battle.UI
 
         private void OnActionExecuted(GameEvents.BattleActionExecuted e)
         {
-            string moveName = e.ChosenMove.BaseTemplate.MoveName.ToUpper();
+            string moveName = e.ChosenMove.MoveName.ToUpper();
             string actorName = e.Actor.Name.ToUpper();
 
             // 1. Group targets by the specific outcome verb

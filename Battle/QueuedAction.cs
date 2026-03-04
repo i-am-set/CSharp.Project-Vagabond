@@ -30,7 +30,7 @@ namespace ProjectVagabond.Battle
     {
         public QueuedActionType Type { get; set; }
         public BattleCombatant Actor { get; set; } = default!;
-        public CompiledMove? ChosenMove { get; set; }
+        public MoveData? ChosenMove { get; set; }
 
         /// <summary>
         /// The specific MoveEntry used for this action, if applicable.

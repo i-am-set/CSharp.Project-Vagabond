@@ -37,7 +37,7 @@ namespace ProjectVagabond
         public struct ActionDeclared
         {
             public BattleCombatant Actor { get; set; }
-            public CompiledMove? Move { get; set; }
+            public MoveData? Move { get; set; }
             public BattleCombatant? Target { get; set; }
             public QueuedActionType Type { get; set; }
         }
@@ -45,7 +45,7 @@ namespace ProjectVagabond
         public struct BattleActionExecuted
         {
             public BattleCombatant Actor { get; set; }
-            public CompiledMove ChosenMove { get; set; }
+            public MoveData ChosenMove { get; set; }
             public List<BattleCombatant> Targets { get; set; }
             public List<DamageCalculator.DamageResult> DamageResults { get; set; }
         }
@@ -53,7 +53,7 @@ namespace ProjectVagabond
         public struct MultiHitActionCompleted
         {
             public BattleCombatant Actor { get; set; }
-            public CompiledMove ChosenMove { get; set; }
+            public MoveData ChosenMove { get; set; }
             public int HitCount { get; set; }
             public int CriticalHitCount { get; set; }
         }
@@ -150,7 +150,7 @@ namespace ProjectVagabond
 
         public struct PlayMoveAnimation
         {
-            public CompiledMove Move { get; set; }
+            public MoveData Move { get; set; }
             public List<BattleCombatant> Targets { get; set; }
             public Dictionary<BattleCombatant, bool> GrazeStatus { get; set; }
         }
@@ -158,14 +158,14 @@ namespace ProjectVagabond
         public struct MoveAnimationTriggered
         {
             public BattleCombatant Actor { get; set; }
-            public CompiledMove Move { get; set; }
+            public MoveData Move { get; set; }
             public List<BattleCombatant> Targets { get; set; }
             public Dictionary<BattleCombatant, bool> GrazeStatus { get; set; }
         }
 
         public struct MoveImpactOccurred
         {
-            public CompiledMove Move { get; set; }
+            public MoveData Move { get; set; }
         }
 
         public struct MoveAnimationCompleted { }
@@ -217,7 +217,7 @@ namespace ProjectVagabond
 
         public struct RequestImpactSync
         {
-            public CompiledMove Move { get; set; }
+            public MoveData Move { get; set; }
             public List<BattleCombatant> Targets { get; set; }
             public float DefaultTimeToImpact { get; set; }
             public Dictionary<BattleCombatant, bool> GrazeStatus { get; set; }
@@ -232,16 +232,16 @@ namespace ProjectVagabond
             public BattleCombatant Target { get; set; }
             public Action OnImpact { get; set; }
             public Color Color { get; set; }
-            public CompiledMove Move { get; set; }
+            public MoveData Move { get; set; }
             public AnimationDefinition AnimDef { get; set; }
         }
 
         public class CheckActionPriorityEvent : GameEvent
         {
             public BattleCombatant Actor { get; }
-            public CompiledMove Move { get; }
+            public MoveData Move { get; }
             public int Priority { get; set; }
-            public CheckActionPriorityEvent(BattleCombatant actor, CompiledMove move, int basePriority)
+            public CheckActionPriorityEvent(BattleCombatant actor, MoveData move, int basePriority)
             {
                 Actor = actor;
                 Move = move;

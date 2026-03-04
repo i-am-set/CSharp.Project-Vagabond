@@ -24,7 +24,7 @@ namespace ProjectVagabond.Battle.UI
 
     public class HoverHighlightState
     {
-        public CompiledMove? CurrentMove;
+        public MoveData? CurrentMove;
         public List<BattleCombatant> Targets = new List<BattleCombatant>();
         public float Timer = 0f;
     }
@@ -46,11 +46,11 @@ namespace ProjectVagabond.Battle.UI
         public BattleUIState UIState { get; private set; } = BattleUIState.Default;
 
         public int ActiveTargetingSlot { get; private set; } = -1;
-        public CompiledMove? MoveForTargeting { get; private set; }
+        public MoveData? MoveForTargeting { get; private set; }
         public MoveEntry? EntryForTargeting { get; private set; }
-        public TargetType? TargetTypeForSelection => UIState == BattleUIState.Targeting ? MoveForTargeting?.FinalTargetType : null;
+        public TargetType? TargetTypeForSelection => UIState == BattleUIState.Targeting ? MoveForTargeting?.Target : null;
 
-        public CompiledMove? HoveredMove => _actionMenu.HoveredMove;
+        public MoveData? HoveredMove => _actionMenu.HoveredMove;
         public int HoveredSlotIndex => _actionMenu.HoveredSlotIndex;
 
         public BattleCombatant? HoveredCombatantFromUI { get; private set; } = null;
@@ -256,7 +256,7 @@ namespace ProjectVagabond.Battle.UI
         {
             var battleManager = ServiceLocator.Get<BattleManager>();
 
-            if (action.ChosenMove != null && action.ChosenMove.FinalTargetType != TargetType.None)
+            if (action.ChosenMove != null && action.ChosenMove.Target != TargetType.None)
             {
                 MoveForTargeting = action.ChosenMove;
                 EntryForTargeting = action.SpellbookEntry;
@@ -285,7 +285,7 @@ namespace ProjectVagabond.Battle.UI
 
                 if (actor != null && MoveForTargeting != null)
                 {
-                    var validTargets = TargetingHelper.GetValidTargets(actor, MoveForTargeting.FinalTargetType, battleManager.AllCombatants);
+                    var validTargets = TargetingHelper.GetValidTargets(actor, MoveForTargeting.Target, battleManager.AllCombatants);
 
                     if (validTargets.Contains(target))
                     {
@@ -313,7 +313,7 @@ namespace ProjectVagabond.Battle.UI
                     SpellbookEntry = EntryForTargeting,
                     Target = target,
                     Type = QueuedActionType.Move,
-                    Priority = MoveForTargeting.FinalPriority,
+                    Priority = MoveForTargeting.Priority,
                     ActorAgility = actor.GetEffectiveAgility()
                 };
 
@@ -375,7 +375,7 @@ namespace ProjectVagabond.Battle.UI
         private void UpdateHoverHighlights(GameTime gameTime, BattleCombatant currentActor)
         {
             HoverHighlightState.Timer += (float)gameTime.ElapsedGameTime.TotalSeconds;
-            CompiledMove? move = null;
+            MoveData? move = null;
             BattleCombatant? actor = null;
 
             if (UIState == BattleUIState.Targeting)
@@ -404,7 +404,7 @@ namespace ProjectVagabond.Battle.UI
                 if (move != null && actor != null)
                 {
                     var battleManager = ServiceLocator.Get<BattleManager>();
-                    var validTargets = TargetingHelper.GetValidTargets(actor, move.FinalTargetType, battleManager.AllCombatants);
+                    var validTargets = TargetingHelper.GetValidTargets(actor, move.Target, battleManager.AllCombatants);
                     HoverHighlightState.Targets.AddRange(validTargets);
                 }
             }

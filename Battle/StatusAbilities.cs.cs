@@ -44,13 +44,13 @@ namespace ProjectVagabond.Battle.Abilities
             }
             else if (e is ActionDeclaredEvent actionDecl && actionDecl.Actor.ActiveStatusEffects.Contains(_status))
             {
-                if (actionDecl.Move != null && actionDecl.Move.FinalPower > 0)
+                if (actionDecl.Move != null && actionDecl.Move.Power > 0)
                 {
                     ApplyBleedDamage(actionDecl.Actor);
                     if (actionDecl.Actor.Stats.CurrentHP <= 0)
                     {
                         actionDecl.IsHandled = true;
-                        EventBus.Publish(new GameEvents.ActionFailed { Actor = actionDecl.Actor, Reason = "bleeding", MoveName = actionDecl.Move.BaseTemplate.MoveName });
+                        EventBus.Publish(new GameEvents.ActionFailed { Actor = actionDecl.Actor, Reason = "bleeding", MoveName = actionDecl.Move.MoveName });
                         if (!actionDecl.Actor.IsDying) EventBus.Publish(new GameEvents.CombatantVisualDeath { Victim = actionDecl.Actor });
                     }
                 }
@@ -157,14 +157,14 @@ namespace ProjectVagabond.Battle.Abilities
         {
             if (e is ActionDeclaredEvent actionEvent && actionEvent.Actor.ActiveStatusEffects.Contains(_status))
             {
-                if (actionEvent.Move != null && actionEvent.Move.BaseTemplate.ImpactType == ImpactType.Status)
+                if (actionEvent.Move != null && actionEvent.Move.ImpactType == ImpactType.Status)
                 {
                     e.IsHandled = true;
                     EventBus.Publish(new GameEvents.ActionFailed
                     {
                         Actor = actionEvent.Actor,
                         Reason = "provoked",
-                        MoveName = actionEvent.Move.BaseTemplate.MoveName
+                        MoveName = actionEvent.Move.MoveName
                     });
                 }
             }
@@ -184,14 +184,14 @@ namespace ProjectVagabond.Battle.Abilities
         {
             if (e is ActionDeclaredEvent actionEvent && actionEvent.Actor.ActiveStatusEffects.Contains(_status))
             {
-                if (actionEvent.Move != null && actionEvent.Move.BaseTemplate.MoveType == MoveType.Spell)
+                if (actionEvent.Move != null && actionEvent.Move.MoveType == MoveType.Spell)
                 {
                     e.IsHandled = true;
                     EventBus.Publish(new GameEvents.ActionFailed
                     {
                         Actor = actionEvent.Actor,
                         Reason = "silenced",
-                        MoveName = actionEvent.Move.BaseTemplate.MoveName
+                        MoveName = actionEvent.Move.MoveName
                     });
                 }
             }
@@ -269,7 +269,7 @@ namespace ProjectVagabond.Battle.Abilities
             // Only proc on actual hits, not simulations
             if (!context.IsSimulation && e is CalculateDamageEvent dmgEvent && dmgEvent.Target.ActiveStatusEffects.Contains(_status))
             {
-                if (dmgEvent.Move.FinalPower > 0) // Ensure it's a damaging move
+                if (dmgEvent.Move.Power > 0) // Ensure it's a damaging move
                 {
                     var global = ServiceLocator.Get<Global>();
                     dmgEvent.DamageMultiplier *= global.VulnerableDamageMultiplier;
@@ -365,7 +365,7 @@ namespace ProjectVagabond.Battle.Abilities
         {
             if (e is CalculateDamageEvent dmgEvent && dmgEvent.Target.ActiveStatusEffects.Contains(_status))
             {
-                var targetType = dmgEvent.Move.FinalTargetType;
+                var targetType = dmgEvent.Move.Target;
                 bool isAoE = targetType == TargetType.Both || targetType == TargetType.Every || targetType == TargetType.All || targetType == TargetType.RandomBoth || targetType == TargetType.RandomEvery || targetType == TargetType.RandomAll;
                 bool isEnemyAttack = dmgEvent.Actor.IsPlayerControlled != dmgEvent.Target.IsPlayerControlled;
 

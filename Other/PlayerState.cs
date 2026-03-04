@@ -64,19 +64,17 @@ namespace ProjectVagabond
             var target = member ?? Leader;
             if (target == null || !BattleDataCache.Moves.TryGetValue(moveId, out var moveData)) return;
 
-            var compiledMove = new CompiledMove(moveData, new List<ModifierToken>());
-
             if (target.Spell1 == null)
             {
-                target.Spell1 = new MoveEntry(compiledMove, 0);
+                target.Spell1 = new MoveEntry(moveId, 0);
             }
             else if (target.Spell2 == null)
             {
-                target.Spell2 = new MoveEntry(compiledMove, 0);
+                target.Spell2 = new MoveEntry(moveId, 0);
             }
             else
             {
-                target.Spell3 = new MoveEntry(compiledMove, 0);
+                target.Spell3 = new MoveEntry(moveId, 0);
             }
         }
 
@@ -85,9 +83,9 @@ namespace ProjectVagabond
             var target = member ?? Leader;
             if (target == null) return;
 
-            if (target.Spell1?.CompiledMove.BaseTemplate.MoveID == moveId) target.Spell1 = null;
-            if (target.Spell2?.CompiledMove.BaseTemplate.MoveID == moveId) target.Spell2 = null;
-            if (target.Spell3?.CompiledMove.BaseTemplate.MoveID == moveId) target.Spell3 = null;
+            if (target.Spell1?.MoveID == moveId) target.Spell1 = null;
+            if (target.Spell2?.MoveID == moveId) target.Spell2 = null;
+            if (target.Spell3?.MoveID == moveId) target.Spell3 = null;
         }
     }
 }

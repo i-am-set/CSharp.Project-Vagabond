@@ -17,6 +17,9 @@ using System.Linq;
 
 namespace ProjectVagabond.Battle.UI
 {
+    /// <summary>
+    /// Manages the loading, caching, and playback of move animations during combat.
+    /// </summary>
     public class MoveAnimationManager
     {
         private readonly Dictionary<string, MoveAnimation?> _animationCache = new();
@@ -70,27 +73,32 @@ namespace ProjectVagabond.Battle.UI
             }
         }
 
-        public bool StartAnimation(CompiledMove move, List<BattleCombatant> targets, BattleRenderer renderer, Dictionary<BattleCombatant, bool>? grazeStatus = null, Action onImpact = null)
+        /// <summary>
+        /// Starts playing an animation for a given move and its targets.
+        /// Returns true if an animation was successfully started.
+        /// </summary>
+        public bool StartAnimation(MoveData move, List<BattleCombatant> targets, BattleRenderer renderer, Dictionary<BattleCombatant, bool>? grazeStatus = null, Action onImpact = null)
         {
-            if (string.IsNullOrEmpty(move.FinalAnimationId)) return false;
+            if (string.IsNullOrEmpty(move.AnimationId)) return false;
 
-            if (!BattleDataCache.Animations.TryGetValue(move.FinalAnimationId, out var animDef)) return false;
+            if (!BattleDataCache.Animations.TryGetValue(move.AnimationId, out var animDef)) return false;
 
             var animationData = GetAnimationData(animDef);
             if (animationData == null) return false;
 
-            if (!move.BaseTemplate.IsAnimationCentralized && (targets == null || !targets.Any())) return false;
+            if (!move.IsAnimationCentralized && (targets == null || !targets.Any())) return false;
 
             float secondsPerFrame = 1.0f / Math.Max(1f, animDef.FPS);
             bool animationStarted = false;
 
+            // Wrapper to ensure we call the visual trigger AND the gameplay callback
             Action impactWrapper = () =>
             {
                 HandleImpactTrigger(move);
                 onImpact?.Invoke();
             };
 
-            if (move.BaseTemplate.IsAnimationCentralized)
+            if (move.IsAnimationCentralized)
             {
                 Func<Vector2> positionProvider = () => new Vector2(Global.VIRTUAL_WIDTH / 2f, Global.VIRTUAL_HEIGHT / 2f);
 
@@ -115,6 +123,7 @@ namespace ProjectVagabond.Battle.UI
                     Func<Vector2> positionProvider = () =>
                         renderer.GetCombatantVisualCenterPosition(target, ServiceLocator.Get<BattleManager>().AllCombatants) + finalOffset;
 
+                    // Only invoke the gameplay impact callback once (on the first target)
                     Action instanceCallback = isFirst ? impactWrapper : () => { };
 
                     var instance = new MoveAnimationInstance(animationData, positionProvider, secondsPerFrame, animDef.ImpactFrameIndex, instanceCallback);
@@ -128,8 +137,9 @@ namespace ProjectVagabond.Battle.UI
             return animationStarted;
         }
 
-        private void HandleImpactTrigger(CompiledMove move)
+        private void HandleImpactTrigger(MoveData move)
         {
+            // Visual-only trigger (e.g. screen shake could go here if decoupled from BattleManager)
         }
 
         public void Update(GameTime gameTime)

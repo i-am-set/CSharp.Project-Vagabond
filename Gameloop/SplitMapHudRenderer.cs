@@ -27,8 +27,8 @@ namespace ProjectVagabond.UI
         private int BaseY => Global.VIRTUAL_HEIGHT - HUD_HEIGHT;
 
         // --- Hover State ---
-        private readonly List<(Rectangle Bounds, CompiledMove? Move, int CardCenterX, PartyMember Member)> _activeHitboxes = new();
-        private (Rectangle Bounds, CompiledMove? Move, int CardCenterX, PartyMember Member)? _currentHoveredItem;
+        private readonly List<(Rectangle Bounds, MoveData? Move, int CardCenterX, PartyMember Member)> _activeHitboxes = new();
+        private (Rectangle Bounds, MoveData? Move, int CardCenterX, PartyMember Member)? _currentHoveredItem;
         private Vector2 _lastMousePos;
         private bool _isTooltipVisible;
         private PartyMember? _hoveredMember;
@@ -1025,8 +1025,8 @@ namespace ProjectVagabond.UI
                         Rectangle btnRect = new Rectangle(overlayBtnX, currentY, overlayBtnWidth, overlayBtnHeight);
 
                         var entry = entries[j];
-                        CompiledMove moveData = null;
-                        if (entry != null) moveData = entry.CompiledMove;
+                        MoveData moveData = null;
+                        if (entry != null && BattleDataCache.Moves.TryGetValue(entry.MoveID, out var m)) moveData = m;
 
                         Color bgColor = _global.Palette_Black;
                         string text = "EMPTY";
@@ -1034,9 +1034,9 @@ namespace ProjectVagabond.UI
 
                         if (moveData != null)
                         {
-                            text = moveData.BaseTemplate.MoveName.ToUpper();
+                            text = moveData.MoveName.ToUpper();
                             textColor = _global.Palette_Black;
-                            switch (moveData.BaseTemplate.ImpactType)
+                            switch (moveData.ImpactType)
                             {
                                 case ImpactType.Physical: bgColor = _global.Palette_DarkRust; break;
                                 case ImpactType.Magical: bgColor = _global.Palette_Sea; break;
@@ -1068,7 +1068,7 @@ namespace ProjectVagabond.UI
 
                         if (moveData != null && _spriteManager.ActionIconsSpriteSheet != null && _spriteManager.ActionIconSourceRects != null)
                         {
-                            int iconIndex = moveData.BaseTemplate.ImpactType switch { ImpactType.Physical => 3, ImpactType.Magical => 4, ImpactType.Status => 5, _ => -1 };
+                            int iconIndex = moveData.ImpactType switch { ImpactType.Physical => 3, ImpactType.Magical => 4, ImpactType.Status => 5, _ => -1 };
                             if (iconIndex >= 0 && iconIndex < _spriteManager.ActionIconSourceRects.Length)
                             {
                                 var iconRect = _spriteManager.ActionIconSourceRects[iconIndex];

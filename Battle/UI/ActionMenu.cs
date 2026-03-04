@@ -24,7 +24,7 @@ namespace ProjectVagabond.Battle.UI
 
         private List<CombatantPanel> _panels = new List<CombatantPanel>();
 
-        public CompiledMove? HoveredMove { get; private set; }
+        public MoveData? HoveredMove { get; private set; }
         public int HoveredSlotIndex { get; private set; } = -1;
         public MoveEntry? SelectedMoveEntry { get; private set; }
 
@@ -147,7 +147,7 @@ namespace ProjectVagabond.Battle.UI
         {
             public int SlotIndex { get; }
             public BattleCombatant Combatant { get; }
-            public CompiledMove? HoveredMove { get; private set; }
+            public MoveData? HoveredMove { get; private set; }
 
             public event Action<QueuedAction>? OnActionSelected;
             public event Action? OnSwitchRequested;
@@ -203,30 +203,29 @@ namespace ProjectVagabond.Battle.UI
                 var tertiaryFont = ServiceLocator.Get<Core>().TertiaryFont;
                 var global = ServiceLocator.Get<Global>();
 
-                CompiledMove? GetMove(MoveEntry? entry) => entry?.CompiledMove;
+                MoveData? GetMoveData(MoveEntry? entry) => entry != null && BattleDataCache.Moves.TryGetValue(entry.MoveID, out var m) ? m : null;
                 BitmapFont GetFontForLabel(string text) => text.Length >= 12 ? tertiaryFont : (text.Length > 8 ? secondaryFont : defaultFont);
 
                 // 0: Basic
                 AddActionButton("BASC", Combatant.BasicMove, defaultFont, global, global.Palette_DarkestPale, 44, 28, new Vector2(0, 1), Vector2.Zero, false);
 
                 // 1: Spell 1
-                var sp1Data = GetMove(Combatant.Spell1);
-                string sp1Label = sp1Data?.BaseTemplate.MoveName.ToUpper() ?? "---";
+                var sp1Data = GetMoveData(Combatant.Spell1);
+                string sp1Label = sp1Data?.MoveName.ToUpper() ?? "---";
                 AddActionButton(sp1Label, Combatant.Spell1, GetFontForLabel(sp1Label), global, global.Palette_DarkPale, 89, 13, Vector2.Zero, new Vector2(0, 1), true);
 
                 // 2: Spell 2
-                var sp2Data = GetMove(Combatant.Spell2);
-                string sp2Label = sp2Data?.BaseTemplate.MoveName.ToUpper() ?? "---";
+                var sp2Data = GetMoveData(Combatant.Spell2);
+                string sp2Label = sp2Data?.MoveName.ToUpper() ?? "---";
                 AddActionButton(sp2Label, Combatant.Spell2, GetFontForLabel(sp2Label), global, global.Palette_DarkestPale, 89, 13, Vector2.Zero, new Vector2(0, 1), true);
 
                 // 3: Switch
-                var switchMoveData = new MoveData { MoveID = "SWITCH", MoveName = "SWITCH", Description = "Switch to a reserve member.", Target = TargetType.None };
-                var switchMove = new CompiledMove(switchMoveData, new List<ModifierToken>());
+                var switchMove = new MoveData { MoveID = "SWITCH", MoveName = "SWITCH", Description = "Switch to a reserve member.", Target = TargetType.None };
                 AddSecondaryButton("SWITCH", null, switchMove, () => OnSwitchRequested?.Invoke());
 
                 // 4: Spell 3
-                var sp3Data = GetMove(Combatant.Spell3);
-                string sp3Label = sp3Data?.BaseTemplate.MoveName.ToUpper() ?? "---";
+                var sp3Data = GetMoveData(Combatant.Spell3);
+                string sp3Label = sp3Data?.MoveName.ToUpper() ?? "---";
                 AddActionButton(sp3Label, Combatant.Spell3, GetFontForLabel(sp3Label), global, global.Palette_DarkPale, 89, 13, Vector2.Zero, new Vector2(0, 1), true);
 
                 _hasBench = allCombatants.Any(c => c.IsPlayerControlled && !c.IsDefeated && c.BattleSlot >= 2);
@@ -266,8 +265,8 @@ namespace ProjectVagabond.Battle.UI
 
             private void AddActionButton(string label, MoveEntry? entry, BitmapFont font, Global global, Color defaultBackgroundColor, int width, int height, Vector2 iconOffset, Vector2 textOffset, bool showCooldown)
             {
-                bool moveExists = entry != null;
-                CompiledMove? moveData = moveExists ? entry!.CompiledMove : null;
+                bool moveExists = entry != null && BattleDataCache.Moves.ContainsKey(entry.MoveID);
+                MoveData? moveData = moveExists ? BattleDataCache.Moves[entry!.MoveID] : null;
 
                 Color backgroundColor = defaultBackgroundColor;
                 Rectangle? iconRect = null;
@@ -276,11 +275,11 @@ namespace ProjectVagabond.Battle.UI
 
                 if (moveData != null)
                 {
-                    switch (moveData.BaseTemplate.ImpactType) { case ImpactType.Physical: backgroundColor = global.Palette_DarkRust; break; case ImpactType.Magical: backgroundColor = global.Palette_Sea; break; case ImpactType.Status: backgroundColor = global.Palette_DarkPale; break; }
-                    int iconIndex = moveData.BaseTemplate.ImpactType switch { ImpactType.Physical => 3, ImpactType.Magical => 4, ImpactType.Status => 5, _ => -1 };
+                    switch (moveData.ImpactType) { case ImpactType.Physical: backgroundColor = global.Palette_DarkRust; break; case ImpactType.Magical: backgroundColor = global.Palette_Sea; break; case ImpactType.Status: backgroundColor = global.Palette_DarkPale; break; }
+                    int iconIndex = moveData.ImpactType switch { ImpactType.Physical => 3, ImpactType.Magical => 4, ImpactType.Status => 5, _ => -1 };
                     if (iconIndex >= 0 && _iconRects != null && iconIndex < _iconRects.Length) iconRect = _iconRects[iconIndex];
                     iconColor = global.Palette_Black;
-                    if (moveData.FinalAbilities.OfType<CounterAbility>().Any() && Combatant.HasUsedFirstAttack) forceDisabled = true;
+                    if (moveData.Abilities.OfType<CounterAbility>().Any() && Combatant.HasUsedFirstAttack) forceDisabled = true;
                 }
                 else
                 {
@@ -313,21 +312,21 @@ namespace ProjectVagabond.Battle.UI
                     IsEnabled = !forceDisabled && !isOnCooldown,
                     ShowCooldown = showCooldown,
                     CurrentCooldown = entry?.TurnsUntilReady ?? 0,
-                    MaxCooldown = moveData?.FinalCooldown ?? 0
+                    MaxCooldown = moveData?.Cooldown ?? 0
                 };
 
                 if (moveExists && !forceDisabled && !isOnCooldown)
                 {
-                    btn.OnClick += () => OnActionSelected?.Invoke(new QueuedAction { Actor = Combatant, ChosenMove = moveData!, SpellbookEntry = entry!, Type = QueuedActionType.Move, Priority = moveData!.FinalPriority, ActorAgility = Combatant.GetEffectiveAgility() });
+                    btn.OnClick += () => OnActionSelected?.Invoke(new QueuedAction { Actor = Combatant, ChosenMove = moveData!, SpellbookEntry = entry!, Type = QueuedActionType.Move, Priority = moveData!.Priority, ActorAgility = Combatant.GetEffectiveAgility() });
                 }
                 _buttons.Add(btn);
             }
 
-            private void AddSecondaryButton(string label, string moveId, CompiledMove? manualData = null, Action? customAction = null)
+            private void AddSecondaryButton(string label, string moveId, MoveData? manualData = null, Action? customAction = null)
             {
                 var global = ServiceLocator.Get<Global>();
                 var font = ServiceLocator.Get<Core>().SecondaryFont;
-                CompiledMove? moveData = manualData ?? (!string.IsNullOrEmpty(moveId) && BattleDataCache.Moves.TryGetValue(moveId, out var m) ? new CompiledMove(m, new List<ModifierToken>()) : null);
+                MoveData? moveData = manualData ?? (!string.IsNullOrEmpty(moveId) && BattleDataCache.Moves.TryGetValue(moveId, out var m) ? m : null);
 
                 var btn = new MoveButton(Combatant, moveData, null, font)
                 {
@@ -343,7 +342,7 @@ namespace ProjectVagabond.Battle.UI
                 };
 
                 if (customAction != null) btn.OnClick += customAction;
-                else if (moveData != null) btn.OnClick += () => OnActionSelected?.Invoke(new QueuedAction { Actor = Combatant, ChosenMove = moveData, Type = QueuedActionType.Move, Priority = moveData.FinalPriority, ActorAgility = Combatant.GetEffectiveAgility() });
+                else if (moveData != null) btn.OnClick += () => OnActionSelected?.Invoke(new QueuedAction { Actor = Combatant, ChosenMove = moveData, Type = QueuedActionType.Move, Priority = moveData.Priority, ActorAgility = Combatant.GetEffectiveAgility() });
                 _buttons.Add(btn);
             }
 
@@ -385,7 +384,7 @@ namespace ProjectVagabond.Battle.UI
                 }
             }
 
-            private CompiledMove? GetMove(MoveEntry? entry) => entry?.CompiledMove;
+            private MoveData? GetMove(MoveEntry? entry) => entry != null && BattleDataCache.Moves.TryGetValue(entry.MoveID, out var m) ? m : null;
 
             public void DrawButtons(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Matrix transform, Vector2 offset)
             {

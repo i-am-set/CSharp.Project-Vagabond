@@ -6,7 +6,7 @@ namespace ProjectVagabond.Battle.Abilities
     {
         public string Name => "Standard Rules";
         public string Description => "Applies standard combat math.";
-        public int Priority => AbilityPriority.BaseOverride;
+        public int Priority => 0;
         private static readonly Random _random = new Random();
 
         private const float STAT_DIVISOR = 3.0f;
@@ -19,13 +19,13 @@ namespace ProjectVagabond.Battle.Abilities
             }
             else if (e is CalculateDamageEvent dmgEvent)
             {
-                float offense = GetOffensiveStat(dmgEvent.Actor, dmgEvent.Move.BaseTemplate.OffensiveStat, context);
+                float offense = GetOffensiveStat(dmgEvent.Actor, dmgEvent.Move.OffensiveStat, context);
 
                 float baseDamage = 0f;
 
-                if (dmgEvent.Move.FinalPower > 0)
+                if (dmgEvent.Move.Power > 0)
                 {
-                    baseDamage = dmgEvent.Move.FinalPower + (offense / STAT_DIVISOR);
+                    baseDamage = dmgEvent.Move.Power + (offense / STAT_DIVISOR);
                 }
 
                 float multiplier = dmgEvent.DamageMultiplier;
@@ -41,7 +41,7 @@ namespace ProjectVagabond.Battle.Abilities
 
                 float finalValue = (baseDamage + dmgEvent.FlatBonus) * multiplier;
 
-                if (finalValue < 1f && dmgEvent.Move.FinalPower > 0 && !dmgEvent.WasProtected)
+                if (finalValue < 1f && dmgEvent.Move.Power > 0 && !dmgEvent.WasProtected)
                 {
                     finalValue = 1f;
                 }
