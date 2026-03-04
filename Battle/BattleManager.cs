@@ -29,13 +29,6 @@ namespace ProjectVagabond.Battle
         public int Amount { get; set; }
     }
 
-    public class LevelUpDraft
-    {
-        public PartyMember Member { get; set; }
-        public List<ModifierToken> Spell1Options { get; set; }
-        public List<ModifierToken> Spell2Options { get; set; }
-    }
-
     public class BattleManager
     {
         public enum BattlePhase
@@ -82,7 +75,7 @@ namespace ProjectVagabond.Battle
         private readonly List<BattleCombatant> _cachedAllActive = new List<BattleCombatant>();
 
         private List<QueuedAction> _actionQueue;
-        public Queue<LevelUpDraft> PendingLevelUps { get; } = new Queue<LevelUpDraft>();
+        public Queue<(PartyMember Member, string NewMoveId)> PendingLevelUps { get; } = new Queue<(PartyMember, string)>();
 
         private readonly Dictionary<int, QueuedAction> _pendingPlayerActions = new Dictionary<int, QueuedAction>();
 
@@ -1243,6 +1236,7 @@ namespace ProjectVagabond.Battle
                                 partyMember.Level++;
                                 partyMember.MaxEXP = (int)(partyMember.MaxEXP * 1.2f);
 
+                                // Auto Omni-Stat Boost
                                 partyMember.MaxHP += 2;
                                 partyMember.CurrentHP += 2;
                                 partyMember.Strength++;
@@ -1250,12 +1244,28 @@ namespace ProjectVagabond.Battle
                                 partyMember.Tenacity++;
                                 partyMember.Agility++;
 
-                                var spell1Options = GetValidTokensForMove(partyMember.Spell1?.CompiledMove?.BaseTemplate, 2);
-                                var spell2Options = GetValidTokensForMove(partyMember.Spell2?.CompiledMove?.BaseTemplate, 2);
-
-                                if (spell1Options.Any() || spell2Options.Any())
+                                // Auto Learn Move
+                                if (BattleDataCache.PartyMembers.TryGetValue(partyMember.Name, out var pmData))
                                 {
-                                    PendingLevelUps.Enqueue(new LevelUpDraft { Member = partyMember, Spell1Options = spell1Options, Spell2Options = spell2Options });
+                                    var availableMoves = pmData.MovePool.Where(m => !partyMember.KnownMovesHistory.Contains(m)).ToList();
+                                    if (availableMoves.Any())
+                                    {
+                                        string newMove = availableMoves[_random.Next(availableMoves.Count)];
+                                        partyMember.KnownMovesHistory.Add(newMove);
+
+                                        if (BattleDataCache.Moves.TryGetValue(newMove, out var baseMoveData))
+                                        {
+                                            var compiledMove = new CompiledMove(baseMoveData, new List<ModifierToken>());
+                                            if (partyMember.Spell1 == null) partyMember.Spell1 = new MoveEntry(compiledMove, 0);
+                                            else if (partyMember.Spell2 == null) partyMember.Spell2 = new MoveEntry(compiledMove, 0);
+                                            else if (partyMember.Spell3 == null) partyMember.Spell3 = new MoveEntry(compiledMove, 0);
+                                            else
+                                            {
+                                                // All slots full, queue for replacement UI
+                                                PendingLevelUps.Enqueue((partyMember, newMove));
+                                            }
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -1264,32 +1274,6 @@ namespace ProjectVagabond.Battle
             }
 
             if (deadCombatants.Any()) RefreshCombatantCaches();
-        }
-
-        private List<ModifierToken> GetValidTokensForMove(MoveData baseMove, int count)
-        {
-            if (baseMove == null || BattleDataCache.Tokens == null) return new List<ModifierToken>();
-
-            var validTokens = BattleDataCache.Tokens.Values.Where(t =>
-            {
-                if (baseMove.Target == TargetType.Self && t.TargetOverride.HasValue && t.TargetOverride.Value != TargetType.Self) return false;
-                return true;
-            }).OrderBy(x => _random.Next()).Take(count).ToList();
-
-            return validTokens.Select(t => new ModifierToken
-            {
-                Id = t.Id,
-                Name = t.Name,
-                Description = t.Description,
-                ModifiedCategories = new HashSet<ModifierCategory>(t.ModifiedCategories),
-                IsDisabled = t.IsDisabled,
-                TargetOverride = t.TargetOverride,
-                FlatDamageBonus = t.FlatDamageBonus,
-                DamageMultiplier = t.DamageMultiplier,
-                CooldownModifier = t.CooldownModifier,
-                AnimationIdOverride = t.AnimationIdOverride,
-                AppendedAbilities = t.AppendedAbilities != null ? new List<IAbility>(t.AppendedAbilities) : new List<IAbility>()
-            }).ToList();
         }
 
         private bool CheckWinLoss()
