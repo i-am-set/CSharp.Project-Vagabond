@@ -182,7 +182,7 @@ namespace ProjectVagabond.Battle.UI
 
             public void SetSwitchButtonAllowed(bool allowed)
             {
-                if (_buttons.Count > 3) _buttons[3].IsEnabled = allowed && _hasBench;
+                if (_buttons.Count > 2) _buttons[2].IsEnabled = allowed && _hasBench;
             }
 
             public void HideButtons() { foreach (var btn in _buttons) btn.SetHiddenForEntrance(); }
@@ -206,31 +206,23 @@ namespace ProjectVagabond.Battle.UI
                 CompiledMove? GetMove(MoveEntry? entry) => entry?.CompiledMove;
                 BitmapFont GetFontForLabel(string text) => text.Length >= 12 ? tertiaryFont : (text.Length > 8 ? secondaryFont : defaultFont);
 
-                // 0: Basic
-                AddActionButton("BASC", Combatant.BasicMove, defaultFont, global, global.Palette_DarkestPale, 44, 28, new Vector2(0, 1), Vector2.Zero, false);
+                // 0: Strike
+                var strikeData = GetMove(Combatant.StrikeMove);
+                string strikeLabel = strikeData?.BaseTemplate.MoveName.ToUpper() ?? "STRIKE";
+                AddActionButton(strikeLabel, Combatant.StrikeMove, GetFontForLabel(strikeLabel), global, global.Palette_DarkRust, 66, 28, new Vector2(0, 1), Vector2.Zero, false);
 
-                // 1: Spell 1
-                var sp1Data = GetMove(Combatant.Spell1);
-                string sp1Label = sp1Data?.BaseTemplate.MoveName.ToUpper() ?? "---";
-                AddActionButton(sp1Label, Combatant.Spell1, GetFontForLabel(sp1Label), global, global.Palette_DarkPale, 89, 13, Vector2.Zero, new Vector2(0, 1), true);
+                // 1: Alt
+                var altData = GetMove(Combatant.AltMove);
+                string altLabel = altData?.BaseTemplate.MoveName.ToUpper() ?? "ALT";
+                AddActionButton(altLabel, Combatant.AltMove, GetFontForLabel(altLabel), global, global.Palette_Sea, 67, 28, new Vector2(0, 1), Vector2.Zero, true);
 
-                // 2: Spell 2
-                var sp2Data = GetMove(Combatant.Spell2);
-                string sp2Label = sp2Data?.BaseTemplate.MoveName.ToUpper() ?? "---";
-                AddActionButton(sp2Label, Combatant.Spell2, GetFontForLabel(sp2Label), global, global.Palette_DarkestPale, 89, 13, Vector2.Zero, new Vector2(0, 1), true);
-
-                // 3: Switch
+                // 2: Switch
                 var switchMoveData = new MoveData { MoveID = "SWITCH", MoveName = "SWITCH", Description = "Switch to a reserve member.", Target = TargetType.None };
                 var switchMove = new CompiledMove(switchMoveData, new List<ModifierToken>());
                 AddSecondaryButton("SWITCH", null, switchMove, () => OnSwitchRequested?.Invoke());
 
-                // 4: Spell 3
-                var sp3Data = GetMove(Combatant.Spell3);
-                string sp3Label = sp3Data?.BaseTemplate.MoveName.ToUpper() ?? "---";
-                AddActionButton(sp3Label, Combatant.Spell3, GetFontForLabel(sp3Label), global, global.Palette_DarkPale, 89, 13, Vector2.Zero, new Vector2(0, 1), true);
-
                 _hasBench = allCombatants.Any(c => c.IsPlayerControlled && !c.IsDefeated && c.BattleSlot >= 2);
-                if (_buttons.Count > 3) _buttons[3].IsEnabled = _hasBench;
+                if (_buttons.Count > 2) _buttons[2].IsEnabled = _hasBench;
 
                 _cancelButton = new Button(Rectangle.Empty, "CANCEL", font: tertiaryFont)
                 {
@@ -248,16 +240,12 @@ namespace ProjectVagabond.Battle.UI
 
                 int y = (int)_position.Y;
 
-                // Basic
-                if (_buttons.Count > 0) { _buttons[0].Bounds = InflateRect(startX - 1, y - 1, 44, 28); ((MoveButton)_buttons[0]).VisualWidthOverride = 44; ((MoveButton)_buttons[0]).VisualHeightOverride = 28; }
-                // Spell 1
-                if (_buttons.Count > 1) { _buttons[1].Bounds = InflateRect(startX + 45, y - 1, 89, 13); ((MoveButton)_buttons[1]).VisualWidthOverride = 89; }
-                // Spell 2
-                if (_buttons.Count > 2) { _buttons[2].Bounds = InflateRect(startX + 45, y + 14, 89, 13); ((MoveButton)_buttons[2]).VisualWidthOverride = 89; }
-                // Switch (Under Basic)
-                if (_buttons.Count > 3) { _buttons[3].Bounds = InflateRect(startX - 1, y + 29, 44, 13); ((MoveButton)_buttons[3]).VisualWidthOverride = 44; ((MoveButton)_buttons[3]).VisualHeightOverride = 13; }
-                // Spell 3 (Under Spell 2)
-                if (_buttons.Count > 4) { _buttons[4].Bounds = InflateRect(startX + 45, y + 29, 89, 13); ((MoveButton)_buttons[4]).VisualWidthOverride = 89; }
+                // Strike
+                if (_buttons.Count > 0) { _buttons[0].Bounds = InflateRect(startX - 1, y - 1, 66, 28); ((MoveButton)_buttons[0]).VisualWidthOverride = 66; ((MoveButton)_buttons[0]).VisualHeightOverride = 28; }
+                // Alt
+                if (_buttons.Count > 1) { _buttons[1].Bounds = InflateRect(startX + 66, y - 1, 67, 28); ((MoveButton)_buttons[1]).VisualWidthOverride = 67; ((MoveButton)_buttons[1]).VisualHeightOverride = 28; }
+                // Switch (Under Strike and Alt)
+                if (_buttons.Count > 2) { _buttons[2].Bounds = InflateRect(startX - 1, y + 29, 134, 13); ((MoveButton)_buttons[2]).VisualWidthOverride = 134; ((MoveButton)_buttons[2]).VisualHeightOverride = 13; }
 
                 _cancelButton.Bounds = new Rectangle((int)(panelCenterX - 25), (int)(_position.Y + (BattleLayout.ACTION_MENU_HEIGHT / 2f) - 7), 50, 15);
             }
@@ -276,7 +264,6 @@ namespace ProjectVagabond.Battle.UI
 
                 if (moveData != null)
                 {
-                    switch (moveData.BaseTemplate.ImpactType) { case ImpactType.Physical: backgroundColor = global.Palette_DarkRust; break; case ImpactType.Magical: backgroundColor = global.Palette_Sea; break; case ImpactType.Status: backgroundColor = global.Palette_DarkPale; break; }
                     int iconIndex = moveData.BaseTemplate.ImpactType switch { ImpactType.Physical => 3, ImpactType.Magical => 4, ImpactType.Status => 5, _ => -1 };
                     if (iconIndex >= 0 && _iconRects != null && iconIndex < _iconRects.Length) iconRect = _iconRects[iconIndex];
                     iconColor = global.Palette_Black;
@@ -337,7 +324,7 @@ namespace ProjectVagabond.Battle.UI
                     Text = label,
                     CustomDefaultTextColor = global.Palette_Black,
                     CustomHoverTextColor = global.Palette_DarkestPale,
-                    VisualWidthOverride = 44,
+                    VisualWidthOverride = 134,
                     VisualHeightOverride = 13,
                     TextRenderOffset = Vector2.Zero
                 };
@@ -376,10 +363,8 @@ namespace ProjectVagabond.Battle.UI
                         if (btn.IsHovered && btn.IsEnabled)
                         {
                             int index = _buttons.IndexOf(btn);
-                            if (index == 0) HoveredMove = GetMove(Combatant.BasicMove);
-                            else if (index == 1) HoveredMove = GetMove(Combatant.Spell1);
-                            else if (index == 2) HoveredMove = GetMove(Combatant.Spell2);
-                            else if (index == 4) HoveredMove = GetMove(Combatant.Spell3);
+                            if (index == 0) HoveredMove = GetMove(Combatant.StrikeMove);
+                            else if (index == 1) HoveredMove = GetMove(Combatant.AltMove);
                         }
                     }
                 }
@@ -410,7 +395,6 @@ namespace ProjectVagabond.Battle.UI
                 if (HoveredMove == null) return;
                 int targetSlot = (SlotIndex == 0) ? 1 : 0;
                 var targetArea = BattleLayout.GetActionMenuArea(targetSlot);
-                // Moved up 5 pixels (was -23f, now -28f)
                 Vector2 tooltipPos = new Vector2(targetArea.Center.X - (MoveTooltipRenderer.WIDTH / 2f), targetArea.Center.Y - 28f + offset.Y);
                 _tooltipRenderer.DrawFixed(spriteBatch, tooltipPos, HoveredMove, Combatant);
             }

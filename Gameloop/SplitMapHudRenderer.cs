@@ -336,8 +336,8 @@ namespace ProjectVagabond.UI
                             _movesViewActive[member] = !isMovesMenuOpen;
                             if (!isMovesMenuOpen)
                             {
-                                _moveButtonPlinks[member] = new PlinkAnimator[4];
-                                for (int j = 0; j < 4; j++)
+                                _moveButtonPlinks[member] = new PlinkAnimator[2]; // Changed to 2 for Strike/Alt
+                                for (int j = 0; j < 2; j++)
                                 {
                                     _moveButtonPlinks[member][j] = new PlinkAnimator();
                                     _moveButtonPlinks[member][j].Start(j * 0.05f);
@@ -1007,15 +1007,15 @@ namespace ProjectVagabond.UI
                 var plinks = _moveButtonPlinks.GetValueOrDefault(member);
                 if (plinks != null)
                 {
-                    MoveEntry[] entries = { member.BasicMove, member.Spell1, member.Spell2, member.Spell3 };
+                    MoveEntry[] entries = { member.StrikeMove, member.AltMove };
 
                     int overlayBtnWidth = CARD_WIDTH - 6;
-                    int overlayBtnHeight = 14;
+                    int overlayBtnHeight = 28; // Taller buttons for 2-move layout
                     int overlayBtnX = snappedX + 3;
                     int startOverlayY = snappedY + 6;
-                    int spacing = 2;
+                    int spacing = 4;
 
-                    for (int j = 0; j < 4; j++)
+                    for (int j = 0; j < 2; j++)
                     {
                         float pScale = plinks[j].IsActive ? plinks[j].Scale : 1f;
                         float pRot = plinks[j].IsActive ? plinks[j].Rotation : 0f;

@@ -55,13 +55,14 @@ namespace ProjectVagabond.Battle
             get
             {
                 var moves = new List<CompiledMove>();
-                if (BasicMove != null) moves.Add(BasicMove.CompiledMove);
-                if (Spell1 != null) moves.Add(Spell1.CompiledMove);
-                if (Spell2 != null) moves.Add(Spell2.CompiledMove);
-                if (Spell3 != null) moves.Add(Spell3.CompiledMove);
+                if (StrikeMove != null) moves.Add(StrikeMove.CompiledMove);
+                if (AltMove != null) moves.Add(AltMove.CompiledMove);
                 return moves;
             }
         }
+
+        public MoveEntry? StrikeMove { get; set; }
+        public MoveEntry? AltMove { get; set; }
 
         public MoveEntry? BasicMove { get; set; }
         public MoveEntry? Spell1 { get; set; }

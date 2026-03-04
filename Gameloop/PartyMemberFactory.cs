@@ -37,27 +37,16 @@ namespace ProjectVagabond.Battle
                 member.IntrinsicAbilities = new Dictionary<string, string>(selectedPassive);
             }
 
-            if (!string.IsNullOrEmpty(data.BasicMoveId) && BattleDataCache.Moves.TryGetValue(data.BasicMoveId, out var bMove))
+            if (!string.IsNullOrEmpty(data.StrikeMoveId) && BattleDataCache.Moves.TryGetValue(data.StrikeMoveId, out var strikeMove))
             {
-                member.BasicMove = new MoveEntry(new CompiledMove(bMove, new List<ModifierToken>()), 0);
+                member.StrikeMove = new MoveEntry(new CompiledMove(strikeMove, new List<ModifierToken>()), 0);
+                member.KnownMovesHistory.Add(data.StrikeMoveId);
             }
 
-            if (!string.IsNullOrEmpty(data.StartSpellSlot1MoveId) && BattleDataCache.Moves.TryGetValue(data.StartSpellSlot1MoveId, out var s1Move))
+            if (!string.IsNullOrEmpty(data.AltMoveId) && BattleDataCache.Moves.TryGetValue(data.AltMoveId, out var altMove))
             {
-                member.Spell1 = new MoveEntry(new CompiledMove(s1Move, new List<ModifierToken>()), 0);
-                member.KnownMovesHistory.Add(data.StartSpellSlot1MoveId);
-            }
-
-            if (!string.IsNullOrEmpty(data.StartSpellSlot2MoveId) && BattleDataCache.Moves.TryGetValue(data.StartSpellSlot2MoveId, out var s2Move))
-            {
-                member.Spell2 = new MoveEntry(new CompiledMove(s2Move, new List<ModifierToken>()), 0);
-                member.KnownMovesHistory.Add(data.StartSpellSlot2MoveId);
-            }
-
-            if (!string.IsNullOrEmpty(data.StartSpellSlot3MoveId) && BattleDataCache.Moves.TryGetValue(data.StartSpellSlot3MoveId, out var s3Move))
-            {
-                member.Spell3 = new MoveEntry(new CompiledMove(s3Move, new List<ModifierToken>()), 0);
-                member.KnownMovesHistory.Add(data.StartSpellSlot3MoveId);
+                member.AltMove = new MoveEntry(new CompiledMove(altMove, new List<ModifierToken>()), 0);
+                member.KnownMovesHistory.Add(data.AltMoveId);
             }
 
             return member;

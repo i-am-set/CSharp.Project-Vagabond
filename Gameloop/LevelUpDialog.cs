@@ -19,54 +19,54 @@ namespace ProjectVagabond.UI
             public Button Btn;
             public Rectangle Bounds;
             public ModifierToken Token;
-            public int SpellIndex;
+            public int MoveIndex; // 1 = Strike, 2 = Alt
         }
 
-        private PartyMember _member;
+        private LevelUpDraftData _draftData;
         private Action<int, ModifierToken> _onChoiceMade;
         private List<TokenOptionButton> _buttons = new List<TokenOptionButton>();
         private string _titleText;
 
         private ModifierToken _hoveredToken;
-        private int _hoveredSpellIndex;
+        private int _hoveredMoveIndex;
 
-        public LevelUpDialog(GameScene scene, PartyMember member, List<ModifierToken> spell1Options, List<ModifierToken> spell2Options, Action<int, ModifierToken> onChoiceMade) : base(scene)
+        public LevelUpDialog(GameScene scene, LevelUpDraftData draftData, Action<int, ModifierToken> onChoiceMade) : base(scene)
         {
-            _member = member;
+            _draftData = draftData;
             _onChoiceMade = onChoiceMade;
             IsActive = true;
 
-            _titleText = $"{member.Name} is leveling up!\nDraft a modifier token:";
+            _titleText = $"{_draftData.Member.Name} is leveling up!\nDraft a modifier token:";
 
             int btnWidth = 300;
             int btnHeight = 25;
             int btnX = (Global.VIRTUAL_WIDTH - btnWidth) / 2;
-            int startY = Global.VIRTUAL_HEIGHT / 2 - 60;
+            int startY = Global.VIRTUAL_HEIGHT / 2 - 75;
 
-            if (spell1Options != null && spell1Options.Any() && _member.Spell1 != null)
+            if (_draftData.StrikeOptions != null && _draftData.StrikeOptions.Any() && _draftData.Member.StrikeMove != null)
             {
-                foreach (var t in spell1Options)
+                foreach (var t in _draftData.StrikeOptions)
                 {
                     var rect = new Rectangle(btnX, startY, btnWidth, btnHeight);
-                    var btn = new Button(rect, $"Spell 1: {t.Name}")
+                    var btn = new Button(rect, $"Strike: {t.Name}")
                     {
                         OnClick = () => MakeChoice(1, t)
                     };
-                    _buttons.Add(new TokenOptionButton { Btn = btn, Bounds = rect, Token = t, SpellIndex = 1 });
+                    _buttons.Add(new TokenOptionButton { Btn = btn, Bounds = rect, Token = t, MoveIndex = 1 });
                     startY += 30;
                 }
             }
 
-            if (spell2Options != null && spell2Options.Any() && _member.Spell2 != null)
+            if (_draftData.AltOptions != null && _draftData.AltOptions.Any() && _draftData.Member.AltMove != null)
             {
-                foreach (var t in spell2Options)
+                foreach (var t in _draftData.AltOptions)
                 {
                     var rect = new Rectangle(btnX, startY, btnWidth, btnHeight);
-                    var btn = new Button(rect, $"Spell 2: {t.Name}")
+                    var btn = new Button(rect, $"Alt: {t.Name}")
                     {
                         OnClick = () => MakeChoice(2, t)
                     };
-                    _buttons.Add(new TokenOptionButton { Btn = btn, Bounds = rect, Token = t, SpellIndex = 2 });
+                    _buttons.Add(new TokenOptionButton { Btn = btn, Bounds = rect, Token = t, MoveIndex = 2 });
                     startY += 30;
                 }
             }
@@ -76,24 +76,24 @@ namespace ProjectVagabond.UI
             {
                 OnClick = () => MakeChoice(0, null)
             };
-            _buttons.Add(new TokenOptionButton { Btn = skipBtn, Bounds = skipRect, Token = null, SpellIndex = 0 });
+            _buttons.Add(new TokenOptionButton { Btn = skipBtn, Bounds = skipRect, Token = null, MoveIndex = 0 });
         }
 
-        private void MakeChoice(int spellIndex, ModifierToken chosenToken)
+        private void MakeChoice(int moveIndex, ModifierToken chosenToken)
         {
             IsActive = false;
 
             if (chosenToken != null)
             {
-                var targetSpell = spellIndex == 1 ? _member.Spell1 : _member.Spell2;
-                if (targetSpell != null)
+                var targetMove = moveIndex == 1 ? _draftData.Member.StrikeMove : _draftData.Member.AltMove;
+                if (targetMove != null)
                 {
-                    targetSpell.CompiledMove.Tokens.Add(chosenToken);
-                    targetSpell.CompiledMove = new CompiledMove(targetSpell.CompiledMove.BaseTemplate, targetSpell.CompiledMove.Tokens);
+                    targetMove.CompiledMove.Tokens.Add(chosenToken);
+                    targetMove.CompiledMove = new CompiledMove(targetMove.CompiledMove.BaseTemplate, targetMove.CompiledMove.Tokens);
                 }
             }
 
-            _onChoiceMade?.Invoke(spellIndex, chosenToken);
+            _onChoiceMade?.Invoke(moveIndex, chosenToken);
         }
 
         public override void Update(GameTime gameTime)
@@ -102,7 +102,7 @@ namespace ProjectVagabond.UI
             var mouseState = Mouse.GetState();
 
             _hoveredToken = null;
-            _hoveredSpellIndex = 0;
+            _hoveredMoveIndex = 0;
 
             foreach (var tb in _buttons)
             {
@@ -110,7 +110,7 @@ namespace ProjectVagabond.UI
                 if (tb.Bounds.Contains(mouseState.Position) && tb.Token != null)
                 {
                     _hoveredToken = tb.Token;
-                    _hoveredSpellIndex = tb.SpellIndex;
+                    _hoveredMoveIndex = tb.MoveIndex;
                 }
             }
         }
@@ -147,17 +147,19 @@ namespace ProjectVagabond.UI
 
             if (_hoveredToken != null)
             {
-                var targetSpell = _hoveredSpellIndex == 1 ? _member.Spell1 : _member.Spell2;
-                var currentMove = targetSpell.CompiledMove;
+                var targetMove = _hoveredMoveIndex == 1 ? _draftData.Member.StrikeMove : _draftData.Member.AltMove;
+                var currentMove = targetMove.CompiledMove;
 
                 var simulatedTokens = currentMove.Tokens.Select(t => CloneToken(t)).ToList();
                 simulatedTokens.Add(CloneToken(_hoveredToken));
+
+                ModifierToken.ResolveConflicts(simulatedTokens);
 
                 var simulatedCompiled = new CompiledMove(currentMove.BaseTemplate, simulatedTokens);
 
                 string statsText = $"PWR: {currentMove.FinalPower} -> {simulatedCompiled.FinalPower}   CD: {currentMove.FinalCooldown} -> {simulatedCompiled.FinalCooldown}";
                 Vector2 statsSize = font.MeasureString(statsText);
-                spriteBatch.DrawStringSnapped(font, statsText, new Vector2((Global.VIRTUAL_WIDTH - statsSize.X) / 2, Global.VIRTUAL_HEIGHT / 2 + 80), Color.White);
+                spriteBatch.DrawStringSnapped(font, statsText, new Vector2((Global.VIRTUAL_WIDTH - statsSize.X) / 2, Global.VIRTUAL_HEIGHT / 2 + 100), Color.White);
 
                 var disabledNames = new List<string>();
                 for (int i = 0; i < currentMove.Tokens.Count; i++)
@@ -170,9 +172,9 @@ namespace ProjectVagabond.UI
 
                 if (disabledNames.Any())
                 {
-                    string warning = $"WARNING: Drafting this will disable {string.Join(", ", disabledNames)}";
+                    string warning = $"WARNING: Drafting this disables {string.Join(", ", disabledNames)}";
                     Vector2 warningSize = font.MeasureString(warning);
-                    spriteBatch.DrawStringSnapped(font, warning, new Vector2((Global.VIRTUAL_WIDTH - warningSize.X) / 2, Global.VIRTUAL_HEIGHT / 2 + 105), Color.Red);
+                    spriteBatch.DrawStringSnapped(font, warning, new Vector2((Global.VIRTUAL_WIDTH - warningSize.X) / 2, Global.VIRTUAL_HEIGHT / 2 + 125), Color.Red);
                 }
             }
         }
