@@ -476,25 +476,8 @@ namespace ProjectVagabond.Scenes
                     if (_battleManager.PendingLevelUps.Count > 0)
                     {
                         var levelUpData = _battleManager.PendingLevelUps.Dequeue();
-                        _levelUpDialog = new LevelUpDialog(this, levelUpData.Member, levelUpData.NewMoveId, (choice, moveId) =>
+                        _levelUpDialog = new LevelUpDialog(this, levelUpData.Member, levelUpData.Spell1Options, levelUpData.Spell2Options, (spellIndex, chosenToken) =>
                         {
-                            if (BattleDataCache.Moves.TryGetValue(moveId, out var baseMove))
-                            {
-                                var compiled = new CompiledMove(baseMove, new List<ModifierToken>());
-                                if (choice == LevelUpDialog.LevelUpChoice.Spell1)
-                                {
-                                    levelUpData.Member.Spell1 = new MoveEntry(compiled, 0);
-                                }
-                                else if (choice == LevelUpDialog.LevelUpChoice.Spell2)
-                                {
-                                    levelUpData.Member.Spell2 = new MoveEntry(compiled, 0);
-                                }
-                                else if (choice == LevelUpDialog.LevelUpChoice.Spell3)
-                                {
-                                    levelUpData.Member.Spell3 = new MoveEntry(compiled, 0);
-                                }
-                            }
-                            // Skip does nothing
                         });
                     }
                     else

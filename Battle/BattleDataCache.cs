@@ -22,6 +22,7 @@ namespace ProjectVagabond.Battle
         public static Dictionary<string, MoveData> Moves { get; private set; }
         public static Dictionary<string, PartyMemberData> PartyMembers { get; private set; }
         public static Dictionary<string, AnimationDefinition> Animations { get; private set; }
+        public static Dictionary<string, ModifierToken> Tokens { get; private set; }
 
         public static void LoadData(ContentManager content)
         {
@@ -45,6 +46,20 @@ namespace ProjectVagabond.Battle
             {
                 Animations = new Dictionary<string, AnimationDefinition>();
                 Debug.WriteLine("[BattleDataCache] WARNING: Animations.json not found.");
+            }
+
+            // --- TOKENS ---
+            string tokensPath = Path.Combine(content.RootDirectory, "Data", "Tokens.json");
+            if (File.Exists(tokensPath))
+            {
+                string tokensJson = File.ReadAllText(tokensPath);
+                var tokenList = JsonSerializer.Deserialize<List<ModifierToken>>(tokensJson, jsonOptions);
+                Tokens = tokenList.ToDictionary(t => t.Id, t => t, StringComparer.OrdinalIgnoreCase);
+            }
+            else
+            {
+                Tokens = new Dictionary<string, ModifierToken>();
+                Debug.WriteLine("[BattleDataCache] WARNING: Tokens.json not found.");
             }
 
             // --- MOVES ---
