@@ -37,7 +37,8 @@ namespace ProjectVagabond.Scenes
         AnimationEditor,
         Battle,
         Split,
-        GameOver
+        GameOver,
+        Arena
     }
 
     /// <summary>

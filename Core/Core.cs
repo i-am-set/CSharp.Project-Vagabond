@@ -251,6 +251,7 @@ namespace ProjectVagabond
             _sceneManager.AddScene(GameSceneState.Battle, new BattleScene());
             _sceneManager.AddScene(GameSceneState.Split, new SplitMapScene());
             _sceneManager.AddScene(GameSceneState.GameOver, new GameOverScene());
+            _sceneManager.AddScene(GameSceneState.Arena, new ArenaScene());
 
             _previousResolution = new Point(Window.ClientBounds.Width, Window.ClientBounds.Height);
             OnResize(null, null);
@@ -265,7 +266,6 @@ namespace ProjectVagabond
                 0,
                 RenderTargetUsage.PreserveContents);
 
-            // Initialize Phosphor Target for ghosting effects
             _phosphorTarget = new RenderTarget2D(
                 GraphicsDevice,
                 Window.ClientBounds.Width,

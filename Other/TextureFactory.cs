@@ -175,10 +175,9 @@ namespace ProjectVagabond
             return texture;
         }
 
-        public Texture2D CreateCircleTexture()
+        public Texture2D CreateCircleTexture(int size = 64)
         {
             var graphicsDevice = ServiceLocator.Get<GraphicsDevice>();
-            const int size = 64; // Match the CLOCK_SIZE for a 1:1 texture
             var texture = new Texture2D(graphicsDevice, size, size);
             var colorData = new Color[size * size];
 
@@ -201,6 +200,45 @@ namespace ProjectVagabond
                     {
                         colorData[y * size + x] = Color.Transparent;
                     }
+                }
+            }
+
+            texture.SetData(colorData);
+            return texture;
+        }
+
+        public Texture2D CreatePolygonTexture(int radius, int edges, int bevel = 0)
+        {
+            edges = Math.Max(3, edges);
+            int size = radius * 2;
+            var texture = new Texture2D(ServiceLocator.Get<GraphicsDevice>(), size, size);
+            var colorData = new Color[size * size];
+
+            float sectorAngle = MathHelper.TwoPi / edges;
+            float apothem = radius * MathF.Cos(sectorAngle / 2f);
+            float bevelApothem = radius - bevel;
+
+            for (int y = 0; y < size; y++)
+            {
+                for (int x = 0; x < size; x++)
+                {
+                    float dx = x - radius + 0.5f;
+                    float dy = y - radius + 0.5f;
+                    float dist = MathF.Sqrt(dx * dx + dy * dy);
+                    float angle = MathF.Atan2(dy, dx);
+                    if (angle < 0) angle += MathHelper.TwoPi;
+
+                    float localAngleEdge = Math.Abs((angle % sectorAngle) - (sectorAngle / 2f));
+                    float maxDistEdge = apothem / MathF.Cos(localAngleEdge);
+
+                    float closestVertexAngle = MathF.Round(angle / sectorAngle) * sectorAngle;
+                    float localAngleVertex = Math.Abs(angle - closestVertexAngle);
+                    float maxDistBevel = bevelApothem / MathF.Cos(localAngleVertex);
+
+                    if (dist <= maxDistEdge && dist <= maxDistBevel)
+                        colorData[y * size + x] = Color.White;
+                    else
+                        colorData[y * size + x] = Color.Transparent;
                 }
             }
 

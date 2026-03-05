@@ -386,7 +386,7 @@ namespace ProjectVagabond.Scenes
 
             var loadingTasks = new List<LoadingTask>
             {
-                new GenericTask("Initializing world...", () =>
+                new GenericTask("Initializing arena...", () =>
                 {
                     gameState.InitializeWorld(selectedId);
                 })
@@ -396,7 +396,7 @@ namespace ProjectVagabond.Scenes
 
             var transitionOut = _transitionManager.GetRandomTransition();
             var transitionIn = _transitionManager.GetRandomTransition();
-            _sceneManager.ChangeScene(GameSceneState.Split, transitionOut, transitionIn, 0f, loadingTasks);
+            _sceneManager.ChangeScene(GameSceneState.Arena, transitionOut, transitionIn, 0f, loadingTasks);
         }
 
         public override void Update(GameTime gameTime)
