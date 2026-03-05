@@ -14,9 +14,9 @@ namespace ProjectVagabond.Battle
     public class CombatantStats
     {
         /// <summary>
-        /// A combatant's maximum vitality.
+        /// A combatant's maximum vitality, derived directly from Tenacity.
         /// </summary>
-        public int MaxHP { get; set; }
+        public int MaxHP => Tenacity * 2;
 
         /// <summary>
         /// A combatant's current vitality. When reduced to 0, they are defeated.

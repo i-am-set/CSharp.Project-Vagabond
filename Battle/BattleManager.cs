@@ -39,7 +39,6 @@ namespace ProjectVagabond.Battle
             ActionSelection,
             ActionResolution,
             EndOfRound,
-            WaitingForLevelUp,
             BattleOver,
             ProcessingInteraction,
             WaitingForSwitchCompletion
@@ -306,21 +305,6 @@ namespace ProjectVagabond.Battle
 
                 int damageToProcess = result.DamageAmount;
 
-                if (damageToProcess > 0 && target.CurrentGuard > 0)
-                {
-                    int guardDamage = Math.Min(damageToProcess, target.CurrentGuard);
-                    target.CurrentGuard -= guardDamage;
-                    damageToProcess -= guardDamage;
-
-                    EventBus.Publish(new GameEvents.GuardChanged { Combatant = target, NewValue = target.CurrentGuard });
-
-                    if (target.CurrentGuard == 0)
-                    {
-                        EventBus.Publish(new GameEvents.GuardBroken { Combatant = target });
-                        AppendToCurrentLine(" [cStatus]GUARD BROKEN![/]");
-                    }
-                }
-
                 if (damageToProcess > 0)
                 {
                     target.ApplyDamage(damageToProcess);
@@ -451,13 +435,6 @@ namespace ProjectVagabond.Battle
             }
 
             foreach (var action in _actionQueue) if (action.Target == actor) action.Target = incomingMember;
-
-            incomingMember.SwitchInCount++;
-            if (incomingMember.SwitchInCount > 1)
-            {
-                incomingMember.GuardExhaustion++;
-            }
-            incomingMember.CurrentGuard = incomingMember.MaxGuard;
 
             var entryEvent = new GameEvents.CombatantEnteredEvent(incomingMember);
             _battleContext.ResetMultipliers();
@@ -599,7 +576,6 @@ namespace ProjectVagabond.Battle
 
             bool isWaitingForInput = _currentPhase == BattlePhase.ProcessingInteraction ||
                                      _currentPhase == BattlePhase.WaitingForSwitchCompletion ||
-                                     _currentPhase == BattlePhase.WaitingForLevelUp ||
                                      _waitingForReinforcementSelection;
 
             if (!CanAdvance && !isWaitingForInput && _currentPhase != BattlePhase.BattleOver)
@@ -635,7 +611,6 @@ namespace ProjectVagabond.Battle
                     }
                     break;
                 case BattlePhase.EndOfRound: HandleEndOfRound(); break;
-                case BattlePhase.WaitingForLevelUp: break;
                 case BattlePhase.ProcessingInteraction: break;
                 case BattlePhase.WaitingForSwitchCompletion: break;
             }
@@ -775,8 +750,7 @@ namespace ProjectVagabond.Battle
             {
                 if (_enemyParty.All(c => c.IsDefeated))
                 {
-                    if (PendingLevelUps.Any()) _currentPhase = BattlePhase.WaitingForLevelUp;
-                    else _currentPhase = BattlePhase.BattleOver;
+                    _currentPhase = BattlePhase.BattleOver;
                     return;
                 }
                 else
@@ -1113,12 +1087,6 @@ namespace ProjectVagabond.Battle
                 case EndOfRoundStage.CheckWinLoss:
                     if (CheckWinLoss()) return;
 
-                    if (PendingLevelUps.Any())
-                    {
-                        _currentPhase = BattlePhase.WaitingForLevelUp;
-                        return;
-                    }
-
                     _endOfRoundStage = EndOfRoundStage.ProcessReinforcements;
                     _reinforcementSlotIndex = 0;
                     _reinforcementAnnounced = false;
@@ -1201,73 +1169,6 @@ namespace ProjectVagabond.Battle
                 _actionQueue.RemoveAll(a => a.Actor == deadCombatant);
 
                 EventBus.Publish(new GameEvents.CombatantDefeated { DefeatedCombatant = deadCombatant });
-
-                if (!deadCombatant.IsPlayerControlled)
-                {
-                    int yield = deadCombatant.EXPYield;
-                    if (yield <= 0)
-                    {
-                        var enemyData = dataManager.GetEnemyData(deadCombatant.ArchetypeId);
-                        if (enemyData != null) yield = enemyData.EXPYield;
-                        if (yield <= 0) yield = 50;
-                    }
-
-                    var eligibleNames = deadCombatant.SeenPlayerCharacterNames;
-                    var eligiblePartyMembers = gameState.PlayerState.Party
-                        .Where(p => eligibleNames.Contains(p.Name) && p.CurrentHP > 0)
-                        .ToList();
-
-                    if (eligiblePartyMembers.Count > 0)
-                    {
-                        int expShare = Math.Max(1, yield / eligiblePartyMembers.Count);
-                        foreach (var partyMember in eligiblePartyMembers)
-                        {
-                            partyMember.CurrentEXP += expShare;
-                            AppendToLog($"[cBlue]{partyMember.Name} gained {expShare} EXP.[/]");
-
-                            var activeCombatant = _cachedActivePlayers.FirstOrDefault(c => c.Name == partyMember.Name);
-                            if (activeCombatant != null)
-                            {
-                                EventBus.Publish(new EXPGainedEvent { Combatant = activeCombatant, Amount = expShare });
-                            }
-
-                            while (partyMember.CurrentEXP >= partyMember.MaxEXP)
-                            {
-                                partyMember.CurrentEXP -= partyMember.MaxEXP;
-                                partyMember.Level++;
-                                partyMember.MaxEXP = (int)(partyMember.MaxEXP * 1.2f);
-
-                                // Auto Omni-Stat Boost
-                                partyMember.MaxHP += 2;
-                                partyMember.CurrentHP += 2;
-                                partyMember.Strength++;
-                                partyMember.Intelligence++;
-                                partyMember.Tenacity++;
-                                partyMember.Agility++;
-
-                                // Auto Learn Move
-                                if (BattleDataCache.PartyMembers.TryGetValue(partyMember.Name, out var pmData))
-                                {
-                                    var availableMoves = pmData.MovePool.Where(m => !partyMember.KnownMovesHistory.Contains(m)).ToList();
-                                    if (availableMoves.Any())
-                                    {
-                                        string newMove = availableMoves[_random.Next(availableMoves.Count)];
-                                        partyMember.KnownMovesHistory.Add(newMove);
-
-                                        if (partyMember.Spell1 == null) partyMember.Spell1 = new MoveEntry(newMove, 0);
-                                        else if (partyMember.Spell2 == null) partyMember.Spell2 = new MoveEntry(newMove, 0);
-                                        else if (partyMember.Spell3 == null) partyMember.Spell3 = new MoveEntry(newMove, 0);
-                                        else
-                                        {
-                                            // All slots full, queue for replacement UI
-                                            PendingLevelUps.Enqueue((partyMember, newMove));
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
             }
 
             if (deadCombatants.Any()) RefreshCombatantCaches();
@@ -1278,14 +1179,7 @@ namespace ProjectVagabond.Battle
             if (_playerParty.All(c => c.IsDefeated)) { _currentPhase = BattlePhase.BattleOver; _actionQueue.Clear(); return true; }
             if (_enemyParty.All(c => c.IsDefeated))
             {
-                if (PendingLevelUps.Any())
-                {
-                    _currentPhase = BattlePhase.WaitingForLevelUp;
-                }
-                else
-                {
-                    _currentPhase = BattlePhase.BattleOver;
-                }
+                _currentPhase = BattlePhase.BattleOver;
                 _actionQueue.Clear();
                 return true;
             }

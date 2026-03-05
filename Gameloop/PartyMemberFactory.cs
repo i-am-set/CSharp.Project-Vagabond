@@ -22,15 +22,14 @@ namespace ProjectVagabond.Battle
             var member = new PartyMember
             {
                 Name = data.Name,
-                // Convert the raw JSON stat (Hearts) into Battle HP (Hearts * 2) immediately
-                MaxHP = data.MaxHP * 2,
-                CurrentHP = data.MaxHP * 2,
                 Strength = data.Strength,
                 Intelligence = data.Intelligence,
                 Tenacity = data.Tenacity,
                 Agility = data.Agility,
                 PortraitIndex = int.TryParse(data.MemberID, out int pid) ? pid : 0
             };
+
+            member.CurrentHP = member.MaxHP;
 
             if (data.PassiveAbilityPool != null && data.PassiveAbilityPool.Any())
             {

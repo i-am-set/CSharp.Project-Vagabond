@@ -12,7 +12,7 @@ namespace ProjectVagabond
         public HashSet<string> PastMemberIds { get; set; } = new HashSet<string>();
         public PartyMember Leader => Party.Count > 0 ? Party[0] : null;
 
-        public int MaxHP { get => Leader?.MaxHP ?? 100; set { if (Leader != null) Leader.MaxHP = value; } }
+        public int MaxHP { get => Leader?.MaxHP ?? 100; }
         public int CurrentHP { get => Leader?.CurrentHP ?? 100; set { if (Leader != null) Leader.CurrentHP = value; } }
         public int Strength { get => Leader?.Strength ?? 10; set { if (Leader != null) Leader.Strength = value; } }
         public int Intelligence { get => Leader?.Intelligence ?? 10; set { if (Leader != null) Leader.Intelligence = value; } }

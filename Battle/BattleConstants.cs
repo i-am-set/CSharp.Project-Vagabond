@@ -25,9 +25,6 @@ namespace ProjectVagabond.Battle
         public const float GRAZE_MULTIPLIER = 0.25f;
         public const float MULTI_TARGET_MODIFIER = 0.75f;
 
-        // --- BREAK ECONOMY ---
-        public const float SHIELDED_DAMAGE_MULT = 0.5f;
-
         // --- SWITCH ANIMATION TUNING ---
         public const float SWITCH_ANIMATION_DURATION = 0.5f;
         public const float SWITCH_VERTICAL_OFFSET = 20f;

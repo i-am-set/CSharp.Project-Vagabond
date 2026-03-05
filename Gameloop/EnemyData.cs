@@ -10,11 +10,6 @@ namespace ProjectVagabond.Battle
         public Gender Gender { get; set; } = Gender.Thing;
         public bool IsProperNoun { get; set; } = false;
 
-        public int EXPYield { get; set; }
-
-        public int MinHP { get; set; }
-        public int MaxHP { get; set; }
-
         public int MinStrength { get; set; }
         public int MaxStrength { get; set; }
 
@@ -26,8 +21,6 @@ namespace ProjectVagabond.Battle
 
         public int MinAgility { get; set; }
         public int MaxAgility { get; set; }
-
-        public int? MaxGuard { get; set; }
 
         public List<string> BasicMoves { get; set; } = new List<string>();
         public List<string> MovePool { get; set; } = new List<string>();

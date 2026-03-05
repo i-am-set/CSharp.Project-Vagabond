@@ -24,7 +24,6 @@ namespace ProjectVagabond.Battle
                 IsPlayerControlled = true,
                 Stats = new CombatantStats
                 {
-                    MaxHP = gameState.PlayerState.GetEffectiveStat(member, "MaxHP"),
                     CurrentHP = member.CurrentHP,
                     Strength = gameState.PlayerState.GetEffectiveStat(member, "Strength"),
                     Intelligence = gameState.PlayerState.GetEffectiveStat(member, "Intelligence"),
@@ -41,10 +40,6 @@ namespace ProjectVagabond.Battle
             combatant.Tags.Add("Type.Player");
             combatant.Tags.Add("Type.Ally");
 
-            combatant.VisualLevel = member.Level;
-            combatant.VisualEXP = member.CurrentEXP;
-            combatant.VisualMaxEXP = member.MaxEXP;
-
             var data = BattleDataCache.PartyMembers.Values.FirstOrDefault(p => p.Name == member.Name);
             if (data != null)
             {
@@ -55,7 +50,6 @@ namespace ProjectVagabond.Battle
                 if (data.IsProperNoun) combatant.Tags.Add("Prop.ProperNoun");
             }
 
-            combatant.CurrentGuard = combatant.MaxGuard;
             combatant.VisualHP = combatant.Stats.CurrentHP;
 
             if (member.IntrinsicAbilities != null && member.IntrinsicAbilities.Count > 0)
@@ -101,14 +95,11 @@ namespace ProjectVagabond.Battle
             combatant.Tags.Add($"Gender.{enemyData.Gender}");
             if (enemyData.IsProperNoun) combatant.Tags.Add("Prop.ProperNoun");
 
-            combatant.Stats.MaxHP = _random.Next(enemyData.MinHP, enemyData.MaxHP + 1) * 2;
-            combatant.Stats.CurrentHP = combatant.Stats.MaxHP;
             combatant.Stats.Strength = _random.Next(enemyData.MinStrength, enemyData.MaxStrength + 1);
             combatant.Stats.Intelligence = _random.Next(enemyData.MinIntelligence, enemyData.MaxIntelligence + 1);
             combatant.Stats.Tenacity = _random.Next(enemyData.MinTenacity, enemyData.MaxTenacity + 1);
             combatant.Stats.Agility = _random.Next(enemyData.MinAgility, enemyData.MaxAgility + 1);
-
-            combatant.CurrentGuard = combatant.MaxGuard;
+            combatant.Stats.CurrentHP = combatant.Stats.MaxHP;
 
             combatant.VisualHP = combatant.Stats.CurrentHP;
 

@@ -68,12 +68,12 @@ namespace ProjectVagabond.Utils
             });
         }
 
-        private static BattleCombatant CreateDummy(int currentHp, int maxHp)
+        private static BattleCombatant CreateDummy(int currentHp, int tenacity)
         {
             var c = new BattleCombatant
             {
                 Name = "Dummy",
-                Stats = new CombatantStats { CurrentHP = currentHp, MaxHP = maxHp },
+                Stats = new CombatantStats { CurrentHP = currentHp, Tenacity = tenacity },
                 BattleSlot = 0
             };
             return c;

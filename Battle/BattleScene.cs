@@ -69,7 +69,6 @@ namespace ProjectVagabond.Scenes
         private float _multiHitDelayTimer = 0f;
         private readonly Queue<Action> _pendingAnimations = new Queue<Action>();
         private readonly Random _random = new Random();
-        private Dictionary<string, int> _lastKnownTenacity = new Dictionary<string, int>();
 
         private float _watchdogTimer = 0f;
         private const float WATCHDOG_TIMEOUT = 4.0f;
@@ -120,8 +119,6 @@ namespace ProjectVagabond.Scenes
 
         // Floor Alpha Control
         private float _floorAlpha = 1f;
-
-        private LevelUpDialog _levelUpDialog;
 
         public BattleAnimationManager AnimationManager => _animationManager;
 
@@ -224,12 +221,6 @@ namespace ProjectVagabond.Scenes
 
             if (_battleManager != null)
             {
-                _lastKnownTenacity.Clear();
-                foreach (var c in _battleManager.AllCombatants)
-                {
-                    _lastKnownTenacity[c.CombatantID] = c.CurrentGuard;
-                }
-
                 // --- SETUP RANDOMIZED STAGGER ---
                 _introStaggerTimer = BATTLE_ENTRY_INITIAL_DELAY;
                 _introWatchdogTimer = 0f;
@@ -304,11 +295,8 @@ namespace ProjectVagabond.Scenes
             EventBus.Subscribe<GameEvents.CombatantSwitchingOut>(OnCombatantSwitchingOut);
             EventBus.Subscribe<GameEvents.MoveFailed>(OnMoveFailed);
             EventBus.Subscribe<GameEvents.SwitchSequenceInitiated>(OnSwitchSequenceInitiated);
-            EventBus.Subscribe<GameEvents.GuardChanged>(OnGuardChanged);
-            EventBus.Subscribe<GameEvents.GuardBroken>(OnGuardBroken);
             EventBus.Subscribe<GameEvents.RequestImpactSync>(OnRequestImpactSync);
             EventBus.Subscribe<GameEvents.CombatantVisualDeath>(OnCombatantVisualDeath);
-            EventBus.Subscribe<EXPGainedEvent>(OnEXPGained);
 
             _uiManager.OnForcedSwitchSelected += OnForcedSwitchSelected;
             _uiManager.OnFleeRequested += FleeBattle;
@@ -334,11 +322,8 @@ namespace ProjectVagabond.Scenes
             EventBus.Unsubscribe<GameEvents.CombatantSwitchingOut>(OnCombatantSwitchingOut);
             EventBus.Unsubscribe<GameEvents.MoveFailed>(OnMoveFailed);
             EventBus.Unsubscribe<GameEvents.SwitchSequenceInitiated>(OnSwitchSequenceInitiated);
-            EventBus.Unsubscribe<GameEvents.GuardChanged>(OnGuardChanged);
-            EventBus.Unsubscribe<GameEvents.GuardBroken>(OnGuardBroken);
             EventBus.Unsubscribe<GameEvents.RequestImpactSync>(OnRequestImpactSync);
             EventBus.Unsubscribe<GameEvents.CombatantVisualDeath>(OnCombatantVisualDeath);
-            EventBus.Unsubscribe<EXPGainedEvent>(OnEXPGained);
 
             _uiManager.OnForcedSwitchSelected -= OnForcedSwitchSelected;
             _uiManager.OnFleeRequested -= FleeBattle;
@@ -361,7 +346,7 @@ namespace ProjectVagabond.Scenes
             var playerParty = new List<BattleCombatant>();
 
             var leaderMember = gameState.PlayerState.Leader;
-            if (leaderMember != null && leaderMember.Level <= _progressionManager.CurrentSplitCap)
+            if (leaderMember != null)
             {
                 var leaderCombatant = BattleCombatantFactory.CreatePlayer(leaderMember, "player_leader");
                 leaderCombatant.BattleSlot = 0;
@@ -371,7 +356,6 @@ namespace ProjectVagabond.Scenes
             for (int i = 1; i < gameState.PlayerState.Party.Count; i++)
             {
                 var member = gameState.PlayerState.Party[i];
-                if (member.Level > _progressionManager.CurrentSplitCap) continue;
 
                 var memberCombatant = BattleCombatantFactory.CreatePlayer(member, $"player_ally_{i}");
                 memberCombatant.BattleSlot = playerParty.Count;
@@ -467,42 +451,6 @@ namespace ProjectVagabond.Scenes
                     _sceneManager.ChangeScene(GameSceneState.GameOver, TransitionType.None, TransitionType.None);
                 }
                 return;
-            }
-
-            if (_battleManager.CurrentPhase == BattleManager.BattlePhase.WaitingForLevelUp)
-            {
-                if (_levelUpDialog == null || !_levelUpDialog.IsActive)
-                {
-                    if (_battleManager.PendingLevelUps.Count > 0)
-                    {
-                        var levelUpData = _battleManager.PendingLevelUps.Dequeue();
-                        _levelUpDialog = new LevelUpDialog(this, levelUpData.Member, levelUpData.NewMoveId, (choice, moveId) =>
-                        {
-                            if (choice == LevelUpDialog.LevelUpChoice.Spell1)
-                            {
-                                levelUpData.Member.Spell1 = new MoveEntry(moveId, 0);
-                            }
-                            else if (choice == LevelUpDialog.LevelUpChoice.Spell2)
-                            {
-                                levelUpData.Member.Spell2 = new MoveEntry(moveId, 0);
-                            }
-                            else if (choice == LevelUpDialog.LevelUpChoice.Spell3)
-                            {
-                                levelUpData.Member.Spell3 = new MoveEntry(moveId, 0);
-                            }
-                            // Skip does nothing
-                        });
-                    }
-                    else
-                    {
-                        _battleManager.CompleteLevelUps();
-                    }
-                }
-
-                if (_levelUpDialog != null && _levelUpDialog.IsActive)
-                {
-                    _levelUpDialog.Update(effectiveGameTime);
-                }
             }
 
             if (_battleManager.CurrentPhase == BattleManager.BattlePhase.BattleStartIntro)
@@ -731,7 +679,7 @@ namespace ProjectVagabond.Scenes
             }
 
             bool stateChanged = _battleManager.CurrentPhase != _lastFramePhase || isUiBusy != _wasUiBusyLastFrame || isAnimBusy != _wasAnimatingLastFrame;
-            if (!stateChanged && !_isBattleOver && !_uiManager.IsWaitingForInput && _battleManager.CurrentPhase != BattleManager.BattlePhase.WaitingForLevelUp) _watchdogTimer += dt; else _watchdogTimer = 0f;
+            if (!stateChanged && !_isBattleOver && !_uiManager.IsWaitingForInput) _watchdogTimer += dt; else _watchdogTimer = 0f;
 
             if (_watchdogTimer > WATCHDOG_TIMEOUT)
             {
@@ -796,14 +744,6 @@ namespace ProjectVagabond.Scenes
             GameTime effectiveGameTime = ServiceLocator.Get<InputManager>().GetEffectiveGameTime(gameTime, canSpeedUp);
 
             _uiManager.DrawFullscreenDialogs(spriteBatch, font, effectiveGameTime, transform);
-            if (_levelUpDialog != null && _levelUpDialog.IsActive)
-            {
-                _levelUpDialog.DrawOverlay(spriteBatch);
-
-                spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp, null, null, null, transform);
-                _levelUpDialog.DrawContent(spriteBatch, font, effectiveGameTime, transform);
-                spriteBatch.End();
-            }
         }
 
         private void OnEXPGained(EXPGainedEvent e)
@@ -1206,34 +1146,6 @@ namespace ProjectVagabond.Scenes
                 }
                 if (result.WasProtected) _animationManager.StartProtectedIndicator(target.CombatantID, hudPosition);
             }
-        }
-
-        private void OnGuardChanged(GameEvents.GuardChanged e)
-        {
-            Vector2 hudPos = _renderer.GetCombatantHudCenterPosition(e.Combatant, _battleManager.AllCombatants);
-            Vector2 visualPos = _renderer.GetCombatantVisualCenterPosition(e.Combatant, _battleManager.AllCombatants);
-            var sparks = _particleSystemManager.CreateEmitter(ParticleEffects.CreateSparks());
-            sparks.Position = visualPos;
-            sparks.Settings.StartColor = _global.Palette_Sky;
-            sparks.Settings.EndColor = Color.White;
-            sparks.EmitBurst(5);
-
-            // Check for restore
-            int oldVal = _lastKnownTenacity.ContainsKey(e.Combatant.CombatantID) ? _lastKnownTenacity[e.Combatant.CombatantID] : 0;
-            if (e.NewValue > oldVal)
-            {
-                _renderer.TriggerTenacityAnimation(e.Combatant.CombatantID, false);
-            }
-            _lastKnownTenacity[e.Combatant.CombatantID] = e.NewValue;
-        }
-
-        private void OnGuardBroken(GameEvents.GuardBroken e)
-        {
-            Vector2 hudPos = _renderer.GetCombatantHudCenterPosition(e.Combatant, _battleManager.AllCombatants);
-            _animationManager.StartDamageIndicator(e.Combatant.CombatantID, "GUARD BROKEN", hudPos + new Vector2(0, -15), _global.TenacityBrokenIndicatorColor);
-            _hapticsManager.TriggerShake(5f, 0.2f);
-
-            _renderer.TriggerTenacityAnimation(e.Combatant.CombatantID, true);
         }
 
         private void OnRequestImpactSync(GameEvents.RequestImpactSync e)

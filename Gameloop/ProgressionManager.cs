@@ -18,7 +18,6 @@ namespace ProjectVagabond.Progression
 
         public SplitData? CurrentSplit { get; private set; }
         public SplitMap? CurrentSplitMap { get; private set; }
-        public int CurrentSplitCap { get; set; } = 5;
 
         private readonly Dictionary<BattleDifficulty, List<List<string>>> _categorizedBattles = new();
 
@@ -125,7 +124,7 @@ namespace ProjectVagabond.Progression
                     var enemyData = dataManager.GetEnemyData(archetypeId);
                     if (enemyData != null)
                     {
-                        powerScore += enemyData.MinHP + (enemyData.MinStrength + enemyData.MinIntelligence + enemyData.MinTenacity + enemyData.MinAgility) * 10;
+                        powerScore += (enemyData.MinTenacity * 2) + (enemyData.MinStrength + enemyData.MinIntelligence + enemyData.MinTenacity + enemyData.MinAgility) * 10;
                     }
                 }
                 encountersWithPower.Add((encounter, powerScore));

@@ -11,13 +11,10 @@ namespace ProjectVagabond.Battle
         public Gender Gender { get; set; } = Gender.Neutral;
         public bool IsProperNoun { get; set; } = true;
 
-        public int MaxHP { get; set; }
         public int Strength { get; set; }
         public int Intelligence { get; set; }
         public int Tenacity { get; set; }
         public int Agility { get; set; }
-
-        public int? MaxGuard { get; set; }
 
         public string BasicMoveId { get; set; }
         public string StartSpellSlot1MoveId { get; set; }

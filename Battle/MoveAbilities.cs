@@ -374,37 +374,6 @@ namespace ProjectVagabond.Battle.Abilities
         }
     }
 
-    public class RestoreGuardAbility : IAbility
-    {
-        public string Name => "Restore Guard";
-        public string Description => "Fully restores Guard.";
-        public int Priority => 0;
-
-        private readonly int _amount;
-
-        public RestoreGuardAbility(int amount) { _amount = amount; }
-
-        public void OnEvent(GameEvent e, BattleContext context)
-        {
-            if (e is ReactionEvent reaction && reaction.TriggeringAction.ChosenMove.Abilities.Contains(this))
-            {
-                var target = reaction.Target;
-                if (target.CurrentGuard < target.MaxGuard)
-                {
-                    int oldVal = target.CurrentGuard;
-
-                    target.CurrentGuard = target.MaxGuard;
-
-                    if (target.CurrentGuard != oldVal)
-                    {
-                        EventBus.Publish(new GameEvents.GuardChanged { Combatant = target, NewValue = target.CurrentGuard });
-                        EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{target.Name} fully restored Guard!" });
-                    }
-                }
-            }
-        }
-    }
-
     public class SelfSwitchAbility : IAbility
     {
         public string Name => "Self Switch";
@@ -418,38 +387,6 @@ namespace ProjectVagabond.Battle.Abilities
                 if (!reaction.Result.WasGraze)
                 {
                     EventBus.Publish(new GameEvents.DisengageTriggered { Actor = reaction.Actor });
-                }
-            }
-        }
-    }
-
-    public class DamageGuardAbility : IAbility
-    {
-        public string Name => "Damage Guard";
-        public string Description => "Reduces target's Guard directly.";
-        public int Priority => 0;
-
-        private readonly int _amount;
-        public DamageGuardAbility(int amount) { _amount = amount; }
-
-        public void OnEvent(GameEvent e, BattleContext context)
-        {
-            if (e is ReactionEvent reaction && reaction.TriggeringAction.ChosenMove.Abilities.Contains(this))
-            {
-                var target = reaction.Target;
-                if (target.CurrentGuard > 0)
-                {
-                    int oldVal = target.CurrentGuard;
-                    target.CurrentGuard = Math.Max(0, target.CurrentGuard - _amount);
-
-                    if (target.CurrentGuard != oldVal)
-                    {
-                        EventBus.Publish(new GameEvents.GuardChanged { Combatant = target, NewValue = target.CurrentGuard });
-                        EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{target.Name}'s guard was damaged!" });
-
-                        if (target.CurrentGuard == 0)
-                            EventBus.Publish(new GameEvents.GuardBroken { Combatant = target });
-                    }
                 }
             }
         }
@@ -514,63 +451,6 @@ namespace ProjectVagabond.Battle.Abilities
                         : reaction.Target;
 
                     targetCombatant.ModifyStatStage(_stat, _amount);
-                }
-            }
-        }
-    }
-
-    public class SacrificeGuardAbility : IAbility
-    {
-        public string Name => "Sacrifice Guard";
-        public string Description => "Lowers user's Guard on hit.";
-        public int Priority => 0;
-
-        private readonly int _amount;
-        public SacrificeGuardAbility(int amount) { _amount = amount; }
-
-        public void OnEvent(GameEvent e, BattleContext context)
-        {
-            if (e is ReactionEvent reaction && reaction.TriggeringAction.ChosenMove.Abilities.Contains(this))
-            {
-                var user = reaction.Actor;
-                if (user.CurrentGuard > 0)
-                {
-                    int oldVal = user.CurrentGuard;
-                    user.CurrentGuard = Math.Max(0, user.CurrentGuard - _amount);
-
-                    if (user.CurrentGuard != oldVal)
-                    {
-                        EventBus.Publish(new GameEvents.GuardChanged { Combatant = user, NewValue = user.CurrentGuard });
-                        EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{user.Name} sacrificed Guard!" });
-
-                        if (user.CurrentGuard == 0)
-                            EventBus.Publish(new GameEvents.GuardBroken { Combatant = user });
-                    }
-                }
-            }
-        }
-    }
-
-    public class DepleteGuardAbility : IAbility
-    {
-        public string Name => "Deplete Guard";
-        public string Description => "Shatters target's Guard completely.";
-        public int Priority => 0;
-
-        public void OnEvent(GameEvent e, BattleContext context)
-        {
-            if (e is ReactionEvent reaction && reaction.TriggeringAction.ChosenMove.Abilities.Contains(this))
-            {
-                if (reaction.Result.WasGraze) return;
-
-                var target = reaction.Target;
-                if (target.CurrentGuard > 0)
-                {
-                    target.CurrentGuard = 0;
-
-                    EventBus.Publish(new GameEvents.GuardChanged { Combatant = target, NewValue = 0 });
-                    EventBus.Publish(new GameEvents.GuardBroken { Combatant = target });
-                    EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{target.Name}'s guard was shattered!" });
                 }
             }
         }

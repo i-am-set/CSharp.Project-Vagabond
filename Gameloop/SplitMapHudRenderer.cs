@@ -791,28 +791,6 @@ namespace ProjectVagabond.UI
             string statusText = member.ActiveBuffs.Count > 0 ? $"{member.ActiveBuffs.Count} EFF" : "NORMAL";
             Vector2 statusTextSize = secondaryFont.MeasureString(statusText);
             spriteBatch.DrawStringSnapped(secondaryFont, statusText, new Vector2(MathF.Floor(centerX - statusTextSize.X / 2f), y), _global.Palette_LightPale);
-            y += secondaryFont.LineHeight + 6;
-
-            string expLabel = "EXP";
-            Vector2 expLabelSize = tertiaryFont.MeasureString(expLabel);
-            spriteBatch.DrawStringSnapped(tertiaryFont, expLabel, new Vector2(MathF.Floor(centerX - expLabelSize.X / 2f), y), _global.Palette_DarkPale);
-            y += tertiaryFont.LineHeight + 1;
-
-            string expValue = $"{member.CurrentEXP}/{member.MaxEXP}";
-            Vector2 expValueSize = tertiaryFont.MeasureString(expValue);
-            spriteBatch.DrawStringSnapped(tertiaryFont, expValue, new Vector2(MathF.Floor(centerX - expValueSize.X / 2f), y), _global.Palette_Sea);
-            y += tertiaryFont.LineHeight + 2;
-
-            int expBarWidth = (int)maxWidth - 12;
-            float expBarX = MathF.Floor(centerX - expBarWidth / 2f);
-            float expPercent = member.MaxEXP > 0 ? Math.Clamp((float)member.CurrentEXP / member.MaxEXP, 0f, 1f) : 0f;
-            int filledExp = (int)(expBarWidth * expPercent);
-
-            spriteBatch.DrawSnapped(_pixel, new Vector2(expBarX, y), null, _global.Palette_DarkestPale, 0f, Vector2.Zero, new Vector2(expBarWidth, 1), SpriteEffects.None, 0f);
-            if (filledExp > 0)
-            {
-                spriteBatch.DrawSnapped(_pixel, new Vector2(expBarX, y), null, _global.Palette_Sky, 0f, Vector2.Zero, new Vector2(filledExp, 1), SpriteEffects.None, 0f);
-            }
         }
 
         private (string Name, string Description) GetAbilityInfo(string abilityId)
@@ -869,19 +847,6 @@ namespace ProjectVagabond.UI
             spriteBatch.DrawStringSnapped(defaultFont, name, new Vector2(MathF.Floor(centerX - nameSize.X / 2f), MathF.Round(y)), nameColor);
 
             y += nameSize.Y - 4;
-
-            if (_spriteManager.LevelIconSprite != null)
-            {
-                string lvValue = member.Level.ToString();
-                float iconWidth = _spriteManager.LevelIconSprite.Width;
-                float gap = 1f;
-
-                int lvStartX = snappedX + 4;
-                int textY = (int)MathF.Round(y) + 31;
-
-                spriteBatch.DrawSnapped(_spriteManager.LevelIconSprite, new Vector2(lvStartX, textY + 1), _global.Palette_DarkestPale);
-                spriteBatch.DrawStringSnapped(tertiaryFont, lvValue, new Vector2(lvStartX + iconWidth + gap, textY), _global.Palette_DarkestPale);
-            }
 
             if (_spriteManager.HealthHearts3x3SpriteSheet != null)
             {

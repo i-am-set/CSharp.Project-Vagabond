@@ -193,8 +193,9 @@ namespace ProjectVagabond.Scenes
             {
                 if (BattleDataCache.PartyMembers.TryGetValue(id, out var data))
                 {
-                    if (data.MaxHP < _globalMinHP) _globalMinHP = data.MaxHP;
-                    if (data.MaxHP > _globalMaxHP) _globalMaxHP = data.MaxHP;
+                    int hp = data.Tenacity * 2;
+                    if (hp < _globalMinHP) _globalMinHP = hp;
+                    if (hp > _globalMaxHP) _globalMaxHP = hp;
                 }
             }
 
@@ -670,7 +671,7 @@ namespace ProjectVagabond.Scenes
 
             // --- Stats Block ---
             string[] labels = { "HP", "STR", "INT", "TEN", "AGI" };
-            int[] values = { data.MaxHP, data.Strength, data.Intelligence, data.Tenacity, data.Agility };
+            int[] values = { data.Tenacity * 2, data.Strength, data.Intelligence, data.Tenacity, data.Agility };
 
             int statBlockX = centerX - 30;
             float standardLabelWidth = secondaryFont.MeasureString("STR").Width;

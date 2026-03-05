@@ -204,17 +204,6 @@ namespace ProjectVagabond
             public BattleCombatant IncomingCombatant { get; set; }
         }
 
-        public struct GuardChanged
-        {
-            public BattleCombatant Combatant { get; set; }
-            public int NewValue { get; set; }
-        }
-
-        public struct GuardBroken
-        {
-            public BattleCombatant Combatant { get; set; }
-        }
-
         public struct RequestImpactSync
         {
             public MoveData Move { get; set; }

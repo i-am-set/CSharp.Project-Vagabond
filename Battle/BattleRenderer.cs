@@ -144,10 +144,7 @@ namespace ProjectVagabond.Battle.UI
             _enemySquashScales.Clear();
             _reticleController.Reset();
             _tenacityAnims.Clear();
-            _expAnimTimers.Clear();
-            _expAnimStartValues.Clear();
         }
-
         public List<TargetInfo> GetCurrentTargets() => _currentTargets;
 
         public Vector2 GetCombatantVisualCenterPosition(BattleCombatant combatant, IEnumerable<BattleCombatant> allCombatants)
@@ -306,7 +303,6 @@ namespace ProjectVagabond.Battle.UI
             UpdateActiveTurnOffsets(dt, combatants, currentActor);
             UpdateEnemySquash(dt);
             UpdateTenacityAnimations(dt);
-            UpdateEXPAnimations(dt, combatants);
 
             foreach (var controller in _attackAnimControllers.Values) controller.Update(gameTime);
 
@@ -332,53 +328,6 @@ namespace ProjectVagabond.Battle.UI
                     }
 
                     sprite.Update(gameTime, currentActor == c, manualBob, manualAlt);
-                }
-            }
-        }
-
-        private void UpdateEXPAnimations(float dt, IEnumerable<BattleCombatant> combatants)
-        {
-            var gameState = ServiceLocator.Get<GameState>();
-            if (gameState.PlayerState == null) return;
-
-            const float EXP_ANIM_DURATION = 2.0f;
-
-            foreach (var c in combatants.Where(c => c.IsPlayerControlled))
-            {
-                var pm = gameState.PlayerState.Party.FirstOrDefault(p => p.Name == c.Name);
-                if (pm != null)
-                {
-                    bool needsLevelUp = c.VisualLevel < pm.Level;
-                    float targetExp = needsLevelUp ? c.VisualMaxEXP : pm.CurrentEXP;
-
-                    if (Math.Abs(c.VisualEXP - targetExp) > 0.1f)
-                    {
-                        if (!_expAnimTimers.ContainsKey(c.CombatantID))
-                        {
-                            _expAnimTimers[c.CombatantID] = 0f;
-                            _expAnimStartValues[c.CombatantID] = c.VisualEXP;
-                        }
-
-                        _expAnimTimers[c.CombatantID] += dt;
-                        float progress = Math.Clamp(_expAnimTimers[c.CombatantID] / EXP_ANIM_DURATION, 0f, 1f);
-
-                        float easedProgress = Easing.EaseOutQuint(progress);
-                        c.VisualEXP = MathHelper.Lerp(_expAnimStartValues[c.CombatantID], targetExp, easedProgress);
-
-                        if (progress >= 1.0f)
-                        {
-                            c.VisualEXP = targetExp;
-                            _expAnimTimers.Remove(c.CombatantID);
-                            _expAnimStartValues.Remove(c.CombatantID);
-
-                            if (needsLevelUp)
-                            {
-                                c.VisualLevel++;
-                                c.VisualEXP = 0f;
-                                c.VisualMaxEXP = (c.VisualLevel == pm.Level) ? pm.MaxEXP : (int)(c.VisualMaxEXP * 1.2f);
-                            }
-                        }
-                    }
                 }
             }
         }

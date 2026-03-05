@@ -23,20 +23,10 @@ namespace ProjectVagabond.Battle
         public Gender Gender { get; set; } = Gender.Neutral;
         public bool IsProperNoun { get; set; } = false;
 
-        public int EXPYield { get; set; }
         public CombatantStats Stats { get; set; }
-
-        public int CurrentGuard { get; set; }
-        public int GuardExhaustion { get; set; } = 0;
-        public int MaxGuard => Math.Max(0, (Stats.Tenacity / 2) - GuardExhaustion);
-        public int SwitchInCount { get; set; } = 0;
 
         public float VisualHP { get; set; }
         public float VisualAlpha { get; set; } = 1.0f;
-
-        public int VisualLevel { get; set; }
-        public float VisualEXP { get; set; }
-        public int VisualMaxEXP { get; set; }
 
         public float HudVisualAlpha { get; set; } = 0f;
 
