@@ -449,8 +449,15 @@ namespace ProjectVagabond.Battle
                 _queuedDirection = new Vector2(1, 0);
             }
 
-            State = WizardState.Telegraphing;
-            _stateTimer = _queuedMove.ChargeTime;
+            if (_queuedMove.ExecuteOnChargeStart)
+            {
+                ExecuteAttack(arena);
+            }
+            else
+            {
+                State = WizardState.Telegraphing;
+                _stateTimer = _queuedMove.ChargeTime;
+            }
         }
 
         private void ExecuteAttack(ArenaScene arena)
@@ -529,7 +536,7 @@ namespace ProjectVagabond.Battle
 
                 float timeElapsed = _moveTextDuration - _moveTextTimer;
                 float scale = 1f;
-                float alpha = 1f;
+                float alpha = 0.5f;
 
                 float appearDuration = 0.2f;
                 float expireDuration = 0.25f;
@@ -542,7 +549,7 @@ namespace ProjectVagabond.Battle
                 {
                     float shrinkProgress = 1f - (_moveTextTimer / expireDuration);
                     scale = Math.Max(0f, 1f - Easing.EaseInBack(shrinkProgress));
-                    alpha = _moveTextTimer / expireDuration;
+                    alpha = (_moveTextTimer / expireDuration) * 0.5f;
                 }
 
                 if (scale > 0.01f)

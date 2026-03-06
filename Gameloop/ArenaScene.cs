@@ -120,15 +120,15 @@ namespace ProjectVagabond.Scenes
                 availableIds.Remove(playerEntry.Key);
             }
 
-            var selectedIds = availableIds.OrderBy(x => _random.Next()).Take(7).ToList();
+            var selectedIds = availableIds.OrderBy(x => _random.Next()).Take(5).ToList();
             selectedIds.Insert(0, playerEntry.Key ?? "0");
 
-            for (int i = 0; i < 8; i++)
+            for (int i = 0; i < 6; i++)
             {
                 string id = selectedIds[i];
                 if (!GameDataCache.WizardCats.TryGetValue(id, out var data)) continue;
 
-                float angle = (i / 8f) * MathHelper.TwoPi;
+                float angle = (i / 6f) * MathHelper.TwoPi;
                 float spawnRadius = GetMaxRadiusAtAngle(angle, 10f);
                 Vector2 spawnPos = _arenaCenter + new Vector2(MathF.Cos(angle) * spawnRadius, MathF.Sin(angle) * spawnRadius);
 

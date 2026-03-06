@@ -37,6 +37,7 @@ namespace ProjectVagabond.Animations
         public float ProjectileSpeed { get; set; }
         public ParticleEmitterData Emitter { get; set; }
         public ParticleEmitterData Trail { get; set; }
+        public ParticleEmitterData Impact { get; set; }
     }
 
     public class ParticleEmitterData
@@ -364,6 +365,9 @@ namespace ProjectVagabond.Animations
         private readonly List<ParticleEmitter> _trailEmitters = new();
         private float _timer;
         private Vector2 _projectilePos;
+        private Vector2 _startPos;
+        private Vector2 _targetPos;
+        private float _totalDist;
 
         public bool IsFinished { get; private set; }
         public bool HasTriggeredImpact { get; private set; }
@@ -376,7 +380,10 @@ namespace ProjectVagabond.Animations
         public void Start(ActiveAttack attack, ArenaScene arena)
         {
             var psm = ServiceLocator.Get<ParticleSystemManager>();
-            _projectilePos = attack.Origin;
+            _startPos = attack.Origin;
+            _targetPos = attack.TargetPosition;
+            _totalDist = Vector2.Distance(_startPos, _targetPos);
+            _projectilePos = _startPos;
 
             foreach (var layer in _layers)
             {
@@ -448,18 +455,22 @@ namespace ProjectVagabond.Animations
                 if (layer.Mode == "Projectile")
                 {
                     hasProjectiles = true;
-                    Vector2 dir = attack.TargetPosition - _projectilePos;
-                    float dist = dir.Length();
+                    float travelDuration = attack.Move.ChargeTime > 0 ? attack.Move.ChargeTime : 1.0f;
+                    float progress = Math.Clamp(_timer / travelDuration, 0f, 1f);
 
-                    if (layer.ProjectileSpeed <= 0 || dist < layer.ProjectileSpeed * dt)
+                    if (progress >= 1.0f)
                     {
-                        _projectilePos = attack.TargetPosition;
+                        _projectilePos = _targetPos;
                         _emitters[i].IsActive = false;
                         if (i < _trailEmitters.Count && _trailEmitters[i] != null) _trailEmitters[i].IsActive = false;
                     }
                     else
                     {
-                        if (dist > 0) _projectilePos += Vector2.Normalize(dir) * layer.ProjectileSpeed * dt;
+                        Vector2 basePos = Vector2.Lerp(_startPos, _targetPos, progress);
+                        float lobHeight = Math.Min(_totalDist * 0.4f, 80f);
+                        float yOffset = -4f * lobHeight * progress * (1f - progress);
+
+                        _projectilePos = basePos + new Vector2(0, yOffset);
                         allProjectilesArrived = false;
                     }
 
@@ -471,6 +482,18 @@ namespace ProjectVagabond.Animations
             if (hasProjectiles && allProjectilesArrived && !HasTriggeredImpact)
             {
                 HasTriggeredImpact = true;
+
+                var psm = ServiceLocator.Get<ParticleSystemManager>();
+                foreach (var layer in _layers)
+                {
+                    if (layer.Mode == "Projectile" && layer.Impact != null)
+                    {
+                        var impactSettings = AnimationFactory.MapEmitterData(layer.Impact);
+                        var impactEmitter = psm.CreateEmitter(impactSettings);
+                        impactEmitter.Position = _targetPos;
+                        impactEmitter.EmitBurst(impactSettings.BurstCount > 0 ? impactSettings.BurstCount : 30);
+                    }
+                }
             }
 
             if (!hasProjectiles && !HasTriggeredImpact)
@@ -479,6 +502,12 @@ namespace ProjectVagabond.Animations
             }
 
             float maxDuration = _layers.Max(l => l.Duration);
+            if (hasProjectiles)
+            {
+                float travelDuration = attack.Move.ChargeTime > 0 ? attack.Move.ChargeTime : 1.0f;
+                maxDuration = Math.Max(maxDuration, travelDuration + 0.5f);
+            }
+
             if (_timer >= maxDuration && (allProjectilesArrived || !hasProjectiles))
             {
                 IsFinished = true;

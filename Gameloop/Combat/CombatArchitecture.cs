@@ -17,7 +17,8 @@ namespace ProjectVagabond.Battle
                 ChargeTime = data.ChargeTime,
                 Weight = data.Weight,
                 CanTargetSelf = data.CanTargetSelf,
-                AnimationID = data.AnimationID
+                AnimationID = data.AnimationID,
+                ExecuteOnChargeStart = data.ExecuteOnChargeStart
             };
 
             if (data.DeliveryType == "InstantAOE")
@@ -302,6 +303,7 @@ namespace ProjectVagabond.Battle
         public float ChargeTime { get; set; }
         public int Weight { get; set; }
         public bool CanTargetSelf { get; set; }
+        public bool ExecuteOnChargeStart { get; set; }
         public IDelivery Delivery { get; set; }
         public List<IEffect> Effects { get; set; } = new List<IEffect>();
     }
