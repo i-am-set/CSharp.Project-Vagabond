@@ -45,7 +45,7 @@ namespace ProjectVagabond.Scenes
             return new Rectangle(0, 0, Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT);
         }
 
-        private float GetMaxRadiusAtAngle(float angle, float margin)
+        public float GetMaxRadiusAtAngle(float angle, float margin)
         {
             if (angle < 0) angle += MathHelper.TwoPi;
             float sectorAngle = MathHelper.TwoPi / _arenaEdges;

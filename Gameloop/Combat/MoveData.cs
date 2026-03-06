@@ -8,6 +8,7 @@
         public int BasePower { get; set; }
         public float ChargeTime { get; set; }
         public int Weight { get; set; }
+        public float Knockback { get; set; }
 
         public string DeliveryType { get; set; }
         public float DeliveryRadius { get; set; }

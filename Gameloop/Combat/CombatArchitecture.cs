@@ -16,6 +16,7 @@ namespace ProjectVagabond.Battle
                 BasePower = data.BasePower,
                 ChargeTime = data.ChargeTime,
                 Weight = data.Weight,
+                Knockback = data.Knockback,
                 CanTargetSelf = data.CanTargetSelf,
                 AnimationID = data.AnimationID,
                 ExecuteOnChargeStart = data.ExecuteOnChargeStart
@@ -113,7 +114,7 @@ namespace ProjectVagabond.Battle
                 {
                     foreach (var effect in attack.Move.Effects)
                     {
-                        effect.Apply(attack.Caster, target, attack.Move);
+                        effect.Apply(attack, target);
                     }
                 }
             }
@@ -149,15 +150,24 @@ namespace ProjectVagabond.Battle
 
     public interface IEffect
     {
-        void Apply(ArenaWizard caster, ArenaWizard target, MoveDefinition move);
+        void Apply(ActiveAttack attack, ArenaWizard target);
     }
 
     public class DamageEffect : IEffect
     {
-        public void Apply(ArenaWizard caster, ArenaWizard target, MoveDefinition move)
+        public void Apply(ActiveAttack attack, ArenaWizard target)
         {
-            int damage = Math.Max(1, (int)Math.Floor(move.BasePower * (caster.Strength + 10) / 200f));
-            target.TakeDamage(damage);
+            int damage = Math.Max(1, (int)Math.Floor(attack.Move.BasePower * (attack.Caster.Strength + 10) / 200f));
+            bool tookDamage = target.TakeDamage(damage);
+
+            if (tookDamage && attack.Move.Knockback > 0)
+            {
+                Vector2 sourcePos = attack.Caster.Position;
+                if (attack.DeliveryInstance is InstantAOEDelivery) sourcePos = attack.TargetPosition;
+                else if (attack.DeliveryInstance is TickingBeamDelivery) sourcePos = attack.Origin;
+
+                target.ApplyKnockback(sourcePos, attack.Move.Knockback);
+            }
         }
     }
 
@@ -165,9 +175,9 @@ namespace ProjectVagabond.Battle
     {
         public float HealPercentage { get; set; } = 0.5f;
 
-        public void Apply(ArenaWizard caster, ArenaWizard target, MoveDefinition move)
+        public void Apply(ActiveAttack attack, ArenaWizard target)
         {
-            int heal = Math.Max(1, (int)(move.BasePower * HealPercentage));
+            int heal = Math.Max(1, (int)(attack.Move.BasePower * HealPercentage));
             target.Heal(heal);
         }
     }
@@ -204,7 +214,7 @@ namespace ProjectVagabond.Battle
 
                 foreach (var effect in attack.Move.Effects)
                 {
-                    effect.Apply(attack.Caster, target, attack.Move);
+                    effect.Apply(attack, target);
                 }
             }
         }
@@ -281,7 +291,7 @@ namespace ProjectVagabond.Battle
 
                 foreach (var effect in attack.Move.Effects)
                 {
-                    effect.Apply(attack.Caster, target, attack.Move);
+                    effect.Apply(attack, target);
                 }
             }
         }
@@ -347,7 +357,7 @@ namespace ProjectVagabond.Battle
         {
             foreach (var effect in attack.Move.Effects)
             {
-                effect.Apply(attack.Caster, attack.Caster, attack.Move);
+                effect.Apply(attack, attack.Caster);
             }
         }
 
@@ -396,6 +406,7 @@ namespace ProjectVagabond.Battle
         public int BasePower { get; set; }
         public float ChargeTime { get; set; }
         public int Weight { get; set; }
+        public float Knockback { get; set; }
         public bool CanTargetSelf { get; set; }
         public bool ExecuteOnChargeStart { get; set; }
         public IDelivery Delivery { get; set; }

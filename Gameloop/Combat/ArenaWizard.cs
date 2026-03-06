@@ -68,6 +68,11 @@ namespace ProjectVagabond.Battle
         private float _moveTextTimer;
         private float _moveTextDuration;
 
+        private Vector2 _knockbackStartPos;
+        private Vector2 _knockbackTargetPos;
+        private float _knockbackTimer;
+        private float _knockbackDuration;
+
         private static readonly Random _random = new Random();
 
         public void Initialize(WizardCatData data, Vector2 startPos, bool isPlayer)
@@ -125,9 +130,10 @@ namespace ProjectVagabond.Battle
             );
         }
 
-        public void TakeDamage(int amount)
+        public bool TakeDamage(int amount)
         {
-            if (InvincibilityTimer > 0 || State == WizardState.Dead || CurrentHP <= 0) return;
+            // Added State == WizardState.Casting to grant i-frames during active move execution
+            if (InvincibilityTimer > 0 || State == WizardState.Casting || State == WizardState.Dead || CurrentHP <= 0) return false;
 
             int oldHP = CurrentHP;
             CurrentHP = Math.Clamp(CurrentHP - amount, 0, MaxHP);
@@ -141,13 +147,31 @@ namespace ProjectVagabond.Battle
                 // Instantly show the health bar when taking damage
                 _healthBarVisibilityTimer = HealthBarLingerDuration;
                 _healthBarAlpha = 1.0f;
+                return true;
             }
+            return false;
         }
 
         public void Heal(int amount)
         {
             if (State == WizardState.Dead) return;
             CurrentHP = Math.Clamp(CurrentHP + amount, 0, MaxHP);
+        }
+
+        public void ApplyKnockback(Vector2 sourcePosition, float distance)
+        {
+            if (State == WizardState.Dead) return;
+
+            Vector2 dir = Position - sourcePosition;
+            if (dir.LengthSquared() > 0)
+                dir.Normalize();
+            else
+                dir = new Vector2(1, 0);
+
+            _knockbackStartPos = Position;
+            _knockbackTargetPos = Position + dir * distance;
+            _knockbackDuration = InvincibilityDuration;
+            _knockbackTimer = _knockbackDuration;
         }
 
         private void TriggerHeartFlash(int oldHP, int newHP)
@@ -190,6 +214,27 @@ namespace ProjectVagabond.Battle
             if (InvincibilityTimer > 0)
             {
                 InvincibilityTimer -= dt;
+            }
+
+            if (_knockbackTimer > 0)
+            {
+                _knockbackTimer -= dt;
+                float progress = 1f - Math.Max(0, _knockbackTimer) / _knockbackDuration;
+                float eased = Easing.EaseOutCubic(progress);
+                Vector2 newPos = Vector2.Lerp(_knockbackStartPos, _knockbackTargetPos, eased);
+
+                Vector2 center = new Vector2(Global.VIRTUAL_WIDTH / 2f, Global.VIRTUAL_HEIGHT / 2f);
+                Vector2 fromCenter = newPos - center;
+                float angle = MathF.Atan2(fromCenter.Y, fromCenter.X);
+                float maxRadius = arena.GetMaxRadiusAtAngle(angle, 4f);
+
+                if (fromCenter.Length() > maxRadius)
+                {
+                    newPos = center + Vector2.Normalize(fromCenter) * maxRadius;
+                    _knockbackTargetPos = newPos;
+                }
+
+                Position = newPos;
             }
 
             if (HudShakeTimer > 0)
@@ -247,7 +292,7 @@ namespace ProjectVagabond.Battle
             switch (State)
             {
                 case WizardState.Moving:
-                    UpdateMovement(dt, arena);
+                    if (_knockbackTimer <= 0) UpdateMovement(dt, arena);
                     _actionTimer -= dt;
                     if (_actionTimer <= 0)
                     {
@@ -256,6 +301,22 @@ namespace ProjectVagabond.Battle
                     break;
 
                 case WizardState.Telegraphing:
+                    // Dynamically update direction and target position while charging in case of knockback
+                    if (_queuedMove.Delivery is SelfDelivery)
+                    {
+                        _queuedTargetPos = Position;
+                    }
+
+                    _queuedDirection = _queuedTargetPos - Position;
+                    if (_queuedDirection.LengthSquared() > 0)
+                    {
+                        _queuedDirection.Normalize();
+                    }
+                    else
+                    {
+                        _queuedDirection = new Vector2(1, 0);
+                    }
+
                     _stateTimer -= dt;
                     if (_stateTimer <= 0)
                     {
