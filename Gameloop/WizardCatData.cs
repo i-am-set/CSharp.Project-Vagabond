@@ -17,5 +17,9 @@ namespace ProjectVagabond.Battle
         public string Move2 { get; set; }
         public string Move3 { get; set; }
         public string Move4 { get; set; }
+
+        public string SparName { get; set; }
+        public int SparBasePower { get; set; }
+        public string SparEffectType { get; set; }
     }
 }

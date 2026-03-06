@@ -15,6 +15,10 @@ namespace ProjectVagabond
 
         public int PortraitIndex { get; set; } = 0;
 
+        public string SparName { get; set; }
+        public int SparBasePower { get; set; }
+        public string SparEffectType { get; set; }
+
         public WizardCat() { }
 
         public WizardCat Clone()

@@ -1,21 +1,5 @@
 [
   {
-    "ID": "basic_strike",
-    "Name": "Basic Strike",
-    "BasePower": 30,
-    "ChargeTime": 0.5,
-    "Weight": 30,
-    "DeliveryType": "InstantAOE",
-    "DeliveryRadius": 15.0,
-    "DeliveryWidth": 0.0,
-    "DeliveryLength": 0.0,
-    "DeliveryLifetime": 0.0,
-    "DeliveryTickRate": 0.0,
-    "EffectType": "Damage",
-    "EffectArg": 0.0,
-    "CanTargetSelf": false
-  },
-  {
     "ID": "magic_beam",
     "Name": "Magic Beam",
     "BasePower": 30,

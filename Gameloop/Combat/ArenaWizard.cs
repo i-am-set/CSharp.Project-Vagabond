@@ -1,5 +1,6 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using ProjectVagabond.Particles;
 using ProjectVagabond.Scenes;
 using ProjectVagabond.Utils;
 using System;
@@ -14,7 +15,8 @@ namespace ProjectVagabond.Battle
         Telegraphing,
         Casting,
         Recovering,
-        Dead
+        Dead,
+        Sparring
     }
 
     public class ArenaWizard
@@ -40,6 +42,20 @@ namespace ProjectVagabond.Battle
         public WizardState State = WizardState.Moving;
         public List<MoveDefinition> Moves = new List<MoveDefinition>();
 
+        public bool IsSparPassive;
+        public float SparCooldownTimer;
+        public MoveDefinition SparMove;
+
+        public bool IsHovered;
+
+        // --- Tunables ---
+        public float HealthBarLingerDuration = 2.5f;
+        public float HealthBarMinAlpha = 0.75f;
+        public float DeadBodyFadeDuration = 16.0f;
+        public float DeadBodyMinAlpha = 0.1f;
+
+        public float TimeSinceDeath { get; private set; } = 0f;
+
         private float _actionTimer;
         private float _stateTimer;
         private MoveDefinition _queuedMove;
@@ -47,8 +63,16 @@ namespace ProjectVagabond.Battle
         private Vector2 _queuedDirection;
         private ActiveAttack _currentActiveAttack;
 
+        private ArenaWizard _sparOpponent;
+        private bool _isSparWinner;
+        private int _sparPhase;
+        private float _sparTimer;
+
         private float[] _heartFlashTimers;
         private int[] _heartFlashFrame;
+
+        private float _healthBarVisibilityTimer = 0f;
+        private float _healthBarAlpha;
 
         private static readonly Random _random = new Random();
 
@@ -72,11 +96,31 @@ namespace ProjectVagabond.Battle
             _heartFlashFrame = new int[maxHearts];
 
             CurrentHP = MaxHP;
-            Speed = Agility * 5f + 10f;
+            Speed = Agility * 2.5f + 5f;
 
+            _healthBarAlpha = HealthBarMinAlpha;
             _actionTimer = GetRandomActionTime();
 
             LoadMoves(data);
+
+            SparMove = new MoveDefinition
+            {
+                Name = data.SparName ?? "Scratch",
+                BasePower = data.SparBasePower > 0 ? data.SparBasePower : 10,
+                ChargeTime = 0,
+                Weight = 0,
+                CanTargetSelf = false,
+                Delivery = new SelfDelivery()
+            };
+
+            if ((data.SparEffectType ?? "Damage") == "Damage")
+            {
+                SparMove.Effects.Add(new DamageEffect());
+            }
+            else if (data.SparEffectType == "Heal")
+            {
+                SparMove.Effects.Add(new HealEffect { HealPercentage = 1.0f });
+            }
         }
 
         private void LoadMoves(WizardCatData data)
@@ -143,6 +187,28 @@ namespace ProjectVagabond.Battle
             }
         }
 
+        public void InitiateSpar(ArenaWizard opponent, bool isWinner, ArenaScene arena)
+        {
+            State = WizardState.Sparring;
+            _sparOpponent = opponent;
+            _isSparWinner = isWinner;
+            _sparPhase = 0;
+            _sparTimer = 0.25f;
+
+            TargetPosition = arena.GetRandomArenaPoint();
+            _actionTimer = GetRandomActionTime();
+
+            _queuedMove = null;
+            _currentActiveAttack = null;
+        }
+
+        public float GetDeathAlpha()
+        {
+            if (State != WizardState.Dead) return 1.0f;
+            float progress = Math.Clamp(TimeSinceDeath / DeadBodyFadeDuration, 0f, 1f);
+            return MathHelper.Lerp(1.0f, DeadBodyMinAlpha, progress);
+        }
+
         public void Update(float dt, ArenaScene arena)
         {
             if (InvincibilityTimer > 0)
@@ -150,6 +216,12 @@ namespace ProjectVagabond.Battle
                 InvincibilityTimer -= dt;
             }
 
+            if (SparCooldownTimer > 0)
+            {
+                SparCooldownTimer -= dt;
+            }
+
+            bool isFlashing = false;
             if (_heartFlashTimers != null)
             {
                 for (int i = 0; i < _heartFlashTimers.Length; i++)
@@ -157,17 +229,38 @@ namespace ProjectVagabond.Battle
                     if (_heartFlashTimers[i] > 0)
                     {
                         _heartFlashTimers[i] -= dt;
+                        isFlashing = true;
                     }
                 }
             }
 
-            if (State == WizardState.Dead) return;
+            if (IsHovered || isFlashing)
+            {
+                _healthBarVisibilityTimer = HealthBarLingerDuration;
+                _healthBarAlpha = 1.0f;
+            }
+            else if (_healthBarVisibilityTimer > 0)
+            {
+                _healthBarVisibilityTimer -= dt;
+                _healthBarAlpha = 1.0f;
+            }
+            else if (_healthBarAlpha > HealthBarMinAlpha)
+            {
+                _healthBarAlpha = Math.Max(HealthBarMinAlpha, _healthBarAlpha - dt * 4f);
+            }
+
+            if (State == WizardState.Dead)
+            {
+                TimeSinceDeath += dt;
+                return;
+            }
 
             if (CurrentHP <= 0)
             {
                 if (InvincibilityTimer <= 0)
                 {
                     State = WizardState.Dead;
+                    TimeSinceDeath = 0f;
                 }
                 return;
             }
@@ -205,6 +298,40 @@ namespace ProjectVagabond.Battle
                     {
                         State = WizardState.Moving;
                         _actionTimer = GetRandomActionTime();
+                        IsSparPassive = true;
+                        SparCooldownTimer = 1.0f;
+                    }
+                    break;
+
+                case WizardState.Sparring:
+                    _sparTimer -= dt;
+                    if (_sparTimer <= 0)
+                    {
+                        if (_sparPhase == 0)
+                        {
+                            if (_isSparWinner && _sparOpponent != null && _sparOpponent.State != WizardState.Dead)
+                            {
+                                foreach (var effect in SparMove.Effects)
+                                {
+                                    effect.Apply(this, _sparOpponent, SparMove);
+                                }
+
+                                Vector2 midpoint = (Position + _sparOpponent.Position) / 2f;
+                                var psm = ServiceLocator.Get<ParticleSystemManager>();
+                                var emitter = psm.CreateEmitter(ParticleEffects.CreateHitSparks(0.5f));
+                                emitter.Position = midpoint;
+                                emitter.EmitBurst(5);
+                            }
+                            _sparPhase = 1;
+                            _sparTimer = 0.5f;
+                        }
+                        else if (_sparPhase == 1)
+                        {
+                            State = WizardState.Moving;
+                            IsSparPassive = true;
+                            SparCooldownTimer = 1.0f;
+                            _sparOpponent = null;
+                        }
                     }
                     break;
             }
@@ -223,7 +350,7 @@ namespace ProjectVagabond.Battle
             {
                 dir.Normalize();
                 Position += dir * Speed * dt;
-                HopTimer += dt * Speed * 0.25f;
+                HopTimer += dt * Speed * 0.5f;
             }
         }
 
@@ -302,7 +429,7 @@ namespace ProjectVagabond.Battle
 
         public void DrawUI(SpriteBatch spriteBatch, SpriteManager spriteManager)
         {
-            if (State == WizardState.Dead) return;
+            if (State == WizardState.Dead || _healthBarAlpha <= 0f) return;
 
             var sheet = spriteManager.HealthHearts3x3SpriteSheet;
             if (sheet == null) return;
@@ -319,6 +446,8 @@ namespace ProjectVagabond.Battle
 
             int startX = wizX - (totalWidth / 2) - 1;
             int startY = wizY - 10;
+
+            Color drawColor = Color.White * _healthBarAlpha;
 
             for (int i = 0; i < maxHearts; i++)
             {
@@ -340,7 +469,7 @@ namespace ProjectVagabond.Battle
                 var sourceRect = new Rectangle(frameIndex * heartWidth, 0, heartWidth, 3);
                 Vector2 pos = new Vector2(startX + i * (heartWidth + spacing), startY);
 
-                spriteBatch.DrawSnapped(sheet, pos, sourceRect, Color.White);
+                spriteBatch.DrawSnapped(sheet, pos, sourceRect, drawColor);
             }
         }
 

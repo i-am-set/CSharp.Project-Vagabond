@@ -8,10 +8,13 @@
     "Intelligence": 8,
     "Tenacity": 3,
     "Agility": 4,
-    "Move1": "basic_strike",
-    "Move2": "magic_beam",
+    "Move1": "magic_beam",
+    "Move2": "",
     "Move3": "",
-    "Move4": ""
+    "Move4": "",
+    "SparName": "Scratch",
+    "SparBasePower": 10,
+    "SparEffectType": "Damage"
   },
   {
     "MemberID": "1",
@@ -22,10 +25,13 @@
     "Intelligence": 6,
     "Tenacity": 3,
     "Agility": 5,
-    "Move1": "basic_strike",
-    "Move2": "snipe",
+    "Move1": "snipe",
+    "Move2": "",
     "Move3": "",
-    "Move4": ""
+    "Move4": "",
+    "SparName": "Scratch",
+    "SparBasePower": 10,
+    "SparEffectType": "Damage"
   },
   {
     "MemberID": "2",
@@ -36,10 +42,13 @@
     "Intelligence": 3,
     "Tenacity": 5,
     "Agility": 6,
-    "Move1": "basic_strike",
-    "Move2": "lick_wounds",
+    "Move1": "lick_wounds",
+    "Move2": "",
     "Move3": "",
-    "Move4": ""
+    "Move4": "",
+    "SparName": "Scratch",
+    "SparBasePower": 10,
+    "SparEffectType": "Damage"
   },
   {
     "MemberID": "3",
@@ -50,10 +59,13 @@
     "Intelligence": 2,
     "Tenacity": 4,
     "Agility": 8,
-    "Move1": "basic_strike",
-    "Move2": "basic_strike",
+    "Move1": "",
+    "Move2": "",
     "Move3": "",
-    "Move4": ""
+    "Move4": "",
+    "SparName": "Scratch",
+    "SparBasePower": 10,
+    "SparEffectType": "Damage"
   },
   {
     "MemberID": "4",
@@ -64,10 +76,13 @@
     "Intelligence": 3,
     "Tenacity": 8,
     "Agility": 3,
-    "Move1": "basic_strike",
-    "Move2": "magic_beam",
+    "Move1": "magic_beam",
+    "Move2": "",
     "Move3": "",
-    "Move4": ""
+    "Move4": "",
+    "SparName": "Scratch",
+    "SparBasePower": 10,
+    "SparEffectType": "Damage"
   },
   {
     "MemberID": "5",
@@ -81,7 +96,10 @@
     "Move1": "lick_wounds",
     "Move2": "magic_beam",
     "Move3": "",
-    "Move4": ""
+    "Move4": "",
+    "SparName": "Scratch",
+    "SparBasePower": 10,
+    "SparEffectType": "Damage"
   },
   {
     "MemberID": "6",
@@ -92,10 +110,13 @@
     "Intelligence": 7,
     "Tenacity": 3,
     "Agility": 6,
-    "Move1": "basic_strike",
-    "Move2": "snipe",
+    "Move1": "snipe",
+    "Move2": "",
     "Move3": "",
-    "Move4": ""
+    "Move4": "",
+    "SparName": "Scratch",
+    "SparBasePower": 10,
+    "SparEffectType": "Damage"
   },
   {
     "MemberID": "7",
@@ -106,10 +127,13 @@
     "Intelligence": 4,
     "Tenacity": 8,
     "Agility": 4,
-    "Move1": "basic_strike",
-    "Move2": "lick_wounds",
+    "Move1": "lick_wounds",
+    "Move2": "",
     "Move3": "",
-    "Move4": ""
+    "Move4": "",
+    "SparName": "Scratch",
+    "SparBasePower": 10,
+    "SparEffectType": "Damage"
   },
   {
     "MemberID": "8",
@@ -120,10 +144,13 @@
     "Intelligence": 6,
     "Tenacity": 3,
     "Agility": 4,
-    "Move1": "basic_strike",
-    "Move2": "magic_beam",
+    "Move1": "magic_beam",
+    "Move2": "",
     "Move3": "",
-    "Move4": ""
+    "Move4": "",
+    "SparName": "Scratch",
+    "SparBasePower": 10,
+    "SparEffectType": "Damage"
   },
   {
     "MemberID": "9",
@@ -134,10 +161,13 @@
     "Intelligence": 4,
     "Tenacity": 4,
     "Agility": 5,
-    "Move1": "basic_strike",
-    "Move2": "snipe",
+    "Move1": "snipe",
+    "Move2": "",
     "Move3": "",
-    "Move4": ""
+    "Move4": "",
+    "SparName": "Scratch",
+    "SparBasePower": 10,
+    "SparEffectType": "Damage"
   },
   {
     "MemberID": "10",
@@ -151,7 +181,10 @@
     "Move1": "lick_wounds",
     "Move2": "magic_beam",
     "Move3": "",
-    "Move4": ""
+    "Move4": "",
+    "SparName": "Scratch",
+    "SparBasePower": 10,
+    "SparEffectType": "Damage"
   },
   {
     "MemberID": "11",
@@ -162,10 +195,13 @@
     "Intelligence": 3,
     "Tenacity": 6,
     "Agility": 2,
-    "Move1": "basic_strike",
-    "Move2": "basic_strike",
+    "Move1": "",
+    "Move2": "",
     "Move3": "",
-    "Move4": ""
+    "Move4": "",
+    "SparName": "Scratch",
+    "SparBasePower": 10,
+    "SparEffectType": "Damage"
   },
   {
     "MemberID": "12",
@@ -176,10 +212,13 @@
     "Intelligence": 3,
     "Tenacity": 4,
     "Agility": 4,
-    "Move1": "basic_strike",
-    "Move2": "snipe",
+    "Move1": "snipe",
+    "Move2": "",
     "Move3": "",
-    "Move4": ""
+    "Move4": "",
+    "SparName": "Scratch",
+    "SparBasePower": 10,
+    "SparEffectType": "Damage"
   },
   {
     "MemberID": "13",
@@ -191,9 +230,12 @@
     "Tenacity": 7,
     "Agility": 1,
     "Move1": "lick_wounds",
-    "Move2": "lick_wounds",
+    "Move2": "",
     "Move3": "",
-    "Move4": ""
+    "Move4": "",
+    "SparName": "Scratch",
+    "SparBasePower": 10,
+    "SparEffectType": "Damage"
   },
   {
     "MemberID": "14",
@@ -204,9 +246,12 @@
     "Intelligence": 6,
     "Tenacity": 3,
     "Agility": 5,
-    "Move1": "basic_strike",
-    "Move2": "magic_beam",
+    "Move1": "magic_beam",
+    "Move2": "",
     "Move3": "",
-    "Move4": ""
+    "Move4": "",
+    "SparName": "Scratch",
+    "SparBasePower": 10,
+    "SparEffectType": "Damage"
   }
 ]
