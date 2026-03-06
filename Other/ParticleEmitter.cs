@@ -86,31 +86,48 @@ namespace ProjectVagabond.Particles
                 {
                     float lifeRatio = p.Age / p.Lifetime;
 
-                    // Apply Vector Field influence first. This is for turbulence/flicker.
-                    if (vectorField != null && Settings.VectorFieldInfluence > 0)
+                    if (!p.HasSettled)
                     {
-                        Vector2 fieldForce = vectorField.GetForceAt(p.Position);
-                        p.Velocity += fieldForce * Settings.VectorFieldInfluence * deltaTime;
+                        // Apply Vector Field influence first. This is for turbulence/flicker.
+                        if (vectorField != null && Settings.VectorFieldInfluence > 0)
+                        {
+                            Vector2 fieldForce = vectorField.GetForceAt(p.Position);
+                            p.Velocity += fieldForce * Settings.VectorFieldInfluence * deltaTime;
+                        }
+
+                        // Apply Attractor Force to pull particles towards a central line.
+                        if (Settings.AttractorXPosition.HasValue && Settings.AttractorStrength > 0)
+                        {
+                            float distanceX = Settings.AttractorXPosition.Value - p.Position.X;
+                            // The force is proportional to the distance, creating a spring-like pull to the center line.
+                            p.Velocity.X += distanceX * Settings.AttractorStrength * deltaTime;
+                        }
+
+                        // Physics
+                        p.Velocity += (p.Acceleration + Settings.Gravity) * deltaTime;
+
+                        if (Settings.Drag > 0)
+                        {
+                            p.Velocity *= Math.Max(0, 1.0f - Settings.Drag * deltaTime);
+                        }
+
+                        p.Position += p.Velocity * deltaTime;
+                        p.Rotation += p.RotationSpeed * deltaTime;
+
+                        if (Settings.Bounciness > 0 && p.Position.Y >= p.FloorY && p.Velocity.Y > 0)
+                        {
+                            p.Position.Y = p.FloorY;
+                            p.Velocity.Y = -p.Velocity.Y * Settings.Bounciness;
+                            p.Velocity.X *= 0.6f; // Ground friction
+
+                            if (Math.Abs(p.Velocity.Y) < 15f)
+                            {
+                                p.Velocity.Y = 0;
+                                p.Velocity.X = 0;
+                                p.HasSettled = true;
+                            }
+                        }
                     }
-
-                    // Apply Attractor Force to pull particles towards a central line.
-                    if (Settings.AttractorXPosition.HasValue && Settings.AttractorStrength > 0)
-                    {
-                        float distanceX = Settings.AttractorXPosition.Value - p.Position.X;
-                        // The force is proportional to the distance, creating a spring-like pull to the center line.
-                        p.Velocity.X += distanceX * Settings.AttractorStrength * deltaTime;
-                    }
-
-                    // Physics
-                    p.Velocity += (p.Acceleration + Settings.Gravity) * deltaTime;
-
-                    if (Settings.Drag > 0)
-                    {
-                        p.Velocity *= Math.Max(0, 1.0f - Settings.Drag * deltaTime);
-                    }
-
-                    p.Position += p.Velocity * deltaTime;
-                    p.Rotation += p.RotationSpeed * deltaTime;
 
                     // Over-lifetime changes
                     if (Settings.UsesCustomShaderData)
@@ -181,8 +198,10 @@ namespace ProjectVagabond.Particles
 
             p.Age = 0;
             p.Lifetime = Settings.Lifetime.GetValue(_random);
+            p.HasSettled = false;
 
             p.Position = Position; // Start at emitter center
+            p.FloorY = Position.Y + (float)(_random.NextDouble() * 2 - 1) * Settings.FloorScatterY;
 
             Vector2 localOffset = Vector2.Zero;
             switch (Settings.Shape)

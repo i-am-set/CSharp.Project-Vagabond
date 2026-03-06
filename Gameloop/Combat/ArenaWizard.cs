@@ -332,8 +332,8 @@ namespace ProjectVagabond.Battle
                             if (_isSparWinner && _sparOpponent != null && _sparOpponent.State != WizardState.Dead)
                             {
                                 _activeMoveText = SparMove.Name;
-                                _moveTextTimer = 1.5f;
-                                _moveTextDuration = 1.5f;
+                                _moveTextTimer = 0.8f;
+                                _moveTextDuration = 0.8f;
 
                                 if (!string.IsNullOrEmpty(SparMove.AnimationID))
                                 {
@@ -463,8 +463,8 @@ namespace ProjectVagabond.Battle
         private void ExecuteAttack(ArenaScene arena)
         {
             _activeMoveText = _queuedMove.Name;
-            _moveTextTimer = 1.5f;
-            _moveTextDuration = 1.5f;
+            _moveTextTimer = 0.8f;
+            _moveTextDuration = 0.8f;
 
             var attack = new ActiveAttack
             {
@@ -536,10 +536,10 @@ namespace ProjectVagabond.Battle
 
                 float timeElapsed = _moveTextDuration - _moveTextTimer;
                 float scale = 1f;
-                float alpha = 0.5f;
+                float alpha = 1f;
 
-                float appearDuration = 0.2f;
-                float expireDuration = 0.25f;
+                float appearDuration = 0.15f;
+                float expireDuration = 0.2f;
 
                 if (timeElapsed < appearDuration)
                 {
@@ -549,7 +549,7 @@ namespace ProjectVagabond.Battle
                 {
                     float shrinkProgress = 1f - (_moveTextTimer / expireDuration);
                     scale = Math.Max(0f, 1f - Easing.EaseInBack(shrinkProgress));
-                    alpha = (_moveTextTimer / expireDuration) * 0.5f;
+                    alpha = (_moveTextTimer / expireDuration);
                 }
 
                 if (scale > 0.01f)

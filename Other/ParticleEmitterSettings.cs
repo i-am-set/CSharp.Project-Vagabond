@@ -51,6 +51,8 @@ namespace ProjectVagabond.Particles
         public float? AttractorXPosition { get; set; } = null;
         public float AttractorStrength { get; set; } = 0f;
         public float EmitterRotation { get; set; } = 0f;
+        public float Bounciness { get; set; } = 0f;
+        public float FloorScatterY { get; set; } = 0f;
 
         // Rendering Properties
         public Texture2D Texture { get; set; }
@@ -114,6 +116,8 @@ namespace ProjectVagabond.Particles
                 AttractorXPosition = null,
                 AttractorStrength = 0f,
                 EmitterRotation = 0f,
+                Bounciness = 0f,
+                FloorScatterY = 0f,
 
                 // Rendering
                 Texture = ServiceLocator.Get<Texture2D>(), // Default 1x1 white pixel

@@ -23,6 +23,9 @@ namespace ProjectVagabond.Particles
 
         public Rectangle SourceRectangle;
 
+        public float FloorY;
+        public bool HasSettled;
+
         /// <summary>
         /// Resets the particle to a default state, ready for emission.
         /// </summary>
@@ -30,6 +33,7 @@ namespace ProjectVagabond.Particles
         {
             Age = 0f;
             Lifetime = 0f;
+            HasSettled = false;
         }
     }
 }

@@ -37,7 +37,7 @@ namespace ProjectVagabond.Animations
         public float ProjectileSpeed { get; set; }
         public ParticleEmitterData Emitter { get; set; }
         public ParticleEmitterData Trail { get; set; }
-        public ParticleEmitterData Impact { get; set; }
+        public List<ParticleEmitterData> Impacts { get; set; }
     }
 
     public class ParticleEmitterData
@@ -67,6 +67,8 @@ namespace ProjectVagabond.Animations
         public float GravityX { get; set; }
         public float GravityY { get; set; }
         public float Drag { get; set; }
+        public float Bounciness { get; set; }
+        public float FloorScatterY { get; set; }
         public string StartColor { get; set; }
         public string EndColor { get; set; }
         public float StartAlpha { get; set; }
@@ -150,6 +152,8 @@ namespace ProjectVagabond.Animations
             settings.InterpolateSize = data.InterpolateSize;
             settings.Gravity = new Vector2(data.GravityX, data.GravityY);
             settings.Drag = data.Drag;
+            settings.Bounciness = data.Bounciness;
+            settings.FloorScatterY = data.FloorScatterY;
 
             settings.StartColor = ParseColor(data.StartColor);
             settings.EndColor = ParseColor(data.EndColor);
@@ -486,12 +490,15 @@ namespace ProjectVagabond.Animations
                 var psm = ServiceLocator.Get<ParticleSystemManager>();
                 foreach (var layer in _layers)
                 {
-                    if (layer.Mode == "Projectile" && layer.Impact != null)
+                    if (layer.Mode == "Projectile" && layer.Impacts != null)
                     {
-                        var impactSettings = AnimationFactory.MapEmitterData(layer.Impact);
-                        var impactEmitter = psm.CreateEmitter(impactSettings);
-                        impactEmitter.Position = _targetPos;
-                        impactEmitter.EmitBurst(impactSettings.BurstCount > 0 ? impactSettings.BurstCount : 30);
+                        foreach (var impactData in layer.Impacts)
+                        {
+                            var impactSettings = AnimationFactory.MapEmitterData(impactData);
+                            var impactEmitter = psm.CreateEmitter(impactSettings);
+                            impactEmitter.Position = _targetPos;
+                            impactEmitter.EmitBurst(impactSettings.BurstCount > 0 ? impactSettings.BurstCount : 30);
+                        }
                     }
                 }
             }
