@@ -74,6 +74,10 @@ namespace ProjectVagabond.Battle
         private float _healthBarVisibilityTimer = 0f;
         private float _healthBarAlpha;
 
+        private string _activeMoveText;
+        private float _moveTextTimer;
+        private float _moveTextDuration;
+
         private static readonly Random _random = new Random();
 
         public void Initialize(WizardCatData data, Vector2 startPos, bool isPlayer)
@@ -221,6 +225,11 @@ namespace ProjectVagabond.Battle
                 SparCooldownTimer -= dt;
             }
 
+            if (_moveTextTimer > 0)
+            {
+                _moveTextTimer -= dt;
+            }
+
             bool isFlashing = false;
             if (_heartFlashTimers != null)
             {
@@ -234,7 +243,7 @@ namespace ProjectVagabond.Battle
                 }
             }
 
-            if (IsHovered || isFlashing)
+            if (IsHovered || isFlashing || _moveTextTimer > 0)
             {
                 _healthBarVisibilityTimer = HealthBarLingerDuration;
                 _healthBarAlpha = 1.0f;
@@ -311,6 +320,10 @@ namespace ProjectVagabond.Battle
                         {
                             if (_isSparWinner && _sparOpponent != null && _sparOpponent.State != WizardState.Dead)
                             {
+                                _activeMoveText = SparMove.Name;
+                                _moveTextTimer = 1.5f;
+                                _moveTextDuration = 1.5f;
+
                                 foreach (var effect in SparMove.Effects)
                                 {
                                     effect.Apply(this, _sparOpponent, SparMove);
@@ -411,6 +424,10 @@ namespace ProjectVagabond.Battle
 
         private void ExecuteAttack(ArenaScene arena)
         {
+            _activeMoveText = _queuedMove.Name;
+            _moveTextTimer = 1.5f;
+            _moveTextDuration = 1.5f;
+
             var attack = new ActiveAttack
             {
                 Caster = this,
@@ -470,6 +487,39 @@ namespace ProjectVagabond.Battle
                 Vector2 pos = new Vector2(startX + i * (heartWidth + spacing), startY);
 
                 spriteBatch.DrawSnapped(sheet, pos, sourceRect, drawColor);
+            }
+
+            if (_moveTextTimer > 0 && !string.IsNullOrEmpty(_activeMoveText))
+            {
+                var font = ServiceLocator.Get<Core>().SecondaryFont;
+                var global = ServiceLocator.Get<Global>();
+
+                float timeElapsed = _moveTextDuration - _moveTextTimer;
+                float scale = 1f;
+                float alpha = 1f;
+
+                float appearDuration = 0.2f;
+                float expireDuration = 0.25f;
+
+                if (timeElapsed < appearDuration)
+                {
+                    scale = Easing.EaseOutBack(timeElapsed / appearDuration);
+                }
+                else if (_moveTextTimer < expireDuration)
+                {
+                    float shrinkProgress = 1f - (_moveTextTimer / expireDuration);
+                    scale = Math.Max(0f, 1f - Easing.EaseInBack(shrinkProgress));
+                    alpha = _moveTextTimer / expireDuration;
+                }
+
+                if (scale > 0.01f)
+                {
+                    Vector2 textSize = font.MeasureString(_activeMoveText);
+                    Vector2 textPos = new Vector2(wizX, wizY - 16);
+                    Vector2 origin = new Vector2(textSize.X / 2f, textSize.Y / 2f);
+
+                    spriteBatch.DrawStringOutlinedSnapped(font, _activeMoveText, textPos, global.Palette_Sun * alpha, global.Palette_DarkShadow * alpha, 0f, origin, scale, SpriteEffects.None, 0f);
+                }
             }
         }
 
