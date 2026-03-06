@@ -18,7 +18,6 @@ namespace ProjectVagabond.Battle
         Recovering,
         Dead
     }
-
     public class ArenaWizard
     {
         public string Name;
@@ -138,6 +137,10 @@ namespace ProjectVagabond.Battle
                 TriggerHeartFlash(oldHP, CurrentHP);
                 InvincibilityTimer = InvincibilityDuration;
                 HudShakeTimer = 0.4f;
+
+                // Instantly show the health bar when taking damage
+                _healthBarVisibilityTimer = HealthBarLingerDuration;
+                _healthBarAlpha = 1.0f;
             }
         }
 
@@ -461,12 +464,6 @@ namespace ProjectVagabond.Battle
 
                 spriteBatch.DrawSnapped(sheet, pos, sourceRect, drawColor);
             }
-
-            var tertiaryFont = ServiceLocator.Get<Core>().TertiaryFont;
-            var globalRef = ServiceLocator.Get<Global>();
-            Vector2 nameSize = tertiaryFont.MeasureString(Name.ToUpper());
-            Vector2 namePos = new Vector2(MathF.Round(wizX - nameSize.X / 2f), MathF.Round(startY + 5));
-            spriteBatch.DrawStringOutlinedSnapped(tertiaryFont, Name.ToUpper(), namePos, Color.White * _healthBarAlpha, globalRef.Palette_Off * _healthBarAlpha);
         }
 
         public void DrawDebug(SpriteBatch spriteBatch, SpriteManager spriteManager)
