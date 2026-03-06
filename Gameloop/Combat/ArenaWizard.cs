@@ -83,6 +83,16 @@ namespace ProjectVagabond.Battle
 
         private static readonly Random _random = new Random();
 
+        private class FloatingText
+        {
+            public string Text;
+            public bool IsHealing;
+            public float Timer;
+            public float Duration;
+            public Vector2 LocalOffset;
+        }
+        private readonly List<FloatingText> _floatingTexts = new List<FloatingText>();
+
         public void Initialize(WizardCatData data, Vector2 startPos, bool isPlayer)
         {
             Name = data.Name;
@@ -159,8 +169,9 @@ namespace ProjectVagabond.Battle
 
             int oldHP = CurrentHP;
             CurrentHP = Math.Clamp(CurrentHP - amount, 0, MaxHP);
+            int actualDamage = oldHP - CurrentHP;
 
-            if (CurrentHP < oldHP)
+            if (actualDamage > 0)
             {
                 TriggerHeartFlash(oldHP, CurrentHP);
                 InvincibilityTimer = InvincibilityDuration;
@@ -168,6 +179,20 @@ namespace ProjectVagabond.Battle
 
                 _healthBarVisibilityTimer = HealthBarLingerDuration;
                 _healthBarAlpha = 1.0f;
+
+                var spriteManager = ServiceLocator.Get<SpriteManager>();
+                var hitbox = GetHitbox(spriteManager);
+                Vector2 centerOffset = new Vector2(hitbox.Center.X - Position.X, hitbox.Center.Y - Position.Y);
+
+                _floatingTexts.Add(new FloatingText
+                {
+                    Text = $"-{actualDamage}",
+                    IsHealing = false,
+                    Duration = 1.0f,
+                    Timer = 1.0f,
+                    LocalOffset = centerOffset + new Vector2(_random.Next(-8, 9), 0)
+                });
+
                 return true;
             }
             return false;
@@ -176,7 +201,26 @@ namespace ProjectVagabond.Battle
         public void Heal(int amount)
         {
             if (State == WizardState.Dead) return;
+
+            int oldHP = CurrentHP;
             CurrentHP = Math.Clamp(CurrentHP + amount, 0, MaxHP);
+            int actualHeal = CurrentHP - oldHP;
+
+            if (actualHeal > 0)
+            {
+                var spriteManager = ServiceLocator.Get<SpriteManager>();
+                var hitbox = GetHitbox(spriteManager);
+                Vector2 centerOffset = new Vector2(hitbox.Center.X - Position.X, hitbox.Center.Y - Position.Y);
+
+                _floatingTexts.Add(new FloatingText
+                {
+                    Text = $"+{actualHeal}",
+                    IsHealing = true,
+                    Duration = 1.0f,
+                    Timer = 1.0f,
+                    LocalOffset = centerOffset + new Vector2(_random.Next(-8, 9), 0)
+                });
+            }
         }
 
         public void ApplyKnockback(Vector2 sourcePosition, float distance, ArenaScene arena)
@@ -258,6 +302,17 @@ namespace ProjectVagabond.Battle
 
         public void Update(float dt, ArenaScene arena)
         {
+            for (int i = _floatingTexts.Count - 1; i >= 0; i--)
+            {
+                var ft = _floatingTexts[i];
+                ft.Timer -= dt;
+                ft.LocalOffset.Y -= 8f * dt;
+                if (ft.Timer <= 0)
+                {
+                    _floatingTexts.RemoveAt(i);
+                }
+            }
+
             if (InvincibilityTimer > 0)
             {
                 InvincibilityTimer -= dt;
@@ -544,10 +599,13 @@ namespace ProjectVagabond.Battle
             float hopOffset = State == WizardState.Dead ? 0f : -MathF.Abs(MathF.Sin(HopTimer)) * 4f;
             int wizY = (int)MathF.Round(Position.Y + hopOffset);
 
+            var global = ServiceLocator.Get<Global>();
+            var core = ServiceLocator.Get<Core>();
+            var tertiaryFont = core.TertiaryFont;
+
             if (_moveTextTimer > 0 && !string.IsNullOrEmpty(_activeMoveText) && State != WizardState.Dead)
             {
-                var font = ServiceLocator.Get<Core>().SecondaryFont;
-                var global = ServiceLocator.Get<Global>();
+                var font = core.SecondaryFont;
 
                 float timeElapsed = _moveTextDuration - _moveTextTimer;
                 float scale = 1f;
@@ -575,6 +633,24 @@ namespace ProjectVagabond.Battle
 
                     spriteBatch.DrawStringOutlinedSnapped(font, _activeMoveText, textPos, global.Palette_Sun * alpha, global.Palette_Off * alpha, 0f, origin, scale, SpriteEffects.None, 0f);
                 }
+            }
+
+            foreach (var ft in _floatingTexts)
+            {
+                bool isFlash = (ft.Timer % 0.1f) > 0.05f;
+                Color textColor = ft.IsHealing
+                    ? (isFlash ? global.Palette_Sun : global.Palette_Leaf)
+                    : (isFlash ? global.Palette_Sun : global.Palette_Rust);
+
+                float alphaMult = Math.Clamp(ft.Timer / 0.2f, 0f, 1f);
+                Color finalTextColor = textColor * alphaMult;
+                Color outlineColor = global.Palette_Off * alphaMult;
+
+                Vector2 textPos = new Vector2(MathF.Round(Position.X), MathF.Round(Position.Y)) + ft.LocalOffset;
+                Vector2 textSize = tertiaryFont.MeasureString(ft.Text);
+                Vector2 origin = new Vector2(MathF.Round(textSize.X / 2f), MathF.Round(textSize.Y / 2f));
+
+                spriteBatch.DrawStringOutlinedSnapped(tertiaryFont, ft.Text, textPos, finalTextColor, outlineColor, 0f, origin, 1f, SpriteEffects.None, 0f);
             }
 
             if (State == WizardState.Dead || _healthBarAlpha <= 0f) return;
