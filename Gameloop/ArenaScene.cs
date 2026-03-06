@@ -249,7 +249,7 @@ namespace ProjectVagabond.Scenes
                 var mainFont = ServiceLocator.Get<Core>().DefaultFont;
                 Vector2 size = mainFont.MeasureString(text);
                 Vector2 pos = _arenaCenter - (size / 2f);
-                spriteBatch.DrawStringOutlinedSnapped(mainFont, text, pos, _global.Palette_Sun, _global.Palette_DarkShadow);
+                spriteBatch.DrawStringSnapped(mainFont, text, pos, _global.Palette_Sun);
             }
         }
 
@@ -257,6 +257,7 @@ namespace ProjectVagabond.Scenes
         {
             var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
             var sheet = _spriteManager.HealthHearts3x3SpriteSheet;
+            var pixel = ServiceLocator.Get<Texture2D>();
             if (sheet == null) return;
 
             int totalWizards = _wizards.Count;
@@ -292,8 +293,15 @@ namespace ProjectVagabond.Scenes
 
                 string name = w.Name.ToUpper();
                 Vector2 nameSize = secondaryFont.MeasureString(name);
-                Color nameColor = w.IsPlayer ? _global.Palette_Sky : _global.Palette_Sun;
-                if (w.State == WizardState.Dead) nameColor = _global.Palette_DarkGray;
+
+                Color baseNameColor = w.IsPlayer ? _global.Palette_Sky : _global.Palette_Sun;
+                Color nameColor = baseNameColor;
+
+                if (w.State == WizardState.Dead)
+                {
+                    float fadeProgress = Math.Clamp(w.TimeSinceDeath / 0.5f, 0f, 1f);
+                    nameColor = Color.Lerp(baseNameColor, _global.Palette_Off, fadeProgress);
+                }
 
                 int maxHearts = (w.MaxHP + 1) / 2;
                 int heartWidth = 3;
@@ -307,7 +315,18 @@ namespace ProjectVagabond.Scenes
                 float currentY = (isLeft ? leftStartY : rightStartY) + sideIndex * spacingY;
 
                 Vector2 finalNamePos = new Vector2(MathF.Round(nameX + shakeX), MathF.Round(currentY + shakeY));
-                spriteBatch.DrawStringOutlinedSnapped(secondaryFont, name, finalNamePos, nameColor, _global.Palette_DarkShadow);
+                spriteBatch.DrawStringSnapped(secondaryFont, name, finalNamePos, nameColor);
+
+                if (w.State == WizardState.Dead)
+                {
+                    float fadeProgress = Math.Clamp(w.TimeSinceDeath / 0.5f, 0f, 1f);
+                    int currentLineWidth = (int)(nameSize.X * fadeProgress);
+                    if (currentLineWidth > 0)
+                    {
+                        int lineY = (int)MathF.Round(finalNamePos.Y + nameSize.Y / 2f);
+                        spriteBatch.Draw(pixel, new Rectangle((int)finalNamePos.X, lineY, currentLineWidth, 1), _global.Palette_Off);
+                    }
+                }
 
                 float hY = currentY + nameSize.Y + 2;
 

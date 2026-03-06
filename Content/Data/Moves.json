@@ -22,7 +22,7 @@
     "ID": "ray_of_frost",
     "Name": "Ray of Frost",
     "AnimationID": "anim_ray_of_frost",
-    "BasePower": 60,
+    "BasePower": 40,
     "ChargeTime": 0.5,
     "Weight": 20,
     "DeliveryType": "TickingBeam",

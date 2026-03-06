@@ -426,7 +426,7 @@ namespace ProjectVagabond.Battle
                     Vector2 textPos = new Vector2(wizX, wizY - 16);
                     Vector2 origin = new Vector2(textSize.X / 2f, textSize.Y / 2f);
 
-                    spriteBatch.DrawStringOutlinedSnapped(font, _activeMoveText, textPos, global.Palette_Sun * alpha, global.Palette_DarkShadow * alpha, 0f, origin, scale, SpriteEffects.None, 0f);
+                    spriteBatch.DrawStringOutlinedSnapped(font, _activeMoveText, textPos, global.Palette_Sun * alpha, global.Palette_Off * alpha, 0f, origin, scale, SpriteEffects.None, 0f);
                 }
             }
 
@@ -466,7 +466,7 @@ namespace ProjectVagabond.Battle
             var globalRef = ServiceLocator.Get<Global>();
             Vector2 nameSize = tertiaryFont.MeasureString(Name.ToUpper());
             Vector2 namePos = new Vector2(MathF.Round(wizX - nameSize.X / 2f), MathF.Round(startY + 5));
-            spriteBatch.DrawStringOutlinedSnapped(tertiaryFont, Name.ToUpper(), namePos, Color.White * _healthBarAlpha, globalRef.Palette_DarkShadow * _healthBarAlpha);
+            spriteBatch.DrawStringOutlinedSnapped(tertiaryFont, Name.ToUpper(), namePos, Color.White * _healthBarAlpha, globalRef.Palette_Off * _healthBarAlpha);
         }
 
         public void DrawDebug(SpriteBatch spriteBatch, SpriteManager spriteManager)
