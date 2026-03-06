@@ -37,7 +37,7 @@
     "Tenacity": 5,
     "Agility": 6,
     "Move1": "basic_strike",
-    "Move2": "heal_pulse",
+    "Move2": "lick_wounds",
     "Move3": "",
     "Move4": ""
   },
@@ -78,7 +78,7 @@
     "Intelligence": 5,
     "Tenacity": 5,
     "Agility": 5,
-    "Move1": "heal_pulse",
+    "Move1": "lick_wounds",
     "Move2": "magic_beam",
     "Move3": "",
     "Move4": ""
@@ -107,7 +107,7 @@
     "Tenacity": 8,
     "Agility": 4,
     "Move1": "basic_strike",
-    "Move2": "heal_pulse",
+    "Move2": "lick_wounds",
     "Move3": "",
     "Move4": ""
   },
@@ -148,7 +148,7 @@
     "Intelligence": 4,
     "Tenacity": 4,
     "Agility": 3,
-    "Move1": "heal_pulse",
+    "Move1": "lick_wounds",
     "Move2": "magic_beam",
     "Move3": "",
     "Move4": ""
@@ -190,8 +190,8 @@
     "Intelligence": 1,
     "Tenacity": 7,
     "Agility": 1,
-    "Move1": "heal_pulse",
-    "Move2": "heal_pulse",
+    "Move1": "lick_wounds",
+    "Move2": "lick_wounds",
     "Move3": "",
     "Move4": ""
   },

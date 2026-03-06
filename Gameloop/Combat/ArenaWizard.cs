@@ -249,14 +249,23 @@ namespace ProjectVagabond.Battle
                 }
             }
 
-            var potentialTargets = arena.GetAllWizards().Where(w => w != this && w.CurrentHP > 0).ToList();
-            if (potentialTargets.Count == 0)
+            ArenaWizard target = null;
+
+            if (_queuedMove.Delivery is SelfDelivery)
             {
-                _actionTimer = GetRandomActionTime();
-                return;
+                target = this;
+            }
+            else
+            {
+                var potentialTargets = arena.GetAllWizards().Where(w => w != this && w.CurrentHP > 0).ToList();
+                if (potentialTargets.Count == 0)
+                {
+                    _actionTimer = GetRandomActionTime();
+                    return;
+                }
+                target = potentialTargets[_random.Next(potentialTargets.Count)];
             }
 
-            var target = potentialTargets[_random.Next(potentialTargets.Count)];
             _queuedTargetPos = target.Position;
 
             _queuedDirection = _queuedTargetPos - Position;

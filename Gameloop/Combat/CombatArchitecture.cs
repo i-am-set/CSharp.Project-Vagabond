@@ -33,6 +33,10 @@ namespace ProjectVagabond.Battle
                     TickRate = data.DeliveryTickRate
                 };
             }
+            else if (data.DeliveryType == "Self")
+            {
+                move.Delivery = new SelfDelivery();
+            }
 
             if (data.EffectType == "Damage")
             {
@@ -216,6 +220,64 @@ namespace ProjectVagabond.Battle
                 Lifetime = this.Lifetime,
                 TickRate = this.TickRate
             };
+        }
+    }
+
+    public class SelfDelivery : IDelivery
+    {
+        public bool IsFinished { get; private set; }
+        private bool _hasTicked;
+        private float _visualTimer;
+
+        public void Start(ActiveAttack attack)
+        {
+            IsFinished = false;
+            _hasTicked = false;
+            _visualTimer = 0.25f;
+        }
+
+        public void Update(float dt, ArenaScene arena, ActiveAttack attack)
+        {
+            if (!_hasTicked)
+            {
+                foreach (var effect in attack.Move.Effects)
+                {
+                    effect.Apply(attack.Caster, attack.Caster, attack.Move);
+                }
+                _hasTicked = true;
+            }
+
+            _visualTimer -= dt;
+            if (_visualTimer <= 0) IsFinished = true;
+        }
+
+        public void Draw(SpriteBatch spriteBatch, ActiveAttack attack)
+        {
+            if (!ServiceLocator.Get<Global>().ShowDebugOverlays) return;
+            var circle = ServiceLocator.Get<SpriteManager>().CircleTextureSprite;
+            if (circle != null)
+            {
+                float scale = 16f / circle.Width;
+                Vector2 origin = new Vector2(circle.Width / 2f, circle.Height / 2f);
+                spriteBatch.Draw(circle, attack.Caster.Position, null, Color.Lime * 0.3f, 0f, origin, scale, SpriteEffects.None, 0f);
+            }
+        }
+
+        public void DrawTelegraph(SpriteBatch spriteBatch, Vector2 origin, Vector2 direction, Vector2 targetPos)
+        {
+            if (!ServiceLocator.Get<Global>().ShowDebugOverlays) return;
+            var circle = ServiceLocator.Get<SpriteManager>().CircleTextureSprite;
+            if (circle != null)
+            {
+                float scale = 16f / circle.Width;
+                Vector2 texOrigin = new Vector2(circle.Width / 2f, circle.Height / 2f);
+                spriteBatch.Draw(circle, targetPos, null, Color.Green * 0.3f, 0f, texOrigin, scale, SpriteEffects.None, 0f);
+            }
+        }
+
+        public IDelivery Clone()
+        {
+            return new SelfDelivery();
         }
     }
 
