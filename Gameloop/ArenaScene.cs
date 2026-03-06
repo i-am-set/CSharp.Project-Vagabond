@@ -221,24 +221,22 @@ namespace ProjectVagabond.Scenes
                 DrawWizard(spriteBatch, wizard);
             }
 
-            // Draw animations ON TOP of living wizards
             foreach (var attack in _activeAttacks)
             {
                 attack.Animation?.Draw(spriteBatch, attack);
             }
 
-            // --- DRAW PARTICLES ---
-            // Interrupt the current batch so the particle system can use its own blend states and sorting
             spriteBatch.End();
             ServiceLocator.Get<ParticleSystemManager>().Draw(spriteBatch, transform);
             spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp, null, null, null, transform);
-            // ----------------------
 
             foreach (var wizard in _wizards)
             {
                 wizard.DrawUI(spriteBatch, _spriteManager);
                 wizard.DrawDebug(spriteBatch, _spriteManager);
             }
+
+            DrawSideHUD(spriteBatch);
 
             string text = "";
             if (_stateTimer < 1f) text = "3";
@@ -252,6 +250,83 @@ namespace ProjectVagabond.Scenes
                 Vector2 size = mainFont.MeasureString(text);
                 Vector2 pos = _arenaCenter - (size / 2f);
                 spriteBatch.DrawStringOutlinedSnapped(mainFont, text, pos, _global.Palette_Sun, _global.Palette_DarkShadow);
+            }
+        }
+
+        private void DrawSideHUD(SpriteBatch spriteBatch)
+        {
+            var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
+            var sheet = _spriteManager.HealthHearts3x3SpriteSheet;
+            if (sheet == null) return;
+
+            int totalWizards = _wizards.Count;
+            if (totalWizards == 0) return;
+
+            int leftCount = (totalWizards + 1) / 2;
+            int rightCount = totalWizards - leftCount;
+            int spacingY = 24;
+            int itemHeight = (int)secondaryFont.LineHeight + 5; // Name height + 2px gap + 3px heart
+
+            int leftBlockHeight = (leftCount - 1) * spacingY + itemHeight;
+            int rightBlockHeight = (rightCount - 1) * spacingY + itemHeight;
+
+            int leftStartY = (Global.VIRTUAL_HEIGHT - leftBlockHeight) / 2;
+            int rightStartY = (Global.VIRTUAL_HEIGHT - rightBlockHeight) / 2;
+
+            int marginX = 12;
+
+            for (int i = 0; i < totalWizards; i++)
+            {
+                var w = _wizards[i];
+                bool isLeft = i < leftCount;
+                int sideIndex = isLeft ? i : i - leftCount;
+
+                float shakeX = 0f;
+                float shakeY = 0f;
+                if (w.HudShakeTimer > 0)
+                {
+                    float shakeMag = (w.HudShakeTimer / 0.4f) * 3f;
+                    shakeX = (float)(_random.NextDouble() * 2 - 1) * shakeMag;
+                    shakeY = (float)(_random.NextDouble() * 2 - 1) * shakeMag;
+                }
+
+                string name = w.Name.ToUpper();
+                Vector2 nameSize = secondaryFont.MeasureString(name);
+                Color nameColor = w.IsPlayer ? _global.Palette_Sky : _global.Palette_Sun;
+                if (w.State == WizardState.Dead) nameColor = _global.Palette_DarkGray;
+
+                int maxHearts = (w.MaxHP + 1) / 2;
+                int heartWidth = 3;
+                int heartSpacing = 1;
+                int heartsWidth = maxHearts * heartWidth + (maxHearts - 1) * heartSpacing;
+
+                float baseX = isLeft ? marginX : Global.VIRTUAL_WIDTH - marginX;
+                float nameX = isLeft ? baseX : baseX - nameSize.X;
+                float hX = isLeft ? baseX : baseX - heartsWidth;
+
+                float currentY = (isLeft ? leftStartY : rightStartY) + sideIndex * spacingY;
+
+                Vector2 finalNamePos = new Vector2(MathF.Round(nameX + shakeX), MathF.Round(currentY + shakeY));
+                spriteBatch.DrawStringOutlinedSnapped(secondaryFont, name, finalNamePos, nameColor, _global.Palette_DarkShadow);
+
+                float hY = currentY + nameSize.Y + 2;
+
+                for (int h = 0; h < maxHearts; h++)
+                {
+                    int heartVal = Math.Clamp(w.CurrentHP - h * 2, 0, 2);
+                    int frameIndex = 2;
+                    if (heartVal == 2) frameIndex = 0;
+                    else if (heartVal == 1) frameIndex = 1;
+
+                    int flashFrame = w.GetHeartFlashFrame(h);
+                    if (flashFrame != -1) frameIndex = flashFrame;
+
+                    var sourceRect = new Rectangle(frameIndex * heartWidth, 0, heartWidth, 3);
+                    Color heartColor = w.State == WizardState.Dead ? Color.Gray : Color.White;
+
+                    Vector2 finalHeartPos = new Vector2(MathF.Round(hX + h * (heartWidth + heartSpacing) + shakeX), MathF.Round(hY + shakeY));
+                    spriteBatch.DrawSnapped(sheet, finalHeartPos, sourceRect, heartColor);
+                }
             }
         }
 
@@ -271,35 +346,41 @@ namespace ProjectVagabond.Scenes
             float alpha = wizard.GetDeathAlpha();
             Color color = isDead ? (Color.Gray * alpha) : Color.White;
 
-            bool isInvincibleFlash = wizard.InvincibilityTimer > 0 && (wizard.InvincibilityTimer % 0.16f) > 0.08f;
+            bool drawSilhouette = false;
+            bool skipDraw = false;
 
-            if (wizard.IsPlayer && !isDead)
+            if (wizard.InvincibilityTimer > 0 && !isDead)
             {
-                var silhouette = _spriteManager.PlayerMasterSpriteSheetSilhouette;
-                if (silhouette != null)
-                {
-                    spriteBatch.DrawSnapped(silhouette, drawPos + new Vector2(-1, 0), sourceRect, _global.Palette_Sun, rotation, origin, 1f, SpriteEffects.None, 0f);
-                    spriteBatch.DrawSnapped(silhouette, drawPos + new Vector2(1, 0), sourceRect, _global.Palette_Sun, rotation, origin, 1f, SpriteEffects.None, 0f);
-                    spriteBatch.DrawSnapped(silhouette, drawPos + new Vector2(0, -1), sourceRect, _global.Palette_Sun, rotation, origin, 1f, SpriteEffects.None, 0f);
-                    spriteBatch.DrawSnapped(silhouette, drawPos + new Vector2(0, 1), sourceRect, _global.Palette_Sun, rotation, origin, 1f, SpriteEffects.None, 0f);
-                }
+                float timeActive = wizard.InvincibilityDuration - wizard.InvincibilityTimer;
+                int state = (int)(timeActive / 0.05f) % 3;
+
+                if (state == 0) drawSilhouette = true;
+                else if (state == 1) skipDraw = true;
             }
 
-            if (isInvincibleFlash && !isDead)
+            if (!skipDraw)
             {
-                var silhouette = _spriteManager.PlayerMasterSpriteSheetSilhouette;
-                if (silhouette != null)
+                if (wizard.IsPlayer && !isDead)
                 {
-                    spriteBatch.DrawSnapped(silhouette, drawPos, sourceRect, _global.Palette_Sun, rotation, origin, 1f, SpriteEffects.None, 0f);
+                    var silhouette = _spriteManager.PlayerMasterSpriteSheetSilhouette;
+                    if (silhouette != null)
+                    {
+                        spriteBatch.DrawSnapped(silhouette, drawPos + new Vector2(-1, 0), sourceRect, _global.Palette_Sun, rotation, origin, 1f, SpriteEffects.None, 0f);
+                        spriteBatch.DrawSnapped(silhouette, drawPos + new Vector2(1, 0), sourceRect, _global.Palette_Sun, rotation, origin, 1f, SpriteEffects.None, 0f);
+                        spriteBatch.DrawSnapped(silhouette, drawPos + new Vector2(0, -1), sourceRect, _global.Palette_Sun, rotation, origin, 1f, SpriteEffects.None, 0f);
+                        spriteBatch.DrawSnapped(silhouette, drawPos + new Vector2(0, 1), sourceRect, _global.Palette_Sun, rotation, origin, 1f, SpriteEffects.None, 0f);
+                    }
+                }
+
+                if (drawSilhouette)
+                {
+                    var silhouette = _spriteManager.PlayerMasterSpriteSheetSilhouette;
+                    spriteBatch.DrawSnapped(silhouette ?? sheet, drawPos, sourceRect, _global.Palette_Sun, rotation, origin, 1f, SpriteEffects.None, 0f);
                 }
                 else
                 {
-                    spriteBatch.DrawSnapped(sheet, drawPos, sourceRect, _global.Palette_Sun, rotation, origin, 1f, SpriteEffects.None, 0f);
+                    spriteBatch.DrawSnapped(sheet, drawPos, sourceRect, color, rotation, origin, 1f, SpriteEffects.None, 0f);
                 }
-            }
-            else
-            {
-                spriteBatch.DrawSnapped(sheet, drawPos, sourceRect, color, rotation, origin, 1f, SpriteEffects.None, 0f);
             }
         }
     }

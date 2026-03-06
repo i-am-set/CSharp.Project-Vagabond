@@ -15,6 +15,7 @@
         public float DeliveryLength { get; set; }
         public float DeliveryLifetime { get; set; }
         public float DeliveryTickRate { get; set; }
+        public float DeliveryDashDistance { get; set; }
 
         public string EffectType { get; set; }
         public float EffectArg { get; set; }

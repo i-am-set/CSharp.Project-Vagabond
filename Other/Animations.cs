@@ -28,6 +28,7 @@ namespace ProjectVagabond.Animations
         public int ImpactFrame { get; set; }
         public bool IsProjectile { get; set; }
         public float ProjectileSpeed { get; set; }
+        public bool DrawOnHitboxCenter { get; set; }
     }
 
     public class ParticleAnimationData
@@ -242,6 +243,21 @@ namespace ProjectVagabond.Animations
             {
                 _targetPositions.Add(attack.Origin);
             }
+            else if (_data.DrawOnHitboxCenter)
+            {
+                if (attack.DeliveryInstance is DashMeleeDelivery dash)
+                {
+                    _targetPositions.Add(attack.Origin + attack.Direction * (dash.DashDistance / 2f));
+                }
+                else if (attack.DeliveryInstance is TickingBeamDelivery beam)
+                {
+                    _targetPositions.Add(attack.Origin + attack.Direction * (beam.Length / 2f));
+                }
+                else
+                {
+                    _targetPositions.Add(attack.TargetPosition);
+                }
+            }
             else
             {
                 if (attack.DeliveryInstance is InstantAOEDelivery aoe)
@@ -266,13 +282,17 @@ namespace ProjectVagabond.Animations
                 {
                     _targetPositions.Add(attack.Caster.Position);
                 }
+                else if (attack.DeliveryInstance is DashMeleeDelivery)
+                {
+                    // Targets are added dynamically in Update as they are hit
+                }
                 else
                 {
                     _targetPositions.Add(attack.TargetPosition);
                 }
             }
 
-            if (_targetPositions.Count == 0)
+            if (_targetPositions.Count == 0 && !(attack.DeliveryInstance is DashMeleeDelivery))
             {
                 _targetPositions.Add(attack.TargetPosition);
             }
@@ -282,20 +302,32 @@ namespace ProjectVagabond.Animations
         {
             if (IsFinished) return;
 
+            if (attack.DeliveryInstance is DashMeleeDelivery dash && !_data.DrawOnHitboxCenter)
+            {
+                _targetPositions.Clear();
+                foreach (var target in dash.HitTargets)
+                {
+                    _targetPositions.Add(target.Position);
+                }
+            }
+
             if (_data.IsProjectile)
             {
-                Vector2 dir = attack.TargetPosition - _targetPositions[0];
-                float dist = dir.Length();
+                if (_targetPositions.Count > 0)
+                {
+                    Vector2 dir = attack.TargetPosition - _targetPositions[0];
+                    float dist = dir.Length();
 
-                if (_data.ProjectileSpeed <= 0 || dist < _data.ProjectileSpeed * dt)
-                {
-                    _targetPositions[0] = attack.TargetPosition;
-                    if (!HasTriggeredImpact) HasTriggeredImpact = true;
-                    IsFinished = true;
-                }
-                else
-                {
-                    if (dist > 0) _targetPositions[0] += Vector2.Normalize(dir) * _data.ProjectileSpeed * dt;
+                    if (_data.ProjectileSpeed <= 0 || dist < _data.ProjectileSpeed * dt)
+                    {
+                        _targetPositions[0] = attack.TargetPosition;
+                        if (!HasTriggeredImpact) HasTriggeredImpact = true;
+                        IsFinished = true;
+                    }
+                    else
+                    {
+                        if (dist > 0) _targetPositions[0] += Vector2.Normalize(dir) * _data.ProjectileSpeed * dt;
+                    }
                 }
             }
 
@@ -347,9 +379,9 @@ namespace ProjectVagabond.Animations
             var origin = new Vector2(frameWidth / 2f, frameHeight / 2f);
 
             float rotation = 0f;
-            if (_data.IsProjectile)
+            if (_data.IsProjectile || _data.DrawOnHitboxCenter)
             {
-                Vector2 dir = attack.TargetPosition - attack.Origin;
+                Vector2 dir = attack.Direction;
                 if (dir.LengthSquared() > 0) rotation = MathF.Atan2(dir.Y, dir.X);
             }
 

@@ -45,7 +45,8 @@ namespace ProjectVagabond.Battle
                 {
                     Width = data.DeliveryWidth,
                     Length = data.DeliveryLength,
-                    Lifetime = data.DeliveryLifetime
+                    Lifetime = data.DeliveryLifetime,
+                    DashDistance = data.DeliveryDashDistance
                 };
             }
 
@@ -67,10 +68,14 @@ namespace ProjectVagabond.Battle
         public float Width { get; set; }
         public float Length { get; set; }
         public float Lifetime { get; set; }
+        public float DashDistance { get; set; }
 
         private float _timer;
         private HashSet<ArenaWizard> _hitTargets = new HashSet<ArenaWizard>();
-        private Vector2 _dashVelocity;
+        public IEnumerable<ArenaWizard> HitTargets => _hitTargets;
+
+        private Vector2 _startPos;
+        private Vector2 _targetPos;
 
         public bool IsFinished => _timer >= Lifetime;
 
@@ -78,10 +83,8 @@ namespace ProjectVagabond.Battle
         {
             _timer = 0f;
             _hitTargets.Clear();
-            if (Lifetime > 0)
-                _dashVelocity = attack.Direction * (Length / Lifetime);
-            else
-                _dashVelocity = Vector2.Zero;
+            _startPos = attack.Caster.Position;
+            _targetPos = _startPos + attack.Direction * DashDistance;
         }
 
         public void TriggerImpact(ArenaScene arena, ActiveAttack attack)
@@ -95,8 +98,11 @@ namespace ProjectVagabond.Battle
 
             _timer += dt;
 
-            // Move the caster
-            attack.Caster.Position += _dashVelocity * dt;
+            float progress = Lifetime > 0 ? Math.Clamp(_timer / Lifetime, 0f, 1f) : 1f;
+            float easedProgress = Easing.EaseOutCubic(progress);
+
+            // Move the caster along the eased curve
+            attack.Caster.Position = Vector2.Lerp(_startPos, _targetPos, easedProgress);
 
             // Check hitbox (OBB in front of caster)
             foreach (var target in arena.GetWizardsInOBB(attack.Caster.Position, attack.Direction, Width, Length))
@@ -131,7 +137,13 @@ namespace ProjectVagabond.Battle
 
         public IDelivery Clone()
         {
-            return new DashMeleeDelivery { Width = this.Width, Length = this.Length, Lifetime = this.Lifetime };
+            return new DashMeleeDelivery
+            {
+                Width = this.Width,
+                Length = this.Length,
+                Lifetime = this.Lifetime,
+                DashDistance = this.DashDistance
+            };
         }
     }
 

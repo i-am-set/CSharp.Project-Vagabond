@@ -10,11 +10,12 @@
       "Scale": 0.5,
       "ImpactFrame": 2,
       "IsProjectile": false,
-      "ProjectileSpeed": 0.0
+      "ProjectileSpeed": 0.0,
+      "DrawOnHitboxCenter": true
     }
   },
   {
-    "ID": "anim_magic_beam",
+    "ID": "anim_ray_of_frost",
     "Type": "Particle",
     "Particles": [
       {

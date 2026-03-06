@@ -21,6 +21,7 @@ namespace ProjectVagabond.Battle
 
     public class ArenaWizard
     {
+        public string Name;
         public Vector2 Position;
         public Vector2 TargetPosition;
         public float Speed;
@@ -33,6 +34,7 @@ namespace ProjectVagabond.Battle
 
         public float InvincibilityDuration = 0.67f;
         public float InvincibilityTimer { get; private set; }
+        public float HudShakeTimer { get; private set; }
 
         public int Strength;
         public int Intelligence;
@@ -44,9 +46,7 @@ namespace ProjectVagabond.Battle
 
         public bool IsHovered;
 
-        // --- Tunables ---
         public float HealthBarLingerDuration = 2.5f;
-        public float HealthBarMinAlpha = 0.75f;
         public float DeadBodyFadeDuration = 16.0f;
         public float DeadBodyMinAlpha = 0.1f;
 
@@ -63,7 +63,7 @@ namespace ProjectVagabond.Battle
         private int[] _heartFlashFrame;
 
         private float _healthBarVisibilityTimer = 0f;
-        private float _healthBarAlpha;
+        private float _healthBarAlpha = 0f;
 
         private string _activeMoveText;
         private float _moveTextTimer;
@@ -73,6 +73,7 @@ namespace ProjectVagabond.Battle
 
         public void Initialize(WizardCatData data, Vector2 startPos, bool isPlayer)
         {
+            Name = data.Name;
             Position = startPos;
             TargetPosition = startPos;
             IsPlayer = isPlayer;
@@ -93,7 +94,7 @@ namespace ProjectVagabond.Battle
             CurrentHP = MaxHP;
             Speed = Agility * 2.5f + 5f;
 
-            _healthBarAlpha = HealthBarMinAlpha;
+            _healthBarAlpha = 0f;
             _actionTimer = GetRandomActionTime();
 
             LoadMoves(data);
@@ -136,6 +137,7 @@ namespace ProjectVagabond.Battle
             {
                 TriggerHeartFlash(oldHP, CurrentHP);
                 InvincibilityTimer = InvincibilityDuration;
+                HudShakeTimer = 0.4f;
             }
         }
 
@@ -163,6 +165,16 @@ namespace ProjectVagabond.Battle
             }
         }
 
+        public int GetHeartFlashFrame(int index)
+        {
+            if (_heartFlashTimers != null && index < _heartFlashTimers.Length && _heartFlashTimers[index] > 0)
+            {
+                bool isFlashFrame = (_heartFlashTimers[index] % 0.15f) > 0.075f;
+                if (isFlashFrame) return _heartFlashFrame[index];
+            }
+            return -1;
+        }
+
         public float GetDeathAlpha()
         {
             if (State != WizardState.Dead) return 1.0f;
@@ -177,12 +189,16 @@ namespace ProjectVagabond.Battle
                 InvincibilityTimer -= dt;
             }
 
+            if (HudShakeTimer > 0)
+            {
+                HudShakeTimer -= dt;
+            }
+
             if (_moveTextTimer > 0)
             {
                 _moveTextTimer -= dt;
             }
 
-            bool isFlashing = false;
             if (_heartFlashTimers != null)
             {
                 for (int i = 0; i < _heartFlashTimers.Length; i++)
@@ -190,12 +206,11 @@ namespace ProjectVagabond.Battle
                     if (_heartFlashTimers[i] > 0)
                     {
                         _heartFlashTimers[i] -= dt;
-                        isFlashing = true;
                     }
                 }
             }
 
-            if (IsHovered || isFlashing || _moveTextTimer > 0)
+            if (IsHovered)
             {
                 _healthBarVisibilityTimer = HealthBarLingerDuration;
                 _healthBarAlpha = 1.0f;
@@ -205,9 +220,9 @@ namespace ProjectVagabond.Battle
                 _healthBarVisibilityTimer -= dt;
                 _healthBarAlpha = 1.0f;
             }
-            else if (_healthBarAlpha > HealthBarMinAlpha)
+            else if (_healthBarAlpha > 0f)
             {
-                _healthBarAlpha = Math.Max(HealthBarMinAlpha, _healthBarAlpha - dt * 4f);
+                _healthBarAlpha = Math.Max(0f, _healthBarAlpha - dt * 4f);
             }
 
             if (State == WizardState.Dead)
@@ -378,50 +393,11 @@ namespace ProjectVagabond.Battle
 
         public void DrawUI(SpriteBatch spriteBatch, SpriteManager spriteManager)
         {
-            if (State == WizardState.Dead || _healthBarAlpha <= 0f) return;
-
-            var sheet = spriteManager.HealthHearts3x3SpriteSheet;
-            if (sheet == null) return;
-
-            int maxHearts = (MaxHP + 1) / 2;
-            int heartWidth = 3;
-            int spacing = 1;
-            int totalWidth = maxHearts * heartWidth + (maxHearts - 1) * spacing;
-
-            float hopOffset = State == WizardState.Dead ? 0f : -MathF.Abs(MathF.Sin(HopTimer)) * 4f;
-
             int wizX = (int)MathF.Round(Position.X);
+            float hopOffset = State == WizardState.Dead ? 0f : -MathF.Abs(MathF.Sin(HopTimer)) * 4f;
             int wizY = (int)MathF.Round(Position.Y + hopOffset);
 
-            int startX = wizX - (totalWidth / 2) - 1;
-            int startY = wizY - 10;
-
-            Color drawColor = Color.White * _healthBarAlpha;
-
-            for (int i = 0; i < maxHearts; i++)
-            {
-                int heartVal = Math.Clamp(CurrentHP - i * 2, 0, 2);
-                int frameIndex = 2;
-
-                if (heartVal == 2) frameIndex = 0;
-                else if (heartVal == 1) frameIndex = 1;
-
-                if (_heartFlashTimers != null && i < _heartFlashTimers.Length && _heartFlashTimers[i] > 0)
-                {
-                    bool isFlashFrame = (_heartFlashTimers[i] % 0.15f) > 0.075f;
-                    if (isFlashFrame)
-                    {
-                        frameIndex = _heartFlashFrame[i];
-                    }
-                }
-
-                var sourceRect = new Rectangle(frameIndex * heartWidth, 0, heartWidth, 3);
-                Vector2 pos = new Vector2(startX + i * (heartWidth + spacing), startY);
-
-                spriteBatch.DrawSnapped(sheet, pos, sourceRect, drawColor);
-            }
-
-            if (_moveTextTimer > 0 && !string.IsNullOrEmpty(_activeMoveText))
+            if (_moveTextTimer > 0 && !string.IsNullOrEmpty(_activeMoveText) && State != WizardState.Dead)
             {
                 var font = ServiceLocator.Get<Core>().SecondaryFont;
                 var global = ServiceLocator.Get<Global>();
@@ -453,6 +429,44 @@ namespace ProjectVagabond.Battle
                     spriteBatch.DrawStringOutlinedSnapped(font, _activeMoveText, textPos, global.Palette_Sun * alpha, global.Palette_DarkShadow * alpha, 0f, origin, scale, SpriteEffects.None, 0f);
                 }
             }
+
+            if (State == WizardState.Dead || _healthBarAlpha <= 0f) return;
+
+            var sheet = spriteManager.HealthHearts3x3SpriteSheet;
+            if (sheet == null) return;
+
+            int maxHearts = (MaxHP + 1) / 2;
+            int heartWidth = 3;
+            int spacing = 1;
+            int totalWidth = maxHearts * heartWidth + (maxHearts - 1) * spacing;
+
+            int startX = wizX - (totalWidth / 2) - 1;
+            int startY = wizY + 11;
+
+            Color drawColor = Color.White * _healthBarAlpha;
+
+            for (int i = 0; i < maxHearts; i++)
+            {
+                int heartVal = Math.Clamp(CurrentHP - i * 2, 0, 2);
+                int frameIndex = 2;
+
+                if (heartVal == 2) frameIndex = 0;
+                else if (heartVal == 1) frameIndex = 1;
+
+                int flashFrame = GetHeartFlashFrame(i);
+                if (flashFrame != -1) frameIndex = flashFrame;
+
+                var sourceRect = new Rectangle(frameIndex * heartWidth, 0, heartWidth, 3);
+                Vector2 pos = new Vector2(startX + i * (heartWidth + spacing), startY);
+
+                spriteBatch.DrawSnapped(sheet, pos, sourceRect, drawColor);
+            }
+
+            var tertiaryFont = ServiceLocator.Get<Core>().TertiaryFont;
+            var globalRef = ServiceLocator.Get<Global>();
+            Vector2 nameSize = tertiaryFont.MeasureString(Name.ToUpper());
+            Vector2 namePos = new Vector2(MathF.Round(wizX - nameSize.X / 2f), MathF.Round(startY + 5));
+            spriteBatch.DrawStringOutlinedSnapped(tertiaryFont, Name.ToUpper(), namePos, Color.White * _healthBarAlpha, globalRef.Palette_DarkShadow * _healthBarAlpha);
         }
 
         public void DrawDebug(SpriteBatch spriteBatch, SpriteManager spriteManager)
