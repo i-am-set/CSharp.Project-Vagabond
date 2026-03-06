@@ -325,7 +325,9 @@ namespace ProjectVagabond.Particles
 
                 if (Settings.SnapToPixelGrid)
                 {
-                    spriteBatch.DrawSnapped(Settings.Texture, p.Position, sourceRect, drawColor, p.Rotation, origin, scale, SpriteEffects.None, Settings.LayerDepth);
+                    // Round the origin to prevent half-pixel offsets on odd-sized textures (like 3x3)
+                    Vector2 snappedOrigin = new Vector2(MathF.Round(origin.X), MathF.Round(origin.Y));
+                    spriteBatch.DrawSnapped(Settings.Texture, p.Position, sourceRect, drawColor, p.Rotation, snappedOrigin, scale, SpriteEffects.None, Settings.LayerDepth);
                 }
                 else
                 {

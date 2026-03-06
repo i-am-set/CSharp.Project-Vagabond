@@ -209,15 +209,15 @@
           "EmitFrom": "Volume",
           "EmitterSizeX": 16.0,
           "EmitterSizeY": 16.0,
-          "EmissionRate": 10.0,
-          "MaxParticles": 10,
+          "EmissionRate": 20.0,
+          "MaxParticles": 20,
           "VelocityPattern": "Cartesian",
           "VelocityXMin": -10.0,
           "VelocityXMax": 10.0,
           "VelocityYMin": -5.0,
           "VelocityYMax": -10.0,
-          "LifetimeMin": 0.8,
-          "LifetimeMax": 1.2,
+          "LifetimeMin": 0.7,
+          "LifetimeMax": 0.75,
           "SizeMin": 1.0,
           "SizeMax": 1.0,
           "EndSizeMin": 1.0,
@@ -226,9 +226,10 @@
           "StartColor": "Palette_Leaf",
           "EndColor": "Palette_Sun",
           "StartAlpha": 1.0,
-          "EndAlpha": 0.5,
+          "EndAlpha": 1.0,
           "BlendMode": "Additive",
-          "TexturePath": "HealParticle"
+          "TexturePath": "HealParticle",
+          "SnapToPixelGrid": true
         }
       }
     ]

@@ -84,6 +84,7 @@ namespace ProjectVagabond.Animations
         public float EndAlpha { get; set; }
         public string BlendMode { get; set; }
         public string TexturePath { get; set; }
+        public bool SnapToPixelGrid { get; set; }
     }
 
     public interface IAnimationInstance
@@ -178,6 +179,7 @@ namespace ProjectVagabond.Animations
             settings.EndAlpha = data.EndAlpha;
 
             settings.BlendMode = data.BlendMode == "Additive" ? BlendState.Additive : BlendState.AlphaBlend;
+            settings.SnapToPixelGrid = data.SnapToPixelGrid;
 
             if (!string.IsNullOrEmpty(data.TexturePath))
             {
