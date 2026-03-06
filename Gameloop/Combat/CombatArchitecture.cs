@@ -114,7 +114,7 @@ namespace ProjectVagabond.Battle
                 {
                     foreach (var effect in attack.Move.Effects)
                     {
-                        effect.Apply(attack, target);
+                        effect.Apply(attack, target, arena);
                     }
                 }
             }
@@ -150,12 +150,12 @@ namespace ProjectVagabond.Battle
 
     public interface IEffect
     {
-        void Apply(ActiveAttack attack, ArenaWizard target);
+        void Apply(ActiveAttack attack, ArenaWizard target, ArenaScene arena);
     }
 
     public class DamageEffect : IEffect
     {
-        public void Apply(ActiveAttack attack, ArenaWizard target)
+        public void Apply(ActiveAttack attack, ArenaWizard target, ArenaScene arena)
         {
             int damage = Math.Max(1, (int)Math.Floor(attack.Move.BasePower * (attack.Caster.Strength + 10) / 200f));
             bool tookDamage = target.TakeDamage(damage);
@@ -166,7 +166,7 @@ namespace ProjectVagabond.Battle
                 if (attack.DeliveryInstance is InstantAOEDelivery) sourcePos = attack.TargetPosition;
                 else if (attack.DeliveryInstance is TickingBeamDelivery) sourcePos = attack.Origin;
 
-                target.ApplyKnockback(sourcePos, attack.Move.Knockback);
+                target.ApplyKnockback(sourcePos, attack.Move.Knockback, arena);
             }
         }
     }
@@ -175,7 +175,7 @@ namespace ProjectVagabond.Battle
     {
         public float HealPercentage { get; set; } = 0.5f;
 
-        public void Apply(ActiveAttack attack, ArenaWizard target)
+        public void Apply(ActiveAttack attack, ArenaWizard target, ArenaScene arena)
         {
             int heal = Math.Max(1, (int)(attack.Move.BasePower * HealPercentage));
             target.Heal(heal);
@@ -214,7 +214,7 @@ namespace ProjectVagabond.Battle
 
                 foreach (var effect in attack.Move.Effects)
                 {
-                    effect.Apply(attack, target);
+                    effect.Apply(attack, target, arena);
                 }
             }
         }
@@ -291,7 +291,7 @@ namespace ProjectVagabond.Battle
 
                 foreach (var effect in attack.Move.Effects)
                 {
-                    effect.Apply(attack, target);
+                    effect.Apply(attack, target, arena);
                 }
             }
         }
@@ -357,7 +357,7 @@ namespace ProjectVagabond.Battle
         {
             foreach (var effect in attack.Move.Effects)
             {
-                effect.Apply(attack, attack.Caster);
+                effect.Apply(attack, attack.Caster, arena);
             }
         }
 

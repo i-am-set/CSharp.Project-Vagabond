@@ -23,7 +23,7 @@
     "ID": "ray_of_frost",
     "Name": "Ray of Frost",
     "AnimationID": "anim_ray_of_frost",
-    "BasePower": 40,
+    "BasePower": 20,
     "ChargeTime": 0.5,
     "Weight": 20,
     "Knockback": 5.0,

@@ -31,7 +31,7 @@ namespace ProjectVagabond.Battle
         public int MaxHP;
         public int CurrentHP { get; private set; }
 
-        public float InvincibilityDuration = 0.67f;
+        public float InvincibilityDuration = 0.4f;
         public float InvincibilityTimer { get; private set; }
         public float HudShakeTimer { get; private set; }
 
@@ -132,7 +132,6 @@ namespace ProjectVagabond.Battle
 
         public bool TakeDamage(int amount)
         {
-            // Added State == WizardState.Casting to grant i-frames during active move execution
             if (InvincibilityTimer > 0 || State == WizardState.Casting || State == WizardState.Dead || CurrentHP <= 0) return false;
 
             int oldHP = CurrentHP;
@@ -144,7 +143,6 @@ namespace ProjectVagabond.Battle
                 InvincibilityTimer = InvincibilityDuration;
                 HudShakeTimer = 0.4f;
 
-                // Instantly show the health bar when taking damage
                 _healthBarVisibilityTimer = HealthBarLingerDuration;
                 _healthBarAlpha = 1.0f;
                 return true;
@@ -158,7 +156,7 @@ namespace ProjectVagabond.Battle
             CurrentHP = Math.Clamp(CurrentHP + amount, 0, MaxHP);
         }
 
-        public void ApplyKnockback(Vector2 sourcePosition, float distance)
+        public void ApplyKnockback(Vector2 sourcePosition, float distance, ArenaScene arena)
         {
             if (State == WizardState.Dead) return;
 
@@ -169,7 +167,20 @@ namespace ProjectVagabond.Battle
                 dir = new Vector2(1, 0);
 
             _knockbackStartPos = Position;
-            _knockbackTargetPos = Position + dir * distance;
+            Vector2 desiredTarget = Position + dir * distance;
+
+            // Clamp desiredTarget to arena bounds
+            Vector2 center = new Vector2(Global.VIRTUAL_WIDTH / 2f, Global.VIRTUAL_HEIGHT / 2f);
+            Vector2 fromCenter = desiredTarget - center;
+            float angle = MathF.Atan2(fromCenter.Y, fromCenter.X);
+            float maxRadius = arena.GetMaxRadiusAtAngle(angle, 4f);
+
+            if (fromCenter.Length() > maxRadius)
+            {
+                desiredTarget = center + Vector2.Normalize(fromCenter) * maxRadius;
+            }
+
+            _knockbackTargetPos = desiredTarget;
             _knockbackDuration = InvincibilityDuration;
             _knockbackTimer = _knockbackDuration;
         }
@@ -221,20 +232,7 @@ namespace ProjectVagabond.Battle
                 _knockbackTimer -= dt;
                 float progress = 1f - Math.Max(0, _knockbackTimer) / _knockbackDuration;
                 float eased = Easing.EaseOutCubic(progress);
-                Vector2 newPos = Vector2.Lerp(_knockbackStartPos, _knockbackTargetPos, eased);
-
-                Vector2 center = new Vector2(Global.VIRTUAL_WIDTH / 2f, Global.VIRTUAL_HEIGHT / 2f);
-                Vector2 fromCenter = newPos - center;
-                float angle = MathF.Atan2(fromCenter.Y, fromCenter.X);
-                float maxRadius = arena.GetMaxRadiusAtAngle(angle, 4f);
-
-                if (fromCenter.Length() > maxRadius)
-                {
-                    newPos = center + Vector2.Normalize(fromCenter) * maxRadius;
-                    _knockbackTargetPos = newPos;
-                }
-
-                Position = newPos;
+                Position = Vector2.Lerp(_knockbackStartPos, _knockbackTargetPos, eased);
             }
 
             if (HudShakeTimer > 0)
@@ -301,7 +299,6 @@ namespace ProjectVagabond.Battle
                     break;
 
                 case WizardState.Telegraphing:
-                    // Dynamically update direction and target position while charging in case of knockback
                     if (_queuedMove.Delivery is SelfDelivery)
                     {
                         _queuedTargetPos = Position;

@@ -165,13 +165,21 @@ namespace ProjectVagabond.Animations
 
             if (!string.IsNullOrEmpty(data.TexturePath))
             {
-                try
+                var spriteManager = ServiceLocator.Get<SpriteManager>();
+                if (data.TexturePath == "HealParticle") settings.Texture = spriteManager.HealParticleSprite;
+                else if (data.TexturePath == "CircleParticle") settings.Texture = spriteManager.CircleParticleSprite;
+                else if (data.TexturePath == "SoftParticle") settings.Texture = spriteManager.SoftParticleSprite;
+                else if (data.TexturePath == "EmberParticle") settings.Texture = spriteManager.EmberParticleSprite;
+                else
                 {
-                    settings.Texture = ServiceLocator.Get<Core>().Content.Load<Texture2D>(data.TexturePath);
-                }
-                catch
-                {
-                    settings.Texture = ServiceLocator.Get<Texture2D>();
+                    try
+                    {
+                        settings.Texture = ServiceLocator.Get<Core>().Content.Load<Texture2D>(data.TexturePath);
+                    }
+                    catch
+                    {
+                        settings.Texture = ServiceLocator.Get<Texture2D>();
+                    }
                 }
             }
 
@@ -399,6 +407,9 @@ namespace ProjectVagabond.Animations
         private readonly List<ParticleAnimationData> _layers;
         private readonly List<ParticleEmitter> _emitters = new();
         private readonly List<ParticleEmitter> _trailEmitters = new();
+        private readonly List<FloatRange> _baseEmitterSizes = new();
+        private readonly List<FloatRange> _baseTrailSizes = new();
+
         private float _timer;
         private Vector2 _projectilePos;
         private Vector2 _startPos;
@@ -421,9 +432,15 @@ namespace ProjectVagabond.Animations
             _totalDist = Vector2.Distance(_startPos, _targetPos);
             _projectilePos = _startPos;
 
+            _emitters.Clear();
+            _trailEmitters.Clear();
+            _baseEmitterSizes.Clear();
+            _baseTrailSizes.Clear();
+
             foreach (var layer in _layers)
             {
                 var settings = AnimationFactory.MapEmitterData(layer.Emitter);
+                _baseEmitterSizes.Add(settings.InitialSize);
 
                 if (layer.Mode == "Spray")
                 {
@@ -436,6 +453,8 @@ namespace ProjectVagabond.Animations
                 if (layer.Mode == "Spray")
                 {
                     emitter.Position = attack.Origin;
+                    _trailEmitters.Add(null);
+                    _baseTrailSizes.Add(new FloatRange(0));
                 }
                 else if (layer.Mode == "Volume")
                 {
@@ -456,6 +475,8 @@ namespace ProjectVagabond.Animations
                     {
                         emitter.Position = attack.TargetPosition;
                     }
+                    _trailEmitters.Add(null);
+                    _baseTrailSizes.Add(new FloatRange(0));
                 }
                 else if (layer.Mode == "Projectile")
                 {
@@ -463,12 +484,14 @@ namespace ProjectVagabond.Animations
                     if (layer.Trail != null)
                     {
                         var trailSettings = AnimationFactory.MapEmitterData(layer.Trail);
+                        _baseTrailSizes.Add(trailSettings.InitialSize);
                         var trail = psm.CreateEmitter(trailSettings);
                         trail.Position = _projectilePos;
                         _trailEmitters.Add(trail);
                     }
                     else
                     {
+                        _baseTrailSizes.Add(new FloatRange(0));
                         _trailEmitters.Add(null);
                     }
                 }
@@ -504,10 +527,25 @@ namespace ProjectVagabond.Animations
                     {
                         Vector2 basePos = Vector2.Lerp(_startPos, _targetPos, progress);
                         float lobHeight = Math.Min(_totalDist * 0.4f, 80f);
-                        float yOffset = -4f * lobHeight * progress * (1f - progress);
+
+                        // Calculate the arc (0 to 1 to 0)
+                        float arc = 4f * progress * (1f - progress);
+                        float yOffset = -lobHeight * arc;
 
                         _projectilePos = basePos + new Vector2(0, yOffset);
                         allProjectilesArrived = false;
+
+                        // Scale particles based on the height of the lob
+                        float scaleMultiplier = 1f + (arc * 1.0f);
+
+                        var baseSize = _baseEmitterSizes[i];
+                        _emitters[i].Settings.InitialSize = new FloatRange(baseSize.Min * scaleMultiplier, baseSize.Max * scaleMultiplier);
+
+                        if (i < _trailEmitters.Count && _trailEmitters[i] != null)
+                        {
+                            var baseTrailSize = _baseTrailSizes[i];
+                            _trailEmitters[i].Settings.InitialSize = new FloatRange(baseTrailSize.Min * scaleMultiplier, baseTrailSize.Max * scaleMultiplier);
+                        }
                     }
 
                     _emitters[i].Position = _projectilePos;
