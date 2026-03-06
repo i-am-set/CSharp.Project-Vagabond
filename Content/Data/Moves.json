@@ -1,3 +1,4 @@
+// application/json
 [
   {
     "ID": "scratch",
@@ -16,8 +17,10 @@
     "DeliveryDashDistance": 15.0,
     "EffectType": "Damage",
     "EffectArg": 0.0,
-    "CanTargetSelf": false,
-    "ExecuteOnChargeStart": false
+    "TargetSelf": false,
+    "CanEffectSelf": false,
+    "ExecuteOnChargeStart": false,
+    "RequiresFocus": true
   },
   {
     "ID": "ray_of_frost",
@@ -36,8 +39,10 @@
     "DeliveryDashDistance": 0.0,
     "EffectType": "Damage",
     "EffectArg": 0.0,
-    "CanTargetSelf": false,
-    "ExecuteOnChargeStart": false
+    "TargetSelf": false,
+    "CanEffectSelf": false,
+    "ExecuteOnChargeStart": false,
+    "RequiresFocus": true
   },
   {
     "ID": "lick_wounds",
@@ -47,7 +52,7 @@
     "ChargeTime": 0.8,
     "Weight": 15,
     "Knockback": 0.0,
-    "DeliveryType": "Self",
+    "DeliveryType": "SingleTarget",
     "DeliveryRadius": 0.0,
     "DeliveryWidth": 0.0,
     "DeliveryLength": 0.0,
@@ -56,8 +61,10 @@
     "DeliveryDashDistance": 0.0,
     "EffectType": "Heal",
     "EffectArg": 1.0,
-    "CanTargetSelf": true,
-    "ExecuteOnChargeStart": false
+    "TargetSelf": true,
+    "CanEffectSelf": true,
+    "ExecuteOnChargeStart": false,
+    "RequiresFocus": true
   },
   {
     "ID": "fireball",
@@ -76,7 +83,9 @@
     "DeliveryDashDistance": 0.0,
     "EffectType": "Damage",
     "EffectArg": 0.0,
-    "CanTargetSelf": false,
-    "ExecuteOnChargeStart": true
+    "TargetSelf": false,
+    "CanEffectSelf": true,
+    "ExecuteOnChargeStart": true,
+    "RequiresFocus": false
   }
 ]

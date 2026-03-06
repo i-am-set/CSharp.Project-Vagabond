@@ -17,9 +17,11 @@ namespace ProjectVagabond.Battle
                 ChargeTime = data.ChargeTime,
                 Weight = data.Weight,
                 Knockback = data.Knockback,
-                CanTargetSelf = data.CanTargetSelf,
+                TargetSelf = data.TargetSelf,
+                CanEffectSelf = data.CanEffectSelf,
                 AnimationID = data.AnimationID,
-                ExecuteOnChargeStart = data.ExecuteOnChargeStart
+                ExecuteOnChargeStart = data.ExecuteOnChargeStart,
+                RequiresFocus = data.RequiresFocus
             };
 
             if (data.DeliveryType == "InstantAOE")
@@ -36,9 +38,9 @@ namespace ProjectVagabond.Battle
                     TickRate = data.DeliveryTickRate
                 };
             }
-            else if (data.DeliveryType == "Self")
+            else if (data.DeliveryType == "SingleTarget" || data.DeliveryType == "Self")
             {
-                move.Delivery = new SelfDelivery();
+                move.Delivery = new SingleTargetDelivery();
             }
             else if (data.DeliveryType == "DashMelee")
             {
@@ -108,7 +110,7 @@ namespace ProjectVagabond.Battle
             // Check hitbox (OBB in front of caster)
             foreach (var target in arena.GetWizardsInOBB(attack.Caster.Position, attack.Direction, Width, Length))
             {
-                if (target == attack.Caster && !attack.Move.CanTargetSelf) continue;
+                if (target == attack.Caster && !attack.Move.CanEffectSelf) continue;
 
                 if (_hitTargets.Add(target))
                 {
@@ -210,7 +212,7 @@ namespace ProjectVagabond.Battle
         {
             foreach (var target in arena.GetWizardsInCircle(attack.TargetPosition, Radius))
             {
-                if (!attack.Move.CanTargetSelf && target == attack.Caster) continue;
+                if (!attack.Move.CanEffectSelf && target == attack.Caster) continue;
 
                 foreach (var effect in attack.Move.Effects)
                 {
@@ -287,7 +289,7 @@ namespace ProjectVagabond.Battle
         {
             foreach (var target in arena.GetWizardsInOBB(attack.Origin, attack.Direction, Width, Length))
             {
-                if (!attack.Move.CanTargetSelf && target == attack.Caster) continue;
+                if (!attack.Move.CanEffectSelf && target == attack.Caster) continue;
 
                 foreach (var effect in attack.Move.Effects)
                 {
@@ -342,7 +344,7 @@ namespace ProjectVagabond.Battle
         }
     }
 
-    public class SelfDelivery : IDelivery
+    public class SingleTargetDelivery : IDelivery
     {
         public bool IsFinished { get; private set; }
         private float _visualTimer;
@@ -355,9 +357,12 @@ namespace ProjectVagabond.Battle
 
         public void TriggerImpact(ArenaScene arena, ActiveAttack attack)
         {
-            foreach (var effect in attack.Move.Effects)
+            if (attack.TargetWizard != null && attack.TargetWizard.CurrentHP > 0)
             {
-                effect.Apply(attack, attack.Caster, arena);
+                foreach (var effect in attack.Move.Effects)
+                {
+                    effect.Apply(attack, attack.TargetWizard, arena);
+                }
             }
         }
 
@@ -373,11 +378,11 @@ namespace ProjectVagabond.Battle
         {
             if (!ServiceLocator.Get<Global>().ShowDebugOverlays) return;
             var circle = ServiceLocator.Get<SpriteManager>().CircleTextureSprite;
-            if (circle != null)
+            if (circle != null && attack.TargetWizard != null)
             {
                 float scale = 16f / circle.Width;
                 Vector2 origin = new Vector2(circle.Width / 2f, circle.Height / 2f);
-                spriteBatch.Draw(circle, attack.Caster.Position, null, Color.Lime * 0.3f, 0f, origin, scale, SpriteEffects.None, 0f);
+                spriteBatch.Draw(circle, attack.TargetWizard.Position, null, Color.Lime * 0.3f, 0f, origin, scale, SpriteEffects.None, 0f);
             }
         }
 
@@ -395,7 +400,7 @@ namespace ProjectVagabond.Battle
 
         public IDelivery Clone()
         {
-            return new SelfDelivery();
+            return new SingleTargetDelivery();
         }
     }
 
@@ -407,8 +412,10 @@ namespace ProjectVagabond.Battle
         public float ChargeTime { get; set; }
         public int Weight { get; set; }
         public float Knockback { get; set; }
-        public bool CanTargetSelf { get; set; }
+        public bool TargetSelf { get; set; }
+        public bool CanEffectSelf { get; set; }
         public bool ExecuteOnChargeStart { get; set; }
+        public bool RequiresFocus { get; set; }
         public IDelivery Delivery { get; set; }
         public List<IEffect> Effects { get; set; } = new List<IEffect>();
     }
@@ -416,6 +423,7 @@ namespace ProjectVagabond.Battle
     public class ActiveAttack
     {
         public ArenaWizard Caster { get; set; }
+        public ArenaWizard TargetWizard { get; set; }
         public MoveDefinition Move { get; set; }
         public Vector2 Origin { get; set; }
         public Vector2 Direction { get; set; }
@@ -423,5 +431,6 @@ namespace ProjectVagabond.Battle
         public IDelivery DeliveryInstance { get; set; }
         public ProjectVagabond.Animations.IAnimationInstance Animation { get; set; }
         public bool HasTriggeredImpact { get; set; }
+        public bool IsCanceled { get; set; }
     }
 }

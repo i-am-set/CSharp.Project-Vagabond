@@ -75,26 +75,14 @@
     "Particles": [
       {
         "Mode": "Projectile",
-        "Duration": 2.0,
         "ProjectileSpeed": 250.0,
         "MaintainVisualSpeed": true,
         "MinLobHeight": 30.0,
         "MaxLobHeight": 45.0,
         "LobScaleMultiplier": 1.0,
         "Emitter": {
-          "Shape": "Point",
           "EmissionRate": 0.0,
-          "BurstCount": 1,
-          "MaxParticles": 1,
-          "LifetimeMin": 2.0,
-          "LifetimeMax": 2.0,
-          "SizeMin": 6.0,
-          "SizeMax": 6.0,
-          "StartColor": "Palette_Sun",
-          "EndColor": "Palette_Fruit",
-          "StartAlpha": 1.0,
-          "EndAlpha": 1.0,
-          "BlendMode": "Additive"
+          "BurstCount": 0
         },
         "Trail": {
           "Shape": "Point",

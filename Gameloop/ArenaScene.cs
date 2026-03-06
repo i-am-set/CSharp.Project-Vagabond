@@ -164,6 +164,13 @@ namespace ProjectVagabond.Scenes
                 {
                     var attack = _activeAttacks[i];
 
+                    if (attack.IsCanceled)
+                    {
+                        attack.Animation?.Cancel();
+                        _activeAttacks.RemoveAt(i);
+                        continue;
+                    }
+
                     if (attack.Animation != null)
                     {
                         attack.Animation.Update(dt, this, attack);

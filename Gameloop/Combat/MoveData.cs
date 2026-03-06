@@ -1,4 +1,5 @@
-﻿namespace ProjectVagabond.Battle
+﻿// text/plain
+namespace ProjectVagabond.Battle
 {
     public class MoveData
     {
@@ -20,7 +21,11 @@
 
         public string EffectType { get; set; }
         public float EffectArg { get; set; }
-        public bool CanTargetSelf { get; set; }
+
+        public bool TargetSelf { get; set; }
+        public bool CanEffectSelf { get; set; }
+
         public bool ExecuteOnChargeStart { get; set; }
+        public bool RequiresFocus { get; set; }
     }
 }

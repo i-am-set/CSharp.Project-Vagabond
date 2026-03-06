@@ -1,5 +1,8 @@
-﻿using Microsoft.Xna.Framework;
+﻿// text/plain
+using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using ProjectVagabond;
+using ProjectVagabond.Animations;
 using ProjectVagabond.Battle;
 using ProjectVagabond.Particles;
 using ProjectVagabond.Scenes;
@@ -90,6 +93,7 @@ namespace ProjectVagabond.Animations
         void Start(ActiveAttack attack, ArenaScene arena);
         void Update(float dt, ArenaScene arena, ActiveAttack attack);
         void Draw(SpriteBatch spriteBatch, ActiveAttack attack);
+        void Cancel();
     }
 
     public static class AnimationFactory
@@ -129,6 +133,13 @@ namespace ProjectVagabond.Animations
         public static ParticleEmitterSettings MapEmitterData(ParticleEmitterData data)
         {
             var settings = ParticleEmitterSettings.CreateDefault();
+
+            if (data == null)
+            {
+                settings.EmissionRate = 0;
+                settings.BurstCount = 0;
+                return settings;
+            }
 
             if (Enum.TryParse<EmitterShape>(data.Shape, true, out var shape)) settings.Shape = shape;
             if (Enum.TryParse<EmissionSource>(data.EmitFrom, true, out var source)) settings.EmitFrom = source;
@@ -239,6 +250,11 @@ namespace ProjectVagabond.Animations
             _data = data;
         }
 
+        public void Cancel()
+        {
+            IsFinished = true;
+        }
+
         public void Start(ActiveAttack attack, ArenaScene arena)
         {
             try
@@ -279,7 +295,7 @@ namespace ProjectVagabond.Animations
                     var targets = arena.GetWizardsInCircle(attack.TargetPosition, aoe.Radius);
                     foreach (var t in targets)
                     {
-                        if (!attack.Move.CanTargetSelf && t == attack.Caster) continue;
+                        if (!attack.Move.CanEffectSelf && t == attack.Caster) continue;
                         _targetPositions.Add(t.Position);
                     }
                 }
@@ -288,13 +304,16 @@ namespace ProjectVagabond.Animations
                     var targets = arena.GetWizardsInOBB(attack.Origin, attack.Direction, beam.Width, beam.Length);
                     foreach (var t in targets)
                     {
-                        if (!attack.Move.CanTargetSelf && t == attack.Caster) continue;
+                        if (!attack.Move.CanEffectSelf && t == attack.Caster) continue;
                         _targetPositions.Add(t.Position);
                     }
                 }
-                else if (attack.DeliveryInstance is SelfDelivery)
+                else if (attack.DeliveryInstance is SingleTargetDelivery)
                 {
-                    _targetPositions.Add(attack.Caster.Position);
+                    if (attack.TargetWizard != null)
+                        _targetPositions.Add(attack.TargetWizard.Position);
+                    else
+                        _targetPositions.Add(attack.TargetPosition);
                 }
                 else if (attack.DeliveryInstance is DashMeleeDelivery)
                 {
@@ -430,6 +449,13 @@ namespace ProjectVagabond.Animations
             _layers = layers;
         }
 
+        public void Cancel()
+        {
+            IsFinished = true;
+            foreach (var e in _emitters) e.IsActive = false;
+            foreach (var e in _trailEmitters) if (e != null) e.IsActive = false;
+        }
+
         public void Start(ActiveAttack attack, ArenaScene arena)
         {
             var psm = ServiceLocator.Get<ParticleSystemManager>();
@@ -504,7 +530,6 @@ namespace ProjectVagabond.Animations
                     }
                 }
 
-                // Trigger the initial burst if the emitter relies on one
                 if (settings.BurstCount > 0)
                 {
                     emitter.EmitBurst(settings.BurstCount);

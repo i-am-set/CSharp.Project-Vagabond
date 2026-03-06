@@ -1,4 +1,5 @@
-﻿using Microsoft.Xna.Framework;
+﻿// text/plain
+using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using ProjectVagabond.Animations;
 using ProjectVagabond.Particles;
@@ -56,6 +57,7 @@ namespace ProjectVagabond.Battle
         private float _stateTimer;
         private MoveDefinition _queuedMove;
         private Vector2 _queuedTargetPos;
+        private ArenaWizard _queuedTargetWizard;
         private Vector2 _queuedDirection;
         private ActiveAttack _currentActiveAttack;
 
@@ -150,7 +152,7 @@ namespace ProjectVagabond.Battle
 
         public bool TakeDamage(int amount)
         {
-            if (InvincibilityTimer > 0 || State == WizardState.Casting || State == WizardState.Dead || CurrentHP <= 0) return false;
+            if (InvincibilityTimer > 0 || State == WizardState.Dead || CurrentHP <= 0) return false;
 
             int oldHP = CurrentHP;
             CurrentHP = Math.Clamp(CurrentHP - amount, 0, MaxHP);
@@ -177,6 +179,20 @@ namespace ProjectVagabond.Battle
         public void ApplyKnockback(Vector2 sourcePosition, float distance, ArenaScene arena)
         {
             if (State == WizardState.Dead) return;
+
+            if ((State == WizardState.Casting || State == WizardState.Telegraphing) && _queuedMove != null)
+            {
+                if (_queuedMove.RequiresFocus)
+                {
+                    if (_currentActiveAttack != null)
+                    {
+                        _currentActiveAttack.IsCanceled = true;
+                        _currentActiveAttack = null;
+                    }
+                    State = WizardState.Recovering;
+                    _stateTimer = 0.5f;
+                }
+            }
 
             Vector2 dir = Position - sourcePosition;
             if (dir.LengthSquared() > 0)
@@ -327,7 +343,7 @@ namespace ProjectVagabond.Battle
                     break;
 
                 case WizardState.Telegraphing:
-                    if (_queuedMove.Delivery is SelfDelivery)
+                    if (_queuedMove.TargetSelf)
                     {
                         _queuedTargetPos = Position;
                     }
@@ -410,7 +426,7 @@ namespace ProjectVagabond.Battle
 
             ArenaWizard target = null;
 
-            if (_queuedMove.Delivery is SelfDelivery)
+            if (_queuedMove.TargetSelf)
             {
                 target = this;
             }
@@ -433,6 +449,7 @@ namespace ProjectVagabond.Battle
                 }
             }
 
+            _queuedTargetWizard = target;
             _queuedTargetPos = target.Position;
 
             _queuedDirection = _queuedTargetPos - Position;
@@ -467,6 +484,7 @@ namespace ProjectVagabond.Battle
             var attack = new ActiveAttack
             {
                 Caster = this,
+                TargetWizard = _queuedTargetWizard,
                 Move = _queuedMove,
                 Origin = Position,
                 Direction = _queuedDirection,
