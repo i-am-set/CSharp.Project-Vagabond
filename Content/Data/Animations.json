@@ -1,18 +1,40 @@
 [
   {
     "ID": "anim_scratch",
-    "Type": "Sprite",
-    "Sprite": {
-      "TexturePath": "Sprites/MoveAnimationSpriteSheets/phy_claw",
-      "FrameWidth": 32,
-      "FrameHeight": 32,
-      "FrameRate": 12.0,
-      "Scale": 0.5,
-      "ImpactFrame": 2,
-      "IsProjectile": false,
-      "ProjectileSpeed": 0.0,
-      "DrawOnHitboxCenter": true
-    }
+    "Type": "Particle",
+    "Particles": [
+      {
+        "Mode": "Spray",
+        "Duration": 0.25,
+        "Emitter": {
+          "Shape": "Circle",
+          "EmitFrom": "Volume",
+          "EmitterSizeX": 16.0,
+          "EmitterSizeY": 16.0,
+          "EmissionRate": 0.0,
+          "BurstCount": 8,
+          "MaxParticles": 15,
+          "VelocityPattern": "Cone",
+          "ConeSpread": 0.3,
+          "SpeedMin": 300.0,
+          "SpeedMax": 500.0,
+          "Drag": 15.0,
+          "LifetimeMin": 0.15,
+          "LifetimeMax": 0.3,
+          "SizeMin": 1.0,
+          "SizeMax": 1.5,
+          "EndSizeMin": 0.2,
+          "EndSizeMax": 0.5,
+          "InterpolateSize": true,
+          "StartColor": "Palette_Rust",
+          "EndColor": "Palette_Sun",
+          "StartAlpha": 1.0,
+          "EndAlpha": 0.0,
+          "BlendMode": "Additive",
+          "TexturePath": "ScratchParticle"
+        }
+      }
+    ]
   },
   {
     "ID": "anim_ray_of_frost",
@@ -55,6 +77,10 @@
         "Mode": "Projectile",
         "Duration": 2.0,
         "ProjectileSpeed": 250.0,
+        "MaintainVisualSpeed": true,
+        "MinLobHeight": 30.0,
+        "MaxLobHeight": 45.0,
+        "LobScaleMultiplier": 1.0,
         "Emitter": {
           "Shape": "Point",
           "EmissionRate": 0.0,
@@ -212,7 +238,7 @@
           "StartColor": "Palette_Leaf",
           "EndColor": "Palette_Sun",
           "StartAlpha": 1.0,
-          "EndAlpha":0.5,
+          "EndAlpha": 0.5,
           "BlendMode": "Additive",
           "TexturePath": "HealParticle"
         }

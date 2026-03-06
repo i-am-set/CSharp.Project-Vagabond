@@ -8,7 +8,7 @@
     "Intelligence": 8,
     "Tenacity": 3,
     "Agility": 4,
-    "Move1": "ray_of_frost",
+    "Move1": "fireball",
     "Move2": "scratch",
     "Move3": "",
     "Move4": ""
@@ -36,7 +36,7 @@
     "Intelligence": 3,
     "Tenacity": 5,
     "Agility": 6,
-    "Move1": "lick_wounds",
+    "Move1": "fireball",
     "Move2": "scratch",
     "Move3": "",
     "Move4": ""
@@ -50,7 +50,7 @@
     "Intelligence": 2,
     "Tenacity": 4,
     "Agility": 8,
-    "Move1": "scratch",
+    "Move1": "fireball",
     "Move2": "",
     "Move3": "",
     "Move4": ""
@@ -64,7 +64,7 @@
     "Intelligence": 3,
     "Tenacity": 8,
     "Agility": 3,
-    "Move1": "ray_of_frost",
+    "Move1": "fireball",
     "Move2": "scratch",
     "Move3": "",
     "Move4": ""
@@ -78,7 +78,7 @@
     "Intelligence": 5,
     "Tenacity": 5,
     "Agility": 5,
-    "Move1": "lick_wounds",
+    "Move1": "fireball",
     "Move2": "ray_of_frost",
     "Move3": "scratch",
     "Move4": ""
@@ -106,7 +106,7 @@
     "Intelligence": 4,
     "Tenacity": 8,
     "Agility": 4,
-    "Move1": "lick_wounds",
+    "Move1": "fireball",
     "Move2": "scratch",
     "Move3": "",
     "Move4": ""
@@ -120,7 +120,7 @@
     "Intelligence": 6,
     "Tenacity": 3,
     "Agility": 4,
-    "Move1": "ray_of_frost",
+    "Move1": "fireball",
     "Move2": "scratch",
     "Move3": "",
     "Move4": ""
@@ -148,7 +148,7 @@
     "Intelligence": 4,
     "Tenacity": 4,
     "Agility": 3,
-    "Move1": "lick_wounds",
+    "Move1": "fireball",
     "Move2": "ray_of_frost",
     "Move3": "scratch",
     "Move4": ""

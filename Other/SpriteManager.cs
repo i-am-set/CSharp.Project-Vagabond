@@ -179,6 +179,7 @@ namespace ProjectVagabond
         public Texture2D CircleParticleSprite => _circleParticleSprite;
         public Texture2D EmberParticleSprite => _emberParticleSprite;
         public Texture2D SoftParticleSprite => _softParticleSprite;
+        public Texture2D ScratchParticleSprite { get; private set; }
 
         public SpriteManager()
         {
@@ -217,6 +218,9 @@ namespace ProjectVagabond
 
             try { _softParticleSprite = _textureFactory.CreateSoftCircleParticleTexture(); }
             catch { _softParticleSprite = _textureFactory.CreateColoredTexture(16, 16, Color.Red); }
+
+            try { ScratchParticleSprite = _core.Content.Load<Texture2D>("Sprites/Particles/scratch_particle"); }
+            catch { ScratchParticleSprite = _textureFactory.CreateColoredTexture(12, 2, Color.White); }
 
             try { BattleEnemyFloorSprite = _core.Content.Load<Texture2D>("Sprites/UI/BattleUI/battle_enemy_floor"); }
             catch { BattleEnemyFloorSprite = _textureFactory.CreateColoredTexture(128, 128, Color.DarkGray); }
@@ -1047,12 +1051,13 @@ namespace ProjectVagabond
             return new Rectangle(col * spriteSize, row * spriteSize, spriteSize, spriteSize);
         }
 
-        public Rectangle GetPlayerSpriteBounds(int portraitIndex)
+        public Rectangle GetPlayerSpriteBounds(int portraitIndex, PlayerSpriteType type)
         {
-            if (_playerSpriteBoundsCache.TryGetValue(portraitIndex, out var bounds))
+            int cacheKey = portraitIndex | ((int)type << 16);
+            if (_playerSpriteBoundsCache.TryGetValue(cacheKey, out var bounds))
                 return bounds;
 
-            var sourceRect = GetPlayerSourceRect(portraitIndex, PlayerSpriteType.Portrait8x8);
+            var sourceRect = GetPlayerSourceRect(portraitIndex, type);
             if (PlayerMasterSpriteSheet == null) return new Rectangle(-8, -8, 16, 16);
 
             Color[] data = new Color[sourceRect.Width * sourceRect.Height];
@@ -1086,7 +1091,7 @@ namespace ProjectVagabond
                 bounds = new Rectangle(minX - 16, minY - 16, maxX - minX + 1, maxY - minY + 1);
             }
 
-            _playerSpriteBoundsCache[portraitIndex] = bounds;
+            _playerSpriteBoundsCache[cacheKey] = bounds;
             return bounds;
         }
 

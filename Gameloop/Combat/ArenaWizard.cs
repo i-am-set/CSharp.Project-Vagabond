@@ -27,6 +27,7 @@ namespace ProjectVagabond.Battle
         public int PortraitIndex;
         public bool IsPlayer;
         public float HopTimer;
+        public bool IsFacingRight { get; private set; } = false;
 
         public int MaxHP;
         public int CurrentHP { get; private set; }
@@ -47,7 +48,7 @@ namespace ProjectVagabond.Battle
 
         public float HealthBarLingerDuration = 2.5f;
         public float DeadBodyFadeDuration = 16.0f;
-        public float DeadBodyMinAlpha = 0.1f;
+        public float DeadBodyMinAlpha = 0.0f;
 
         public float TimeSinceDeath { get; private set; } = 0f;
 
@@ -72,6 +73,7 @@ namespace ProjectVagabond.Battle
         private Vector2 _knockbackTargetPos;
         private float _knockbackTimer;
         private float _knockbackDuration;
+        private Vector2 _previousPosition;
 
         private static readonly Random _random = new Random();
 
@@ -80,9 +82,11 @@ namespace ProjectVagabond.Battle
             Name = data.Name;
             Position = startPos;
             TargetPosition = startPos;
+            _previousPosition = startPos;
             IsPlayer = isPlayer;
             PortraitIndex = int.TryParse(data.MemberID, out int pid) ? pid : 0;
             HopTimer = (float)(_random.NextDouble() * MathHelper.TwoPi);
+            IsFacingRight = false;
 
             Strength = data.Strength;
             Intelligence = data.Intelligence;
@@ -120,8 +124,22 @@ namespace ProjectVagabond.Battle
 
         public Rectangle GetHitbox(SpriteManager spriteManager)
         {
-            var bounds = spriteManager.GetPlayerSpriteBounds(PortraitIndex);
+            var bounds = spriteManager.GetPlayerSpriteBounds(PortraitIndex, PlayerSpriteType.Portrait5x5);
             float hopOffset = State == WizardState.Dead ? 0f : -MathF.Abs(MathF.Sin(HopTimer)) * 4f;
+
+            if (IsFacingRight)
+            {
+                bounds = new Rectangle(-(bounds.X + bounds.Width), bounds.Y, bounds.Width, bounds.Height);
+            }
+
+            if (State == WizardState.Dead)
+            {
+                // Rotate bounds 90 degrees around the (16, 16) origin
+                int newX = -(bounds.Y + bounds.Height);
+                int newY = bounds.X;
+                bounds = new Rectangle(newX, newY, bounds.Height, bounds.Width);
+            }
+
             return new Rectangle(
                 (int)MathF.Round(Position.X) + bounds.X,
                 (int)MathF.Round(Position.Y + hopOffset) + bounds.Y,
@@ -234,6 +252,16 @@ namespace ProjectVagabond.Battle
                 float eased = Easing.EaseOutCubic(progress);
                 Position = Vector2.Lerp(_knockbackStartPos, _knockbackTargetPos, eased);
             }
+            else
+            {
+                float deltaX = Position.X - _previousPosition.X;
+                if (Math.Abs(deltaX) > 0.001f)
+                {
+                    IsFacingRight = deltaX > 0;
+                }
+            }
+
+            _previousPosition = Position;
 
             if (HudShakeTimer > 0)
             {
@@ -411,10 +439,12 @@ namespace ProjectVagabond.Battle
             if (_queuedDirection.LengthSquared() > 0)
             {
                 _queuedDirection.Normalize();
+                IsFacingRight = _queuedDirection.X > 0;
             }
             else
             {
                 _queuedDirection = new Vector2(1, 0);
+                IsFacingRight = true;
             }
 
             if (_queuedMove.ExecuteOnChargeStart)

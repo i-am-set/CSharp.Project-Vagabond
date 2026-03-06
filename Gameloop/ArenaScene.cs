@@ -355,7 +355,7 @@ namespace ProjectVagabond.Scenes
             if (sheet == null) return;
 
             Vector2 origin = new Vector2(16, 16);
-            var sourceRect = _spriteManager.GetPlayerSourceRect(wizard.PortraitIndex, PlayerSpriteType.Portrait8x8);
+            var sourceRect = _spriteManager.GetPlayerSourceRect(wizard.PortraitIndex, PlayerSpriteType.Portrait5x5);
 
             bool isDead = wizard.State == WizardState.Dead;
             float hopOffset = isDead ? 0f : -MathF.Abs(MathF.Sin(wizard.HopTimer)) * 4f;
@@ -377,6 +377,8 @@ namespace ProjectVagabond.Scenes
                 else if (state == 1) skipDraw = true;
             }
 
+            SpriteEffects spriteEffects = wizard.IsFacingRight ? SpriteEffects.FlipHorizontally : SpriteEffects.None;
+
             if (!skipDraw)
             {
                 if (wizard.IsPlayer && !isDead)
@@ -384,21 +386,21 @@ namespace ProjectVagabond.Scenes
                     var silhouette = _spriteManager.PlayerMasterSpriteSheetSilhouette;
                     if (silhouette != null)
                     {
-                        spriteBatch.DrawSnapped(silhouette, drawPos + new Vector2(-1, 0), sourceRect, _global.Palette_Sun, rotation, origin, 1f, SpriteEffects.None, 0f);
-                        spriteBatch.DrawSnapped(silhouette, drawPos + new Vector2(1, 0), sourceRect, _global.Palette_Sun, rotation, origin, 1f, SpriteEffects.None, 0f);
-                        spriteBatch.DrawSnapped(silhouette, drawPos + new Vector2(0, -1), sourceRect, _global.Palette_Sun, rotation, origin, 1f, SpriteEffects.None, 0f);
-                        spriteBatch.DrawSnapped(silhouette, drawPos + new Vector2(0, 1), sourceRect, _global.Palette_Sun, rotation, origin, 1f, SpriteEffects.None, 0f);
+                        spriteBatch.DrawSnapped(silhouette, drawPos + new Vector2(-1, 0), sourceRect, _global.Palette_Sun, rotation, origin, 1f, spriteEffects, 0f);
+                        spriteBatch.DrawSnapped(silhouette, drawPos + new Vector2(1, 0), sourceRect, _global.Palette_Sun, rotation, origin, 1f, spriteEffects, 0f);
+                        spriteBatch.DrawSnapped(silhouette, drawPos + new Vector2(0, -1), sourceRect, _global.Palette_Sun, rotation, origin, 1f, spriteEffects, 0f);
+                        spriteBatch.DrawSnapped(silhouette, drawPos + new Vector2(0, 1), sourceRect, _global.Palette_Sun, rotation, origin, 1f, spriteEffects, 0f);
                     }
                 }
 
                 if (drawSilhouette)
                 {
                     var silhouette = _spriteManager.PlayerMasterSpriteSheetSilhouette;
-                    spriteBatch.DrawSnapped(silhouette ?? sheet, drawPos, sourceRect, _global.Palette_Sun, rotation, origin, 1f, SpriteEffects.None, 0f);
+                    spriteBatch.DrawSnapped(silhouette ?? sheet, drawPos, sourceRect, _global.Palette_Sun, rotation, origin, 1f, spriteEffects, 0f);
                 }
                 else
                 {
-                    spriteBatch.DrawSnapped(sheet, drawPos, sourceRect, color, rotation, origin, 1f, SpriteEffects.None, 0f);
+                    spriteBatch.DrawSnapped(sheet, drawPos, sourceRect, color, rotation, origin, 1f, spriteEffects, 0f);
                 }
             }
         }

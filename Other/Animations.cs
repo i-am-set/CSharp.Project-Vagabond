@@ -36,6 +36,11 @@ namespace ProjectVagabond.Animations
         public string Mode { get; set; }
         public float Duration { get; set; }
         public float ProjectileSpeed { get; set; }
+        public bool MaintainVisualSpeed { get; set; }
+        public float FixedLobHeight { get; set; }
+        public float MinLobHeight { get; set; }
+        public float MaxLobHeight { get; set; }
+        public float LobScaleMultiplier { get; set; }
         public ParticleEmitterData Emitter { get; set; }
         public ParticleEmitterData Trail { get; set; }
         public List<ParticleEmitterData> Impacts { get; set; }
@@ -170,6 +175,7 @@ namespace ProjectVagabond.Animations
                 else if (data.TexturePath == "CircleParticle") settings.Texture = spriteManager.CircleParticleSprite;
                 else if (data.TexturePath == "SoftParticle") settings.Texture = spriteManager.SoftParticleSprite;
                 else if (data.TexturePath == "EmberParticle") settings.Texture = spriteManager.EmberParticleSprite;
+                else if (data.TexturePath == "ScratchParticle") settings.Texture = spriteManager.ScratchParticleSprite;
                 else
                 {
                     try
@@ -444,8 +450,10 @@ namespace ProjectVagabond.Animations
 
                 if (layer.Mode == "Spray")
                 {
+                    float angle = MathF.Atan2(attack.Direction.Y, attack.Direction.X);
                     settings.VelocityPattern = EmissionPattern.Cone;
-                    settings.ConeAngle = MathF.Atan2(attack.Direction.Y, attack.Direction.X);
+                    settings.ConeAngle = angle;
+                    settings.InitialRotation = new FloatRange(angle);
                 }
 
                 var emitter = psm.CreateEmitter(settings);
@@ -496,6 +504,12 @@ namespace ProjectVagabond.Animations
                     }
                 }
 
+                // Trigger the initial burst if the emitter relies on one
+                if (settings.BurstCount > 0)
+                {
+                    emitter.EmitBurst(settings.BurstCount);
+                }
+
                 _emitters.Add(emitter);
             }
         }
@@ -526,7 +540,17 @@ namespace ProjectVagabond.Animations
                     else
                     {
                         Vector2 basePos = Vector2.Lerp(_startPos, _targetPos, progress);
-                        float lobHeight = Math.Min(_totalDist * 0.4f, 80f);
+
+                        float desiredSpeed = layer.ProjectileSpeed > 0 ? layer.ProjectileSpeed : 250f;
+                        float lobHeight = layer.FixedLobHeight;
+
+                        if (layer.MaintainVisualSpeed)
+                        {
+                            float targetPathLength = desiredSpeed * travelDuration;
+                            float requiredExtraLength = Math.Max(0, targetPathLength - _totalDist);
+                            float maxLob = layer.MaxLobHeight > 0 ? layer.MaxLobHeight : 150f;
+                            lobHeight = Math.Clamp(requiredExtraLength / 2.5f, layer.MinLobHeight, maxLob);
+                        }
 
                         // Calculate the arc (0 to 1 to 0)
                         float arc = 4f * progress * (1f - progress);
@@ -536,7 +560,7 @@ namespace ProjectVagabond.Animations
                         allProjectilesArrived = false;
 
                         // Scale particles based on the height of the lob
-                        float scaleMultiplier = 1f + (arc * 1.0f);
+                        float scaleMultiplier = 1f + (arc * layer.LobScaleMultiplier);
 
                         var baseSize = _baseEmitterSizes[i];
                         _emitters[i].Settings.InitialSize = new FloatRange(baseSize.Min * scaleMultiplier, baseSize.Max * scaleMultiplier);
