@@ -482,7 +482,7 @@ namespace ProjectVagabond
                 if (_global.ShowDebugOverlays)
                 {
                     _spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp, null, null, null, finalSceneTransform);
-                    _spriteBatch.DrawStringSnapped(_defaultFont, "F3", new Vector2(2, 2), _global.Palette_Rust);
+                    _spriteBatch.DrawStringSnapped(SecondaryFont, "F3", new Vector2(12, 8), _global.Palette_Rust);
                     _spriteBatch.End();
                 }
             }
