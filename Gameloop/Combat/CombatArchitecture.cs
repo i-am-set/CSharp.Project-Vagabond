@@ -16,7 +16,8 @@ namespace ProjectVagabond.Battle
                 BasePower = data.BasePower,
                 ChargeTime = data.ChargeTime,
                 Weight = data.Weight,
-                CanTargetSelf = data.CanTargetSelf
+                CanTargetSelf = data.CanTargetSelf,
+                AnimationID = data.AnimationID
             };
 
             if (data.DeliveryType == "InstantAOE")
@@ -83,6 +84,7 @@ namespace ProjectVagabond.Battle
         void Update(float dt, ArenaScene arena, ActiveAttack attack);
         void Draw(SpriteBatch spriteBatch, ActiveAttack attack);
         void DrawTelegraph(SpriteBatch spriteBatch, Vector2 origin, Vector2 direction, Vector2 targetPos);
+        void TriggerImpact(ArenaScene arena, ActiveAttack attack);
         IDelivery Clone();
     }
 
@@ -91,31 +93,30 @@ namespace ProjectVagabond.Battle
         public float Radius { get; set; }
         public bool IsFinished { get; private set; }
 
-        private bool _hasTicked;
         private float _visualTimer;
 
         public void Start(ActiveAttack attack)
         {
             IsFinished = false;
-            _hasTicked = false;
             _visualTimer = 0.25f;
+        }
+
+        public void TriggerImpact(ArenaScene arena, ActiveAttack attack)
+        {
+            foreach (var target in arena.GetWizardsInCircle(attack.TargetPosition, Radius))
+            {
+                if (!attack.Move.CanTargetSelf && target == attack.Caster) continue;
+
+                foreach (var effect in attack.Move.Effects)
+                {
+                    effect.Apply(attack.Caster, target, attack.Move);
+                }
+            }
         }
 
         public void Update(float dt, ArenaScene arena, ActiveAttack attack)
         {
-            if (!_hasTicked)
-            {
-                foreach (var target in arena.GetWizardsInCircle(attack.TargetPosition, Radius))
-                {
-                    if (!attack.Move.CanTargetSelf && target == attack.Caster) continue;
-
-                    foreach (var effect in attack.Move.Effects)
-                    {
-                        effect.Apply(attack.Caster, target, attack.Move);
-                    }
-                }
-                _hasTicked = true;
-            }
+            if (!attack.HasTriggeredImpact) return;
 
             _visualTimer -= dt;
             if (_visualTimer <= 0) IsFinished = true;
@@ -171,23 +172,36 @@ namespace ProjectVagabond.Battle
             _tickTimer = TickRate;
         }
 
+        public void TriggerImpact(ArenaScene arena, ActiveAttack attack)
+        {
+            ApplyTick(arena, attack);
+            _tickTimer = 0f;
+        }
+
+        private void ApplyTick(ArenaScene arena, ActiveAttack attack)
+        {
+            foreach (var target in arena.GetWizardsInOBB(attack.Origin, attack.Direction, Width, Length))
+            {
+                if (!attack.Move.CanTargetSelf && target == attack.Caster) continue;
+
+                foreach (var effect in attack.Move.Effects)
+                {
+                    effect.Apply(attack.Caster, target, attack.Move);
+                }
+            }
+        }
+
         public void Update(float dt, ArenaScene arena, ActiveAttack attack)
         {
+            if (!attack.HasTriggeredImpact) return;
+
             _lifeTimer += dt;
             _tickTimer += dt;
 
             if (_tickTimer >= TickRate)
             {
                 _tickTimer -= TickRate;
-                foreach (var target in arena.GetWizardsInOBB(attack.Origin, attack.Direction, Width, Length))
-                {
-                    if (!attack.Move.CanTargetSelf && target == attack.Caster) continue;
-
-                    foreach (var effect in attack.Move.Effects)
-                    {
-                        effect.Apply(attack.Caster, target, attack.Move);
-                    }
-                }
+                ApplyTick(arena, attack);
             }
         }
 
@@ -226,26 +240,25 @@ namespace ProjectVagabond.Battle
     public class SelfDelivery : IDelivery
     {
         public bool IsFinished { get; private set; }
-        private bool _hasTicked;
         private float _visualTimer;
 
         public void Start(ActiveAttack attack)
         {
             IsFinished = false;
-            _hasTicked = false;
             _visualTimer = 0.25f;
+        }
+
+        public void TriggerImpact(ArenaScene arena, ActiveAttack attack)
+        {
+            foreach (var effect in attack.Move.Effects)
+            {
+                effect.Apply(attack.Caster, attack.Caster, attack.Move);
+            }
         }
 
         public void Update(float dt, ArenaScene arena, ActiveAttack attack)
         {
-            if (!_hasTicked)
-            {
-                foreach (var effect in attack.Move.Effects)
-                {
-                    effect.Apply(attack.Caster, attack.Caster, attack.Move);
-                }
-                _hasTicked = true;
-            }
+            if (!attack.HasTriggeredImpact) return;
 
             _visualTimer -= dt;
             if (_visualTimer <= 0) IsFinished = true;
@@ -284,6 +297,7 @@ namespace ProjectVagabond.Battle
     public class MoveDefinition
     {
         public string Name { get; set; }
+        public string AnimationID { get; set; }
         public int BasePower { get; set; }
         public float ChargeTime { get; set; }
         public int Weight { get; set; }
@@ -300,5 +314,7 @@ namespace ProjectVagabond.Battle
         public Vector2 Direction { get; set; }
         public Vector2 TargetPosition { get; set; }
         public IDelivery DeliveryInstance { get; set; }
+        public ProjectVagabond.Animations.IAnimationInstance Animation { get; set; }
+        public bool HasTriggeredImpact { get; set; }
     }
 }

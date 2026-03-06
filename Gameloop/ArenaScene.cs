@@ -1,7 +1,9 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using MonoGame.Extended.BitmapFonts;
+using ProjectVagabond.Animations;
 using ProjectVagabond.Battle;
+using ProjectVagabond.Particles;
 using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
@@ -91,6 +93,7 @@ namespace ProjectVagabond.Scenes
         public void SpawnAttack(ActiveAttack attack)
         {
             attack.DeliveryInstance.Start(attack);
+            attack.Animation?.Start(attack, this);
             _activeAttacks.Add(attack);
         }
 
@@ -205,8 +208,26 @@ namespace ProjectVagabond.Scenes
                 for (int i = _activeAttacks.Count - 1; i >= 0; i--)
                 {
                     var attack = _activeAttacks[i];
+
+                    if (attack.Animation != null)
+                    {
+                        attack.Animation.Update(dt, this, attack);
+                        if (attack.Animation.HasTriggeredImpact && !attack.HasTriggeredImpact)
+                        {
+                            attack.HasTriggeredImpact = true;
+                            attack.DeliveryInstance.TriggerImpact(this, attack);
+                        }
+                    }
+                    else if (!attack.HasTriggeredImpact)
+                    {
+                        attack.HasTriggeredImpact = true;
+                        attack.DeliveryInstance.TriggerImpact(this, attack);
+                    }
+
                     attack.DeliveryInstance.Update(dt, this, attack);
-                    if (attack.DeliveryInstance.IsFinished)
+
+                    bool animFinished = attack.Animation == null || attack.Animation.IsFinished;
+                    if (attack.DeliveryInstance.IsFinished && animFinished)
                     {
                         _activeAttacks.RemoveAt(i);
                     }
@@ -230,25 +251,34 @@ namespace ProjectVagabond.Scenes
                 spriteBatch.DrawSnapped(_arenaTexture, _arenaCenter, null, _global.Palette_Off, 0f, origin, 1f, SpriteEffects.None, 0f);
             }
 
-            // 1. Draw Dead Wizards (Under everything)
             foreach (var wizard in _wizards.Where(w => w.State == WizardState.Dead).OrderBy(w => w.Position.Y))
             {
                 DrawWizard(spriteBatch, wizard);
             }
 
-            // 2. Draw Attacks
             foreach (var attack in _activeAttacks)
             {
                 attack.DeliveryInstance.Draw(spriteBatch, attack);
             }
 
-            // 3. Draw Living Wizards
             foreach (var wizard in _wizards.Where(w => w.State != WizardState.Dead).OrderBy(w => w.Position.Y))
             {
                 DrawWizard(spriteBatch, wizard);
             }
 
-            // 4. Draw UI & Debug
+            // Draw animations ON TOP of living wizards
+            foreach (var attack in _activeAttacks)
+            {
+                attack.Animation?.Draw(spriteBatch, attack);
+            }
+
+            // --- DRAW PARTICLES ---
+            // Interrupt the current batch so the particle system can use its own blend states and sorting
+            spriteBatch.End();
+            ServiceLocator.Get<ParticleSystemManager>().Draw(spriteBatch, transform);
+            spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp, null, null, null, transform);
+            // ----------------------
+
             foreach (var wizard in _wizards)
             {
                 wizard.DrawUI(spriteBatch, _spriteManager);

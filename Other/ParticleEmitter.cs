@@ -183,6 +183,8 @@ namespace ProjectVagabond.Particles
             p.Lifetime = Settings.Lifetime.GetValue(_random);
 
             p.Position = Position; // Start at emitter center
+
+            Vector2 localOffset = Vector2.Zero;
             switch (Settings.Shape)
             {
                 case EmitterShape.Circle:
@@ -195,22 +197,41 @@ namespace ProjectVagabond.Particles
                         {
                             distance *= (float)_random.NextDouble();
                         }
-                        p.Position += new Vector2((float)Math.Cos(angle), (float)Math.Sin(angle)) * distance;
+                        localOffset = new Vector2((float)Math.Cos(angle), (float)Math.Sin(angle)) * distance;
                     }
                     break;
                 case EmitterShape.Rectangle:
                     float halfWidth = Settings.EmitterSize.X / 2f;
                     float halfHeight = Settings.EmitterSize.Y / 2f;
-                    p.Position += new Vector2(
+                    localOffset = new Vector2(
                         (float)(_random.NextDouble() * 2 - 1) * halfWidth,
                         (float)(_random.NextDouble() * 2 - 1) * halfHeight
                     );
                     break;
             }
 
+            if (Settings.EmitterRotation != 0f)
+            {
+                float cos = MathF.Cos(Settings.EmitterRotation);
+                float sin = MathF.Sin(Settings.EmitterRotation);
+                localOffset = new Vector2(
+                    localOffset.X * cos - localOffset.Y * sin,
+                    localOffset.X * sin + localOffset.Y * cos
+                );
+            }
+
+            p.Position += localOffset;
+
             if (Settings.VelocityPattern == EmissionPattern.Radial)
             {
                 float angle = (float)(_random.NextDouble() * MathHelper.TwoPi);
+                float speed = Settings.InitialVelocityX.GetValue(_random); // Use X range as speed
+                p.Velocity = new Vector2(MathF.Cos(angle), MathF.Sin(angle)) * speed;
+            }
+            else if (Settings.VelocityPattern == EmissionPattern.Cone)
+            {
+                float halfSpread = Settings.ConeSpread / 2f;
+                float angle = Settings.ConeAngle + (float)(_random.NextDouble() * Settings.ConeSpread - halfSpread);
                 float speed = Settings.InitialVelocityX.GetValue(_random); // Use X range as speed
                 p.Velocity = new Vector2(MathF.Cos(angle), MathF.Sin(angle)) * speed;
             }

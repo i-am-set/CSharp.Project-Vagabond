@@ -1,4 +1,5 @@
 ﻿using Microsoft.Xna.Framework.Content;
+using ProjectVagabond.Animations;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -13,6 +14,7 @@ namespace ProjectVagabond.Battle
     {
         public static Dictionary<string, WizardCatData> WizardCats { get; private set; }
         public static Dictionary<string, MoveData> Moves { get; private set; }
+        public static Dictionary<string, AnimationData> Animations { get; private set; }
 
         public static void LoadData(ContentManager content)
         {
@@ -41,6 +43,15 @@ namespace ProjectVagabond.Battle
                 Moves = movesList.ToDictionary(m => m.ID, m => m, StringComparer.OrdinalIgnoreCase);
             }
             else Moves = new Dictionary<string, MoveData>();
+
+            string animPath = Path.Combine(content.RootDirectory, "Data", "Animations.json");
+            if (File.Exists(animPath))
+            {
+                string animJson = File.ReadAllText(animPath);
+                var animList = JsonSerializer.Deserialize<List<AnimationData>>(animJson, jsonOptions);
+                Animations = animList.ToDictionary(a => a.ID, a => a, StringComparer.OrdinalIgnoreCase);
+            }
+            else Animations = new Dictionary<string, AnimationData>();
         }
     }
 }

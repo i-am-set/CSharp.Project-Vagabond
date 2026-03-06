@@ -9,7 +9,7 @@ namespace ProjectVagabond.Particles
 {
     public enum EmitterShape { Point, Circle, Rectangle }
     public enum EmissionSource { Center, Edge, Volume }
-    public enum EmissionPattern { Cartesian, Radial }
+    public enum EmissionPattern { Cartesian, Radial, Cone }
 
     public class ParticleEmitterSettings
     {
@@ -24,6 +24,8 @@ namespace ProjectVagabond.Particles
 
         // Initial Particle Properties
         public EmissionPattern VelocityPattern { get; set; } = EmissionPattern.Cartesian;
+        public float ConeAngle { get; set; } = 0f;
+        public float ConeSpread { get; set; } = MathHelper.PiOver4;
         public FloatRange Lifetime { get; set; }
         public FloatRange InitialVelocityX { get; set; }
         public FloatRange InitialVelocityY { get; set; }
@@ -48,6 +50,7 @@ namespace ProjectVagabond.Particles
         public float VectorFieldInfluence { get; set; }
         public float? AttractorXPosition { get; set; } = null;
         public float AttractorStrength { get; set; } = 0f;
+        public float EmitterRotation { get; set; } = 0f;
 
         // Rendering Properties
         public Texture2D Texture { get; set; }
@@ -84,6 +87,8 @@ namespace ProjectVagabond.Particles
 
                 // Initial Particle
                 VelocityPattern = EmissionPattern.Cartesian,
+                ConeAngle = 0f,
+                ConeSpread = MathHelper.PiOver4,
                 Lifetime = new FloatRange(1.0f, 2.0f),
                 InitialVelocityX = new FloatRange(-10f, 10f),
                 InitialVelocityY = new FloatRange(-10f, 10f),
@@ -108,6 +113,7 @@ namespace ProjectVagabond.Particles
                 VectorFieldInfluence = 0f,
                 AttractorXPosition = null,
                 AttractorStrength = 0f,
+                EmitterRotation = 0f,
 
                 // Rendering
                 Texture = ServiceLocator.Get<Texture2D>(), // Default 1x1 white pixel

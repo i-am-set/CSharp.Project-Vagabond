@@ -1,5 +1,6 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using ProjectVagabond.Animations;
 using ProjectVagabond.Particles;
 using ProjectVagabond.Scenes;
 using ProjectVagabond.Utils;
@@ -107,23 +108,32 @@ namespace ProjectVagabond.Battle
 
             LoadMoves(data);
 
-            SparMove = new MoveDefinition
+            string sparId = (data.SparName ?? "scratch").ToLowerInvariant();
+            if (GameDataCache.Moves.TryGetValue(sparId, out var sparData))
             {
-                Name = data.SparName ?? "Scratch",
-                BasePower = data.SparBasePower > 0 ? data.SparBasePower : 10,
-                ChargeTime = 0,
-                Weight = 0,
-                CanTargetSelf = false,
-                Delivery = new SelfDelivery()
-            };
-
-            if ((data.SparEffectType ?? "Damage") == "Damage")
-            {
-                SparMove.Effects.Add(new DamageEffect());
+                SparMove = MoveFactory.CreateMove(sparData);
+                if (data.SparBasePower > 0) SparMove.BasePower = data.SparBasePower;
             }
-            else if (data.SparEffectType == "Heal")
+            else
             {
-                SparMove.Effects.Add(new HealEffect { HealPercentage = 1.0f });
+                SparMove = new MoveDefinition
+                {
+                    Name = data.SparName ?? "Scratch",
+                    BasePower = data.SparBasePower > 0 ? data.SparBasePower : 10,
+                    ChargeTime = 0,
+                    Weight = 0,
+                    CanTargetSelf = false,
+                    Delivery = new SelfDelivery()
+                };
+
+                if ((data.SparEffectType ?? "Damage") == "Damage")
+                {
+                    SparMove.Effects.Add(new DamageEffect());
+                }
+                else if (data.SparEffectType == "Heal")
+                {
+                    SparMove.Effects.Add(new HealEffect { HealPercentage = 1.0f });
+                }
             }
         }
 
@@ -294,7 +304,8 @@ namespace ProjectVagabond.Battle
                     break;
 
                 case WizardState.Casting:
-                    if (_currentActiveAttack == null || _currentActiveAttack.DeliveryInstance.IsFinished)
+                    bool animFinished = _currentActiveAttack == null || _currentActiveAttack.Animation == null || _currentActiveAttack.Animation.IsFinished;
+                    if (_currentActiveAttack == null || (_currentActiveAttack.DeliveryInstance.IsFinished && animFinished))
                     {
                         State = WizardState.Recovering;
                         _stateTimer = 0.25f;
@@ -323,6 +334,26 @@ namespace ProjectVagabond.Battle
                                 _activeMoveText = SparMove.Name;
                                 _moveTextTimer = 1.5f;
                                 _moveTextDuration = 1.5f;
+
+                                if (!string.IsNullOrEmpty(SparMove.AnimationID))
+                                {
+                                    var anim = AnimationFactory.CreateAnimation(SparMove.AnimationID);
+                                    if (anim != null)
+                                    {
+                                        var attack = new ActiveAttack
+                                        {
+                                            Caster = this,
+                                            Move = SparMove,
+                                            Origin = Position,
+                                            Direction = _sparOpponent.Position - Position,
+                                            TargetPosition = _sparOpponent.Position,
+                                            DeliveryInstance = new InstantAOEDelivery { Radius = 24f },
+                                            Animation = anim,
+                                            HasTriggeredImpact = true
+                                        };
+                                        arena.SpawnAttack(attack);
+                                    }
+                                }
 
                                 foreach (var effect in SparMove.Effects)
                                 {
@@ -435,7 +466,9 @@ namespace ProjectVagabond.Battle
                 Origin = Position,
                 Direction = _queuedDirection,
                 TargetPosition = _queuedTargetPos,
-                DeliveryInstance = _queuedMove.Delivery.Clone()
+                DeliveryInstance = _queuedMove.Delivery.Clone(),
+                Animation = AnimationFactory.CreateAnimation(_queuedMove.AnimationID),
+                HasTriggeredImpact = false
             };
 
             _currentActiveAttack = attack;

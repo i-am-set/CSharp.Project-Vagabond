@@ -92,15 +92,6 @@ namespace ProjectVagabond.Particles
                 }
                 spriteBatch.End();
             }
-
-            // --- DEBUG VISUALIZATION ---
-            var global = ServiceLocator.Get<Global>();
-            if (global.ShowDebugOverlays)
-            {
-                spriteBatch.Begin(sortMode: SpriteSortMode.Deferred, blendState: BlendState.AlphaBlend, samplerState: SamplerState.PointClamp, transformMatrix: transformMatrix);
-                _vectorField.DebugDraw(spriteBatch);
-                spriteBatch.End();
-            }
         }
     }
 }

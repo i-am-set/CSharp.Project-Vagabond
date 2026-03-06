@@ -1,0 +1,130 @@
+[
+  {
+    "ID": "anim_scratch",
+    "Type": "Sprite",
+    "Sprite": {
+      "TexturePath": "Sprites/MoveAnimationSpriteSheets/phy_claw",
+      "FrameWidth": 32,
+      "FrameHeight": 32,
+      "FrameRate": 12.0,
+      "Scale": 0.5,
+      "ImpactFrame": 2,
+      "IsProjectile": false,
+      "ProjectileSpeed": 0.0
+    }
+  },
+  {
+    "ID": "anim_magic_beam",
+    "Type": "Particle",
+    "Particles": [
+      {
+        "Mode": "Volume",
+        "Duration": 1.5,
+        "Emitter": {
+          "Shape": "Rectangle",
+          "EmitFrom": "Volume",
+          "EmissionRate": 1000.0,
+          "MaxParticles": 1000,
+          "VelocityPattern": "Cartesian",
+          "VelocityXMin": -5.0,
+          "VelocityXMax": 5.0,
+          "VelocityYMin": -5.0,
+          "VelocityYMax": 5.0,
+          "LifetimeMin": 0.3,
+          "LifetimeMax": 0.5,
+          "SizeMin": 2.0,
+          "SizeMax": 3.0,
+          "EndSizeMin": 0.0,
+          "EndSizeMax": 0.0,
+          "InterpolateSize": true,
+          "StartColor": "Palette_Sky",
+          "EndColor": "Palette_Shadow",
+          "StartAlpha": 1.0,
+          "EndAlpha": 0.0,
+          "BlendMode": "Additive"
+        }
+      }
+    ]
+  },
+  {
+    "ID": "anim_snipe",
+    "Type": "Particle",
+    "Particles": [
+      {
+        "Mode": "Projectile",
+        "Duration": 2.0,
+        "ProjectileSpeed": 400.0,
+        "Emitter": {
+          "Shape": "Point",
+          "EmissionRate": 0.0,
+          "BurstCount": 1,
+          "MaxParticles": 1,
+          "LifetimeMin": 2.0,
+          "LifetimeMax": 2.0,
+          "SizeMin": 4.0,
+          "SizeMax": 4.0,
+          "StartColor": "Palette_Sun",
+          "EndColor": "Palette_Sun",
+          "StartAlpha": 1.0,
+          "EndAlpha": 1.0,
+          "BlendMode": "Additive"
+        },
+        "Trail": {
+          "Shape": "Point",
+          "EmissionRate": 80.0,
+          "MaxParticles": 150,
+          "VelocityPattern": "Radial",
+          "LifetimeMin": 0.2,
+          "LifetimeMax": 0.4,
+          "SpeedMin": 5.0,
+          "SpeedMax": 20.0,
+          "SizeMin": 2.0,
+          "SizeMax": 4.0,
+          "EndSizeMin": 0.0,
+          "EndSizeMax": 0.0,
+          "InterpolateSize": true,
+          "StartColor": "Palette_Fruit",
+          "EndColor": "Palette_Rust",
+          "StartAlpha": 0.8,
+          "EndAlpha": 0.0,
+          "BlendMode": "Additive"
+        }
+      }
+    ]
+  },
+  {
+    "ID": "anim_lick_wounds",
+    "Type": "Particle",
+    "Particles": [
+      {
+        "Mode": "Volume",
+        "Duration": 0.8,
+        "Emitter": {
+          "Shape": "Circle",
+          "EmitFrom": "Volume",
+          "EmitterSizeX": 16.0,
+          "EmitterSizeY": 16.0,
+          "EmissionRate": 50.0,
+          "MaxParticles": 60,
+          "VelocityPattern": "Cartesian",
+          "VelocityXMin": -10.0,
+          "VelocityXMax": 10.0,
+          "VelocityYMin": -40.0,
+          "VelocityYMax": -15.0,
+          "LifetimeMin": 0.4,
+          "LifetimeMax": 0.8,
+          "SizeMin": 2.0,
+          "SizeMax": 4.0,
+          "EndSizeMin": 0.0,
+          "EndSizeMax": 0.0,
+          "InterpolateSize": true,
+          "StartColor": "Palette_Leaf",
+          "EndColor": "Palette_Sun",
+          "StartAlpha": 1.0,
+          "EndAlpha": 0.0,
+          "BlendMode": "Additive"
+        }
+      }
+    ]
+  }
+]
