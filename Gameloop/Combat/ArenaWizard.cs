@@ -1,11 +1,14 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond.Animations;
 using ProjectVagabond.Particles;
 using ProjectVagabond.Scenes;
 using ProjectVagabond.Utils;
 using System;
 using System.Collections.Generic;
+using static System.Net.Mime.MediaTypeNames;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace ProjectVagabond.Battle
 {
@@ -85,7 +88,7 @@ namespace ProjectVagabond.Battle
 
         private class FloatingText
         {
-            public string Text;
+            public int Number;
             public bool IsHealing;
             public float Timer;
             public float Duration;
@@ -186,7 +189,7 @@ namespace ProjectVagabond.Battle
 
                 _floatingTexts.Add(new FloatingText
                 {
-                    Text = $"-{actualDamage}",
+                    Number = actualDamage,
                     IsHealing = false,
                     Duration = 1.0f,
                     Timer = 1.0f,
@@ -214,7 +217,7 @@ namespace ProjectVagabond.Battle
 
                 _floatingTexts.Add(new FloatingText
                 {
-                    Text = $"+{actualHeal}",
+                    Number = actualHeal,
                     IsHealing = true,
                     Duration = 1.0f,
                     Timer = 1.0f,
@@ -602,6 +605,8 @@ namespace ProjectVagabond.Battle
             var global = ServiceLocator.Get<Global>();
             var core = ServiceLocator.Get<Core>();
             var tertiaryFont = core.TertiaryFont;
+            var secondaryFont = core.SecondaryFont;
+            var defaultFont = core.DefaultFont;
 
             if (_moveTextTimer > 0 && !string.IsNullOrEmpty(_activeMoveText) && State != WizardState.Dead)
             {
@@ -638,19 +643,33 @@ namespace ProjectVagabond.Battle
             foreach (var ft in _floatingTexts)
             {
                 bool isFlash = (ft.Timer % 0.1f) > 0.05f;
-                Color textColor = ft.IsHealing
-                    ? (isFlash ? global.Palette_Sun : global.Palette_Leaf)
-                    : (isFlash ? global.Palette_Sun : global.Palette_Rust);
+                string text = (ft.IsHealing ? $"+{ft.Number}" : $"-{ft.Number}");
+
+                BitmapFont font = core.TertiaryFont;
+                if (ft.Number > 4)
+                {
+                    font = core.DefaultFont;
+                } else if (ft.Number > 2)
+                {
+                    font = core.SecondaryFont;
+                } else
+                {
+                    font = core.TertiaryFont;
+                }
+
+                    Color textColor = ft.IsHealing
+                        ? (isFlash ? global.Palette_Sun : global.Palette_Leaf)
+                        : (isFlash ? global.Palette_Sun : global.Palette_Rust);
 
                 float alphaMult = Math.Clamp(ft.Timer / 0.2f, 0f, 1f);
                 Color finalTextColor = textColor * alphaMult;
                 Color outlineColor = global.Palette_Off * alphaMult;
 
                 Vector2 textPos = new Vector2(MathF.Round(Position.X), MathF.Round(Position.Y)) + ft.LocalOffset;
-                Vector2 textSize = tertiaryFont.MeasureString(ft.Text);
+                Vector2 textSize = font.MeasureString(text);
                 Vector2 origin = new Vector2(MathF.Round(textSize.X / 2f), MathF.Round(textSize.Y / 2f));
 
-                spriteBatch.DrawStringOutlinedSnapped(tertiaryFont, ft.Text, textPos, finalTextColor, outlineColor, 0f, origin, 1f, SpriteEffects.None, 0f);
+                spriteBatch.DrawStringOutlinedSnapped(font, text, textPos, finalTextColor, outlineColor, 0f, origin, 1f, SpriteEffects.None, 0f);
             }
 
             if (State == WizardState.Dead || _healthBarAlpha <= 0f) return;
