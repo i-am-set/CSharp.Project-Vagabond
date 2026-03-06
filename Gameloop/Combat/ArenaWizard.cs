@@ -1,5 +1,4 @@
-﻿// text/plain
-using Microsoft.Xna.Framework;
+﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using ProjectVagabond.Animations;
 using ProjectVagabond.Particles;
@@ -7,7 +6,6 @@ using ProjectVagabond.Scenes;
 using ProjectVagabond.Utils;
 using System;
 using System.Collections.Generic;
-using System.Linq;
 
 namespace ProjectVagabond.Battle
 {
@@ -52,6 +50,12 @@ namespace ProjectVagabond.Battle
         public float DeadBodyMinAlpha = 0.0f;
 
         public float TimeSinceDeath { get; private set; } = 0f;
+
+        // HUD Layout Cache
+        public Vector2 HudNameSize;
+        public Vector2 HudNamePos;
+        public Vector2 HudHeartStartPos;
+        public bool HudIsLeft;
 
         private float _actionTimer;
         private float _stateTimer;
@@ -136,7 +140,6 @@ namespace ProjectVagabond.Battle
 
             if (State == WizardState.Dead)
             {
-                // Rotate bounds 90 degrees around the (16, 16) origin
                 int newX = -(bounds.Y + bounds.Height);
                 int newY = bounds.X;
                 bounds = new Rectangle(newX, newY, bounds.Height, bounds.Width);
@@ -203,7 +206,6 @@ namespace ProjectVagabond.Battle
             _knockbackStartPos = Position;
             Vector2 desiredTarget = Position + dir * distance;
 
-            // Clamp desiredTarget to arena bounds
             Vector2 center = new Vector2(Global.VIRTUAL_WIDTH / 2f, Global.VIRTUAL_HEIGHT / 2f);
             Vector2 fromCenter = desiredTarget - center;
             float angle = MathF.Atan2(fromCenter.Y, fromCenter.X);
@@ -410,7 +412,12 @@ namespace ProjectVagabond.Battle
                 return;
             }
 
-            int totalWeight = Moves.Sum(m => m.Weight);
+            int totalWeight = 0;
+            foreach (var move in Moves)
+            {
+                totalWeight += move.Weight;
+            }
+
             int roll = _random.Next(totalWeight);
             int currentWeight = 0;
 
@@ -432,20 +439,51 @@ namespace ProjectVagabond.Battle
             }
             else
             {
-                var potentialTargets = arena.GetAllWizards().Where(w => w != this && w.CurrentHP > 0).ToList();
-                if (potentialTargets.Count == 0)
-                {
-                    _actionTimer = GetRandomActionTime();
-                    return;
-                }
-
                 if (_queuedMove.Delivery is DashMeleeDelivery)
                 {
-                    target = potentialTargets.OrderBy(w => Vector2.DistanceSquared(Position, w.Position)).First();
+                    float closestDist = float.MaxValue;
+                    foreach (var w in arena.Wizards)
+                    {
+                        if (w == this || w.CurrentHP <= 0) continue;
+                        float dist = Vector2.DistanceSquared(Position, w.Position);
+                        if (dist < closestDist)
+                        {
+                            closestDist = dist;
+                            target = w;
+                        }
+                    }
                 }
                 else
                 {
-                    target = potentialTargets[_random.Next(potentialTargets.Count)];
+                    int validCount = 0;
+                    foreach (var w in arena.Wizards)
+                    {
+                        if (w != this && w.CurrentHP > 0) validCount++;
+                    }
+
+                    if (validCount > 0)
+                    {
+                        int targetRoll = _random.Next(validCount);
+                        int curr = 0;
+                        foreach (var w in arena.Wizards)
+                        {
+                            if (w != this && w.CurrentHP > 0)
+                            {
+                                if (curr == targetRoll)
+                                {
+                                    target = w;
+                                    break;
+                                }
+                                curr++;
+                            }
+                        }
+                    }
+                }
+
+                if (target == null)
+                {
+                    _actionTimer = GetRandomActionTime();
+                    return;
                 }
             }
 

@@ -432,5 +432,33 @@ namespace ProjectVagabond.Battle
         public ProjectVagabond.Animations.IAnimationInstance Animation { get; set; }
         public bool HasTriggeredImpact { get; set; }
         public bool IsCanceled { get; set; }
+
+        public void Update(float dt, ArenaScene arena)
+        {
+            if (IsCanceled)
+            {
+                Animation?.Cancel();
+                return;
+            }
+
+            if (Animation != null)
+            {
+                Animation.Update(dt, arena, this);
+                if (Animation.HasTriggeredImpact && !HasTriggeredImpact)
+                {
+                    HasTriggeredImpact = true;
+                    DeliveryInstance.TriggerImpact(arena, this);
+                }
+            }
+            else if (!HasTriggeredImpact)
+            {
+                HasTriggeredImpact = true;
+                DeliveryInstance.TriggerImpact(arena, this);
+            }
+
+            DeliveryInstance.Update(dt, arena, this);
+        }
+
+        public bool IsFinished => (Animation == null || Animation.IsFinished) && DeliveryInstance.IsFinished;
     }
 }

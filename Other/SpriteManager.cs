@@ -61,7 +61,6 @@ namespace ProjectVagabond
         public Texture2D CardFlipIcon { get; private set; }
         public Texture2D LevelIconSprite { get; private set; }
 
-        // NEW: Fast Forward Icon
         public Texture2D FastForwardIcon { get; private set; }
 
         public Rectangle[] ActionButtonSourceRects { get; private set; }
@@ -123,7 +122,6 @@ namespace ProjectVagabond
         public Texture2D MapNodePlayerSprite { get; private set; }
         public Texture2D MapNodePlayerSpriteSilhouette { get; private set; }
 
-        // NEW: Rest and Recruit Nodes
         public Texture2D SplitNodeRest { get; private set; }
         public Texture2D SplitNodeRestSilhouette { get; private set; }
         public Texture2D SplitNodeRecruit { get; private set; }
@@ -187,13 +185,23 @@ namespace ProjectVagabond
             _textureFactory = ServiceLocator.Get<TextureFactory>();
         }
 
+        private Texture2D LoadTex(string path, int fallbackWidth, int fallbackHeight, Color fallbackColor)
+        {
+            try { return _core.Content.Load<Texture2D>(path); }
+            catch { return _textureFactory.CreateColoredTexture(fallbackWidth, fallbackHeight, fallbackColor); }
+        }
+
+        private Texture2D LoadTexWithSilhouette(string path, int fallbackWidth, int fallbackHeight, Color fallbackColor, out Texture2D silhouette)
+        {
+            Texture2D tex = LoadTex(path, fallbackWidth, fallbackHeight, fallbackColor);
+            silhouette = CreateSilhouette(tex);
+            return tex;
+        }
+
         public void LoadEssentialContent()
         {
-            try { _logoSprite = _core.Content.Load<Texture2D>("Sprites/logo"); }
-            catch { _logoSprite = _textureFactory.CreateColoredTexture(8, 8, Color.Red); }
-
-            try { _mapMarkerSprite = _core.Content.Load<Texture2D>("Sprites/map_marker"); }
-            catch { _mapMarkerSprite = _textureFactory.CreateColoredTexture(8, 8, Color.Magenta); }
+            _logoSprite = LoadTex("Sprites/logo", 8, 8, Color.Red);
+            _mapMarkerSprite = LoadTex("Sprites/map_marker", 8, 8, Color.Magenta);
 
             try { _circleTextureSprite = _textureFactory.CreateCircleTexture(); }
             catch { _circleTextureSprite = _textureFactory.CreateColoredTexture(16, 16, Color.Red); }
@@ -201,210 +209,107 @@ namespace ProjectVagabond
             try { _ringTextureSprite = _textureFactory.CreateRingTexture(); }
             catch { _ringTextureSprite = _textureFactory.CreateColoredTexture(16, 16, Color.White); }
 
-            try { _settingsIconSprite = _core.Content.Load<Texture2D>("Sprites/UI/BasicIcons/ui_settings_icon"); }
-            catch { _settingsIconSprite = _textureFactory.CreateColoredTexture(8, 8, Color.Red); }
-
-            try { _downArrowSprite = _core.Content.Load<Texture2D>("Sprites/UI/BasicIcons/down_arrow"); }
-            catch { _downArrowSprite = _textureFactory.CreateColoredTexture(9, 9, Color.Red); }
-
-            try { FastForwardIcon = _core.Content.Load<Texture2D>("Sprites/UI/BasicIcons/fastforward_icon"); }
-            catch { FastForwardIcon = _textureFactory.CreateColoredTexture(32, 32, Color.Yellow); }
+            _settingsIconSprite = LoadTex("Sprites/UI/BasicIcons/ui_settings_icon", 8, 8, Color.Red);
+            _downArrowSprite = LoadTex("Sprites/UI/BasicIcons/down_arrow", 9, 9, Color.Red);
+            FastForwardIcon = LoadTex("Sprites/UI/BasicIcons/fastforward_icon", 32, 32, Color.Yellow);
 
             try { _circleParticleSprite = _textureFactory.CreateCircleParticleTexture(); }
             catch { _circleParticleSprite = _textureFactory.CreateColoredTexture(4, 4, Color.Red); }
 
-            try { _emberParticleSprite = _core.Content.Load<Texture2D>("Sprites/Particles/ember_particle"); }
-            catch { _emberParticleSprite = _textureFactory.CreateColoredTexture(9, 9, Color.Red); }
+            _emberParticleSprite = LoadTex("Sprites/Particles/ember_particle", 9, 9, Color.Red);
 
             try { _softParticleSprite = _textureFactory.CreateSoftCircleParticleTexture(); }
             catch { _softParticleSprite = _textureFactory.CreateColoredTexture(16, 16, Color.Red); }
 
-            try { ScratchParticleSprite = _core.Content.Load<Texture2D>("Sprites/Particles/scratch_particle"); }
-            catch { ScratchParticleSprite = _textureFactory.CreateColoredTexture(12, 2, Color.White); }
+            ScratchParticleSprite = LoadTex("Sprites/Particles/scratch_particle", 12, 2, Color.White);
+            BattleEnemyFloorSprite = LoadTex("Sprites/UI/BattleUI/battle_enemy_floor", 128, 128, Color.DarkGray);
+            BattlePlayerFloorSprite = LoadTex("Sprites/UI/BattleUI/party_member_enemy_floor", 128, 128, Color.DarkBlue);
+            ArrowIconSpriteSheet = LoadTex("Sprites/UI/BasicIcons/arrow_icon_spritesheet", 48, 48, Color.Magenta);
+            ActionButtonsSpriteSheet = LoadTex("Sprites/UI/BattleUI/ui_action_buttons_icon_spritesheet", 192, 129, Color.Magenta);
+            ActionButtonTemplateSpriteSheet = LoadTex("Sprites/UI/BattleUI/ui_action_button_template_spritesheet", 1099, 17, Color.Magenta);
+            ActionTooltipBackgroundSprite = LoadTex("Sprites/UI/BattleUI/ui_action_tooltip_background", 319, 178, Color.DarkGray);
+            ActionIconsSpriteSheet = LoadTex("Sprites/UI/BasicIcons/ui_action_icons_spritesheet_9x9", 45, 9, Color.Magenta);
+            ActionButtonUsesSpriteSheet = LoadTex("Sprites/UI/BattleUI/ui_action_button_uses_spritesheet", 471, 17, Color.Magenta);
 
-            try { BattleEnemyFloorSprite = _core.Content.Load<Texture2D>("Sprites/UI/BattleUI/battle_enemy_floor"); }
-            catch { BattleEnemyFloorSprite = _textureFactory.CreateColoredTexture(128, 128, Color.DarkGray); }
+            StatChangeIconsSpriteSheet = LoadTexWithSilhouette("Sprites/UI/BasicIcons/stat_change_icons_spritesheet", 9, 3, Color.Magenta, out var statSilhouette);
+            StatChangeIconsSpriteSheetSilhouette = statSilhouette;
 
-            try { BattlePlayerFloorSprite = _core.Content.Load<Texture2D>("Sprites/UI/BattleUI/party_member_enemy_floor"); }
-            catch { BattlePlayerFloorSprite = _textureFactory.CreateColoredTexture(128, 128, Color.DarkBlue); }
+            PermanentStatusIconsSpriteSheet = LoadTex("Sprites/UI/BasicIcons/status_effect_icon_spritesheet", 20, 10, Color.Magenta);
+            ItemWeaponsSpriteSheet = LoadTex("Sprites/Items/item_weapons_spritesheet", 128, 256, Color.Magenta);
+            BattleBorderMain = LoadTex("Sprites/UI/BattleUI/battle_border_main", 320, 180, Color.Magenta);
+            BattleBorderMain2 = LoadTex("Sprites/UI/BattleUI/battle_border_main_2", 320, 180, Color.Magenta);
+            BattleBorderCombat = LoadTex("Sprites/UI/BattleUI/battle_border_combat", 320, 180, Color.Magenta);
+            BattleBorderAction = LoadTex("Sprites/UI/BattleUI/battle_border_action", 320, 180, Color.Magenta);
+            BattleBorderItem = LoadTex("Sprites/UI/BattleUI/battle_border_item", 320, 180, Color.Magenta);
+            BattleBorderTarget = LoadTex("Sprites/UI/BattleUI/battle_border_target", 320, 180, Color.Magenta);
+            BattleBorderSwitch = LoadTex("Sprites/UI/BattleUI/battle_border_switch", 320, 180, Color.Magenta);
 
-            try { ArrowIconSpriteSheet = _core.Content.Load<Texture2D>("Sprites/UI/BasicIcons/arrow_icon_spritesheet"); }
-            catch { ArrowIconSpriteSheet = _textureFactory.CreateColoredTexture(48, 48, Color.Magenta); }
+            MousePromptBlank = LoadTexWithSilhouette("Sprites/UI/KeyPrompts/mouse/ui_mouse_blank", 5, 7, Color.Magenta, out var mpbSil);
+            MousePromptBlankSilhouette = mpbSil;
 
-            try { ActionButtonsSpriteSheet = _core.Content.Load<Texture2D>("Sprites/UI/BattleUI/ui_action_buttons_icon_spritesheet"); }
-            catch { ActionButtonsSpriteSheet = _textureFactory.CreateColoredTexture(192, 129, Color.Magenta); }
+            MousePromptLeftClick = LoadTexWithSilhouette("Sprites/UI/KeyPrompts/mouse/ui_mouse_left_click", 5, 7, Color.Magenta, out var mplcSil);
+            MousePromptLeftClickSilhouette = mplcSil;
 
-            try { ActionButtonTemplateSpriteSheet = _core.Content.Load<Texture2D>("Sprites/UI/BattleUI/ui_action_button_template_spritesheet"); }
-            catch { ActionButtonTemplateSpriteSheet = _textureFactory.CreateColoredTexture(1099, 17, Color.Magenta); }
+            MousePromptRightClick = LoadTexWithSilhouette("Sprites/UI/KeyPrompts/mouse/ui_mouse_right_click", 5, 7, Color.Magenta, out var mprcSil);
+            MousePromptRightClickSilhouette = mprcSil;
 
-            try { ActionTooltipBackgroundSprite = _core.Content.Load<Texture2D>("Sprites/UI/BattleUI/ui_action_tooltip_background"); }
-            catch { ActionTooltipBackgroundSprite = _textureFactory.CreateColoredTexture(319, 178, Color.DarkGray); }
+            MousePromptMiddleClick = LoadTexWithSilhouette("Sprites/UI/KeyPrompts/mouse/ui_mouse_middle_click", 5, 7, Color.Magenta, out var mpmcSil);
+            MousePromptMiddleClickSilhouette = mpmcSil;
 
-            try { ActionIconsSpriteSheet = _core.Content.Load<Texture2D>("Sprites/UI/BasicIcons/ui_action_icons_spritesheet_9x9"); }
-            catch { ActionIconsSpriteSheet = _textureFactory.CreateColoredTexture(45, 9, Color.Magenta); }
+            MousePromptDisabled = LoadTexWithSilhouette("Sprites/UI/KeyPrompts/mouse/ui_mouse_disabled", 5, 7, Color.Magenta, out var mpdSil);
+            MousePromptDisabledSilhouette = mpdSil;
 
-            try { ActionButtonUsesSpriteSheet = _core.Content.Load<Texture2D>("Sprites/UI/BattleUI/ui_action_button_uses_spritesheet"); }
-            catch { ActionButtonUsesSpriteSheet = _textureFactory.CreateColoredTexture(471, 17, Color.Magenta); }
+            SpellbookPageSprite = LoadTex("Sprites/SpellBook/spellbook_page", 35, 35, Color.Magenta);
+            SpellbookClosedSprite = LoadTex("Sprites/SpellBook/spellbook_closed", 64, 64, Color.Magenta);
 
-            try
-            {
-                StatChangeIconsSpriteSheet = _core.Content.Load<Texture2D>("Sprites/UI/BasicIcons/stat_change_icons_spritesheet");
-                StatChangeIconsSpriteSheetSilhouette = CreateSilhouette(StatChangeIconsSpriteSheet);
-            }
-            catch
-            {
-                StatChangeIconsSpriteSheet = _textureFactory.CreateColoredTexture(9, 3, Color.Magenta);
-                StatChangeIconsSpriteSheetSilhouette = _textureFactory.CreateColoredTexture(9, 3, Color.White);
-            }
+            SplitNodeStart = LoadTexWithSilhouette("Sprites/MapNodes/MapNode_Start", 64, 32, Color.Green, out var snsSil);
+            SplitNodeStartSilhouette = snsSil;
 
-            try
-            {
-                PermanentStatusIconsSpriteSheet = _core.Content.Load<Texture2D>("Sprites/UI/BasicIcons/status_effect_icon_spritesheet");
-            }
-            catch
-            {
-                Debug.WriteLine("[SpriteManager] WARNING: Could not load 'permanent_status_icons'. Using placeholder.");
-                PermanentStatusIconsSpriteSheet = _textureFactory.CreateColoredTexture(20, 10, Color.Magenta);
-            }
+            SplitNodeCombat = LoadTexWithSilhouette("Sprites/MapNodes/MapNode_Combat", 64, 32, Color.Red, out var sncSil);
+            SplitNodeCombatSilhouette = sncSil;
 
-            try { ItemWeaponsSpriteSheet = _core.Content.Load<Texture2D>("Sprites/Items/item_weapons_spritesheet"); }
-            catch { ItemWeaponsSpriteSheet = _textureFactory.CreateColoredTexture(128, 256, Color.Magenta); }
+            SplitNodeEasyCombat = LoadTexWithSilhouette("Sprites/MapNodes/MapNode_EasyCombat", 64, 32, Color.LightGreen, out var snecSil);
+            SplitNodeEasyCombatSilhouette = snecSil;
 
-            try { BattleBorderMain = _core.Content.Load<Texture2D>("Sprites/UI/BattleUI/battle_border_main"); }
-            catch { BattleBorderMain = _textureFactory.CreateColoredTexture(320, 180, Color.Magenta); }
+            SplitNodeHardCombat = LoadTexWithSilhouette("Sprites/MapNodes/MapNode_HardCombat", 64, 32, Color.DarkRed, out var snhcSil);
+            SplitNodeHardCombatSilhouette = snhcSil;
 
-            try { BattleBorderMain2 = _core.Content.Load<Texture2D>("Sprites/UI/BattleUI/battle_border_main_2"); }
-            catch { BattleBorderMain2 = _textureFactory.CreateColoredTexture(320, 180, Color.Magenta); }
+            SplitNodeRest = LoadTexWithSilhouette("Sprites/MapNodes/MapNode_Rest", 64, 32, Color.GreenYellow, out var snrSil);
+            SplitNodeRestSilhouette = snrSil;
 
-            try { BattleBorderCombat = _core.Content.Load<Texture2D>("Sprites/UI/BattleUI/battle_border_combat"); }
-            catch { BattleBorderCombat = _textureFactory.CreateColoredTexture(320, 180, Color.Magenta); }
+            SplitNodeRecruit = LoadTexWithSilhouette("Sprites/MapNodes/MapNode_Recuit", 64, 32, Color.CornflowerBlue, out var snrecSil);
+            SplitNodeRecruitSilhouette = snrecSil;
 
-            try { BattleBorderAction = _core.Content.Load<Texture2D>("Sprites/UI/BattleUI/battle_border_action"); }
-            catch { BattleBorderAction = _textureFactory.CreateColoredTexture(320, 180, Color.Magenta); }
+            MapNodePlayerSprite = LoadTexWithSilhouette("Sprites/MapNodes/MapNode_Player", 64, 32, Color.Cyan, out var mnpsSil);
+            MapNodePlayerSpriteSilhouette = mnpsSil;
 
-            try { BattleBorderItem = _core.Content.Load<Texture2D>("Sprites/UI/BattleUI/battle_border_item"); }
-            catch { BattleBorderItem = _textureFactory.CreateColoredTexture(320, 180, Color.Magenta); }
-
-            try { BattleBorderTarget = _core.Content.Load<Texture2D>("Sprites/UI/BattleUI/battle_border_target"); }
-            catch { BattleBorderTarget = _textureFactory.CreateColoredTexture(320, 180, Color.Magenta); }
-
-            try { BattleBorderSwitch = _core.Content.Load<Texture2D>("Sprites/UI/BattleUI/battle_border_switch"); }
-            catch { BattleBorderSwitch = _textureFactory.CreateColoredTexture(320, 180, Color.Magenta); }
-
-            try { MousePromptBlank = _core.Content.Load<Texture2D>("Sprites/UI/KeyPrompts/mouse/ui_mouse_blank"); }
-            catch { MousePromptBlank = _textureFactory.CreateColoredTexture(5, 7, Color.Magenta); }
-            MousePromptBlankSilhouette = CreateSilhouette(MousePromptBlank);
-
-            try { MousePromptLeftClick = _core.Content.Load<Texture2D>("Sprites/UI/KeyPrompts/mouse/ui_mouse_left_click"); }
-            catch { MousePromptLeftClick = _textureFactory.CreateColoredTexture(5, 7, Color.Magenta); }
-            MousePromptLeftClickSilhouette = CreateSilhouette(MousePromptLeftClick);
-
-            try { MousePromptRightClick = _core.Content.Load<Texture2D>("Sprites/UI/KeyPrompts/mouse/ui_mouse_right_click"); }
-            catch { MousePromptRightClick = _textureFactory.CreateColoredTexture(5, 7, Color.Magenta); }
-            MousePromptRightClickSilhouette = CreateSilhouette(MousePromptRightClick);
-
-            try { MousePromptMiddleClick = _core.Content.Load<Texture2D>("Sprites/UI/KeyPrompts/mouse/ui_mouse_middle_click"); }
-            catch { MousePromptMiddleClick = _textureFactory.CreateColoredTexture(5, 7, Color.Magenta); }
-            MousePromptMiddleClickSilhouette = CreateSilhouette(MousePromptMiddleClick);
-
-            try { MousePromptDisabled = _core.Content.Load<Texture2D>("Sprites/UI/KeyPrompts/mouse/ui_mouse_disabled"); }
-            catch { MousePromptDisabled = _textureFactory.CreateColoredTexture(5, 7, Color.Magenta); }
-            MousePromptDisabledSilhouette = CreateSilhouette(MousePromptDisabled);
-
-            try { SpellbookPageSprite = _core.Content.Load<Texture2D>("Sprites/SpellBook/spellbook_page"); }
-            catch { SpellbookPageSprite = _textureFactory.CreateColoredTexture(35, 35, Color.Magenta); }
-
-            try { SpellbookClosedSprite = _core.Content.Load<Texture2D>("Sprites/SpellBook/spellbook_closed"); }
-            catch { SpellbookClosedSprite = _textureFactory.CreateColoredTexture(64, 64, Color.Magenta); }
-
-            try { SplitNodeStart = _core.Content.Load<Texture2D>("Sprites/MapNodes/MapNode_Start"); }
-            catch { SplitNodeStart = _textureFactory.CreateColoredTexture(64, 32, Color.Green); }
-            SplitNodeStartSilhouette = CreateSilhouette(SplitNodeStart);
-
-            try { SplitNodeCombat = _core.Content.Load<Texture2D>("Sprites/MapNodes/MapNode_Combat"); }
-            catch { SplitNodeCombat = _textureFactory.CreateColoredTexture(64, 32, Color.Red); }
-            SplitNodeCombatSilhouette = CreateSilhouette(SplitNodeCombat);
-
-            try { SplitNodeEasyCombat = _core.Content.Load<Texture2D>("Sprites/MapNodes/MapNode_EasyCombat"); }
-            catch { SplitNodeEasyCombat = _textureFactory.CreateColoredTexture(64, 32, Color.LightGreen); }
-            SplitNodeEasyCombatSilhouette = CreateSilhouette(SplitNodeEasyCombat);
-
-            try { SplitNodeHardCombat = _core.Content.Load<Texture2D>("Sprites/MapNodes/MapNode_HardCombat"); }
-            catch { SplitNodeHardCombat = _textureFactory.CreateColoredTexture(64, 32, Color.DarkRed); }
-            SplitNodeHardCombatSilhouette = CreateSilhouette(SplitNodeHardCombat);
-
-            try { SplitNodeRest = _core.Content.Load<Texture2D>("Sprites/MapNodes/MapNode_Rest"); }
-            catch { SplitNodeRest = _textureFactory.CreateColoredTexture(64, 32, Color.GreenYellow); }
-            SplitNodeRestSilhouette = CreateSilhouette(SplitNodeRest);
-
-            try { SplitNodeRecruit = _core.Content.Load<Texture2D>("Sprites/MapNodes/MapNode_Recuit"); }
-            catch { SplitNodeRecruit = _textureFactory.CreateColoredTexture(64, 32, Color.CornflowerBlue); }
-            SplitNodeRecruitSilhouette = CreateSilhouette(SplitNodeRecruit);
-
-            try { MapNodePlayerSprite = _core.Content.Load<Texture2D>("Sprites/MapNodes/MapNode_Player"); }
-            catch { MapNodePlayerSprite = _textureFactory.CreateColoredTexture(64, 32, Color.Cyan); }
-            MapNodePlayerSpriteSilhouette = CreateSilhouette(MapNodePlayerSprite);
-
-            try { SplitMapInventoryButton = _core.Content.Load<Texture2D>("Sprites/UI/BasicIcons/SplitMap_Inventory_Button"); }
-            catch { SplitMapInventoryButton = _textureFactory.CreateColoredTexture(32, 16, Color.Magenta); }
-            try { SplitMapCloseInventoryButton = _core.Content.Load<Texture2D>("Sprites/UI/BasicIcons/SplitMap_Close_Inventory_Button"); }
-            catch { SplitMapCloseInventoryButton = _textureFactory.CreateColoredTexture(32, 16, Color.Magenta); }
-            try { SplitMapSettingsButton = _core.Content.Load<Texture2D>("Sprites/UI/BasicIcons/SplitMap_Settings_Button"); }
-            catch { SplitMapSettingsButton = _textureFactory.CreateColoredTexture(32, 16, Color.Magenta); }
-            try { InventoryBorderHeader = _core.Content.Load<Texture2D>("Sprites/UI/Inventory/inventory_border_header"); }
-            catch { InventoryBorderHeader = _textureFactory.CreateColoredTexture(320, 180, Color.Magenta); }
-            try { InventoryBorderWeapons = _core.Content.Load<Texture2D>("Sprites/UI/Inventory/inventory_border_weapons"); }
-            catch { InventoryBorderWeapons = _textureFactory.CreateColoredTexture(320, 180, Color.Magenta); }
-            try { InventoryBorderEquip = _core.Content.Load<Texture2D>("Sprites/UI/Inventory/inventory_border_equip"); }
-            catch { InventoryBorderEquip = _textureFactory.CreateColoredTexture(320, 180, Color.Magenta); }
-            try { InventoryBorderEquipSubmenu = _core.Content.Load<Texture2D>("Sprites/UI/Inventory/inventory_border_equip_submenu"); }
-            catch { InventoryBorderEquipSubmenu = _textureFactory.CreateColoredTexture(320, 180, Color.Magenta); }
-
-            try { InventoryBorderEquipInfoPanelLeft = _core.Content.Load<Texture2D>("Sprites/UI/Inventory/inventory_border_equip_info_panel_left"); }
-            catch { InventoryBorderEquipInfoPanelLeft = _textureFactory.CreateColoredTexture(320, 180, Color.DarkBlue); }
-
-            try { InventoryBorderEquipInfoPanelRight = _core.Content.Load<Texture2D>("Sprites/UI/Inventory/inventory_border_equip_info_panel_right"); }
-            catch { InventoryBorderEquipInfoPanelRight = _textureFactory.CreateColoredTexture(320, 180, Color.DarkBlue); }
-
-            try { EquipSlotButtonSprite = _core.Content.Load<Texture2D>("Sprites/UI/Inventory/equip_slot_button"); }
-            catch { EquipSlotButtonSprite = _textureFactory.CreateColoredTexture(180, 16, Color.HotPink); }
-            try { InventoryEquipHoverSprite = _core.Content.Load<Texture2D>("Sprites/UI/Inventory/inventory_equip_hover"); }
-            catch { InventoryEquipHoverSprite = _textureFactory.CreateColoredTexture(180, 16, Color.HotPink); }
-            try { InventoryEquipSelectedSprite = _core.Content.Load<Texture2D>("Sprites/UI/Inventory/inventory_equip_selected"); }
-            catch { InventoryEquipSelectedSprite = _textureFactory.CreateColoredTexture(180, 16, Color.Gold); }
-            try { InventoryScrollArrowsSprite = _core.Content.Load<Texture2D>("Sprites/UI/Inventory/inventory_scroll_arrows"); }
-            catch { InventoryScrollArrowsSprite = _textureFactory.CreateColoredTexture(10, 5, Color.Magenta); }
-            try { InventoryEmptySlotSprite = _core.Content.Load<Texture2D>("Sprites/UI/Inventory/inventory_16x16_empty_slot_sprite"); }
-            catch { InventoryEmptySlotSprite = _textureFactory.CreateColoredTexture(16, 16, Color.DarkGray); }
-            try { InventorySlotEquipIconSprite = _core.Content.Load<Texture2D>("Sprites/UI/Inventory/inventory_slot_equip_icon"); }
-            catch { InventorySlotEquipIconSprite = _textureFactory.CreateColoredTexture(64, 32, Color.Magenta); }
-            try { TargetingIndicatorSprite = _core.Content.Load<Texture2D>("Sprites/UI/BasicIcons/targeting_indicator"); }
-            catch { TargetingIndicatorSprite = _textureFactory.CreateColoredTexture(32, 32, Color.Red); }
-            try { ShopBorderMain = _core.Content.Load<Texture2D>("Sprites/UI/Shop/shop_border_main"); }
-            catch { ShopBorderMain = _textureFactory.CreateColoredTexture(320, 180, Color.Magenta); }
-            try { ShopXIcon = _core.Content.Load<Texture2D>("Sprites/UI/BasicIcons/X_32x32"); }
-            catch { ShopXIcon = _textureFactory.CreateColoredTexture(32, 32, Color.Red); }
-            try { RestBorderMain = _core.Content.Load<Texture2D>("Sprites/UI/Rest/rest_border_main"); }
-            catch { RestBorderMain = _textureFactory.CreateColoredTexture(320, 180, Color.Magenta); }
-            try { RestActionIconsSpriteSheet = _core.Content.Load<Texture2D>("Sprites/UI/Rest/rest_action_icons"); }
-            catch { RestActionIconsSpriteSheet = _textureFactory.CreateColoredTexture(24, 32, Color.Magenta); }
-            try { TargetingButtonSpriteSheet = _core.Content.Load<Texture2D>("Sprites/UI/BattleUI/ui_choose_a_target_button_spritesheet"); }
-            catch { TargetingButtonSpriteSheet = _textureFactory.CreateColoredTexture(450, 22, Color.Magenta); }
-            try { HealthHeartsSpriteSheet = _core.Content.Load<Texture2D>("Sprites/UI/BattleUI/health_5x5_icon_spritesheet"); }
-            catch { HealthHeartsSpriteSheet = _textureFactory.CreateColoredTexture(30, 5, Color.Red); }
-
-            try { HealthHearts3x3SpriteSheet = _core.Content.Load<Texture2D>("Sprites/UI/BattleUI/health_3x3_icon_spritesheet"); }
-            catch { HealthHearts3x3SpriteSheet = _textureFactory.CreateColoredTexture(18, 3, Color.Red); }
-
-            try { InventoryPlayerHealthBarEmpty = _core.Content.Load<Texture2D>("Sprites/UI/Inventory/inventory_player_health_bar_empty"); }
-            catch { InventoryPlayerHealthBarEmpty = _textureFactory.CreateColoredTexture(66, 7, Color.DarkGray); }
-            try { InventoryPlayerHealthBarDisabled = _core.Content.Load<Texture2D>("Sprites/UI/Inventory/inventory_player_health_bar_disabled"); }
-            catch { InventoryPlayerHealthBarDisabled = _textureFactory.CreateColoredTexture(66, 7, Color.Black); }
-            try { InventoryPlayerHealthBarFull = _core.Content.Load<Texture2D>("Sprites/UI/Inventory/inventory_player_health_bar_full"); }
-            catch { InventoryPlayerHealthBarFull = _textureFactory.CreateColoredTexture(64, 7, Color.Red); }
-
-            try { InventoryPlayerHealthBarOverlay = _core.Content.Load<Texture2D>("Sprites/UI/Inventory/inventory_player_health_bar_overlay"); }
-            catch { InventoryPlayerHealthBarOverlay = _textureFactory.CreateColoredTexture(64, 7, Color.LimeGreen); }
+            SplitMapInventoryButton = LoadTex("Sprites/UI/BasicIcons/SplitMap_Inventory_Button", 32, 16, Color.Magenta);
+            SplitMapCloseInventoryButton = LoadTex("Sprites/UI/BasicIcons/SplitMap_Close_Inventory_Button", 32, 16, Color.Magenta);
+            SplitMapSettingsButton = LoadTex("Sprites/UI/BasicIcons/SplitMap_Settings_Button", 32, 16, Color.Magenta);
+            InventoryBorderHeader = LoadTex("Sprites/UI/Inventory/inventory_border_header", 320, 180, Color.Magenta);
+            InventoryBorderWeapons = LoadTex("Sprites/UI/Inventory/inventory_border_weapons", 320, 180, Color.Magenta);
+            InventoryBorderEquip = LoadTex("Sprites/UI/Inventory/inventory_border_equip", 320, 180, Color.Magenta);
+            InventoryBorderEquipSubmenu = LoadTex("Sprites/UI/Inventory/inventory_border_equip_submenu", 320, 180, Color.Magenta);
+            InventoryBorderEquipInfoPanelLeft = LoadTex("Sprites/UI/Inventory/inventory_border_equip_info_panel_left", 320, 180, Color.DarkBlue);
+            InventoryBorderEquipInfoPanelRight = LoadTex("Sprites/UI/Inventory/inventory_border_equip_info_panel_right", 320, 180, Color.DarkBlue);
+            EquipSlotButtonSprite = LoadTex("Sprites/UI/Inventory/equip_slot_button", 180, 16, Color.HotPink);
+            InventoryEquipHoverSprite = LoadTex("Sprites/UI/Inventory/inventory_equip_hover", 180, 16, Color.HotPink);
+            InventoryEquipSelectedSprite = LoadTex("Sprites/UI/Inventory/inventory_equip_selected", 180, 16, Color.Gold);
+            InventoryScrollArrowsSprite = LoadTex("Sprites/UI/Inventory/inventory_scroll_arrows", 10, 5, Color.Magenta);
+            InventoryEmptySlotSprite = LoadTex("Sprites/UI/Inventory/inventory_16x16_empty_slot_sprite", 16, 16, Color.DarkGray);
+            InventorySlotEquipIconSprite = LoadTex("Sprites/UI/Inventory/inventory_slot_equip_icon", 64, 32, Color.Magenta);
+            TargetingIndicatorSprite = LoadTex("Sprites/UI/BasicIcons/targeting_indicator", 32, 32, Color.Red);
+            ShopBorderMain = LoadTex("Sprites/UI/Shop/shop_border_main", 320, 180, Color.Magenta);
+            ShopXIcon = LoadTex("Sprites/UI/BasicIcons/X_32x32", 32, 32, Color.Red);
+            RestBorderMain = LoadTex("Sprites/UI/Rest/rest_border_main", 320, 180, Color.Magenta);
+            RestActionIconsSpriteSheet = LoadTex("Sprites/UI/Rest/rest_action_icons", 24, 32, Color.Magenta);
+            TargetingButtonSpriteSheet = LoadTex("Sprites/UI/BattleUI/ui_choose_a_target_button_spritesheet", 450, 22, Color.Magenta);
+            HealthHeartsSpriteSheet = LoadTex("Sprites/UI/BattleUI/health_5x5_icon_spritesheet", 30, 5, Color.Red);
+            HealthHearts3x3SpriteSheet = LoadTex("Sprites/UI/BattleUI/health_3x3_icon_spritesheet", 18, 3, Color.Red);
+            InventoryPlayerHealthBarEmpty = LoadTex("Sprites/UI/Inventory/inventory_player_health_bar_empty", 66, 7, Color.DarkGray);
+            InventoryPlayerHealthBarDisabled = LoadTex("Sprites/UI/Inventory/inventory_player_health_bar_disabled", 66, 7, Color.Black);
+            InventoryPlayerHealthBarFull = LoadTex("Sprites/UI/Inventory/inventory_player_health_bar_full", 64, 7, Color.Red);
+            InventoryPlayerHealthBarOverlay = LoadTex("Sprites/UI/Inventory/inventory_player_health_bar_overlay", 64, 7, Color.LimeGreen);
 
             try { NoiseTexture = _textureFactory.CreateNoiseTexture(256, 256); }
             catch { NoiseTexture = _textureFactory.CreateColoredTexture(256, 256, Color.Gray); }
@@ -412,29 +317,14 @@ namespace ProjectVagabond
             try { HealParticleSprite = _core.Content.Load<Texture2D>("Sprites/Particles/heal_plus"); }
             catch { HealParticleSprite = _textureFactory.CreatePlusParticleTexture(); }
 
-            try { InventorySpellSlotButtonSpriteSheet = _core.Content.Load<Texture2D>("Sprites/UI/Inventory/inventory_spell_slot_button"); }
-            catch { InventorySpellSlotButtonSpriteSheet = _textureFactory.CreateColoredTexture(192, 8, Color.Magenta); }
-
-            try { StunnedIconSpriteSheet = _core.Content.Load<Texture2D>("Sprites/UI/BattleUI/stunned_16x16_spritesheet"); }
-            catch { StunnedIconSpriteSheet = _textureFactory.CreateColoredTexture(48, 16, Color.Magenta); }
-
-            try { TenacityPipTexture = _core.Content.Load<Texture2D>("Sprites/UI/BattleUI/tenacity_5x5_icon_spritesheet"); }
-            catch { TenacityPipTexture = _textureFactory.CreateColoredTexture(20, 5, Color.Magenta); }
-
-            try { TenacityBreakSpriteSheet = _core.Content.Load<Texture2D>("Sprites/UI/BattleUI/tenacity_break_32x32_spritesheet"); }
-            catch { TenacityBreakSpriteSheet = _textureFactory.CreateColoredTexture(352, 32, Color.Cyan); }
-
-            try { TenacityRestoreSpriteSheet = _core.Content.Load<Texture2D>("Sprites/UI/BattleUI/tenacity_restored_32x32_spritesheet"); }
-            catch { TenacityRestoreSpriteSheet = _textureFactory.CreateColoredTexture(352, 32, Color.Lime); }
-
-            try { StatModIconsTexture = _core.Content.Load<Texture2D>("Sprites/UI/BasicIcons/stat_mod_icons_spritesheet"); }
-            catch { StatModIconsTexture = _textureFactory.CreateColoredTexture(24, 6, Color.Magenta); }
-
-            try { CardFlipIcon = _core.Content.Load<Texture2D>("Sprites/UI/BasicIcons/rotate_icon_8x8_spritesheet"); }
-            catch { CardFlipIcon = _textureFactory.CreateColoredTexture(16, 8, Color.Yellow); }
-
-            try { LevelIconSprite = _core.Content.Load<Texture2D>("Sprites/UI/BasicIcons/level_text_icon"); }
-            catch { LevelIconSprite = _textureFactory.CreateColoredTexture(5, 3, Color.Magenta); }
+            InventorySpellSlotButtonSpriteSheet = LoadTex("Sprites/UI/Inventory/inventory_spell_slot_button", 192, 8, Color.Magenta);
+            StunnedIconSpriteSheet = LoadTex("Sprites/UI/BattleUI/stunned_16x16_spritesheet", 48, 16, Color.Magenta);
+            TenacityPipTexture = LoadTex("Sprites/UI/BattleUI/tenacity_5x5_icon_spritesheet", 20, 5, Color.Magenta);
+            TenacityBreakSpriteSheet = LoadTex("Sprites/UI/BattleUI/tenacity_break_32x32_spritesheet", 352, 32, Color.Cyan);
+            TenacityRestoreSpriteSheet = LoadTex("Sprites/UI/BattleUI/tenacity_restored_32x32_spritesheet", 352, 32, Color.Lime);
+            StatModIconsTexture = LoadTex("Sprites/UI/BasicIcons/stat_mod_icons_spritesheet", 24, 6, Color.Magenta);
+            CardFlipIcon = LoadTex("Sprites/UI/BasicIcons/rotate_icon_8x8_spritesheet", 16, 8, Color.Yellow);
+            LevelIconSprite = LoadTex("Sprites/UI/BasicIcons/level_text_icon", 5, 3, Color.Magenta);
 
             try { MiniActionButtonSprite = _textureFactory.CreateMiniActionButtonTexture(80); }
             catch { MiniActionButtonSprite = _textureFactory.CreateColoredTexture(80, 6, Color.Magenta); }
@@ -982,54 +872,26 @@ namespace ProjectVagabond
             try { _emptySprite = _textureFactory.CreateEmptyTexture(); }
             catch { _emptySprite = _textureFactory.CreateColoredTexture(8, 8, Color.Red); }
 
-            try { _speedMarkSprite = _core.Content.Load<Texture2D>("Sprites/speedMark"); }
-            catch { _speedMarkSprite = _textureFactory.CreateColoredTexture(8, 8, Color.Red); }
+            _speedMarkSprite = LoadTex("Sprites/speedMark", 8, 8, Color.Red);
 
-            try
-            {
-                PlayerHeartSpriteSheet = _core.Content.Load<Texture2D>("Sprites/Player/player_heart_spritesheet");
-                PlayerHeartSpriteSheetSilhouette = CreateSilhouette(PlayerHeartSpriteSheet);
-                PreCalculateSpriteBounds(PlayerHeartSpriteSheet, "player", 32);
-            }
-            catch
-            {
-                PlayerHeartSpriteSheet = _textureFactory.CreateColoredTexture(32, 32, Color.DeepPink);
-                PlayerHeartSpriteSheetSilhouette = _textureFactory.CreateColoredTexture(32, 32, Color.White);
-            }
+            PlayerHeartSpriteSheet = LoadTexWithSilhouette("Sprites/Player/player_heart_spritesheet", 32, 32, Color.DeepPink, out var phsSil);
+            PlayerHeartSpriteSheetSilhouette = phsSil;
+            PreCalculateSpriteBounds(PlayerHeartSpriteSheet, "player", 32);
 
-            try { InventoryStatBarEmpty = _core.Content.Load<Texture2D>("Sprites/UI/Inventory/inventory_stat_bar_empty"); }
-            catch { InventoryStatBarEmpty = _textureFactory.CreateColoredTexture(40, 3, Color.DarkGray); }
-            try { InventoryStatBarDisabled = _core.Content.Load<Texture2D>("Sprites/UI/Inventory/inventory_stat_bar_disabled"); }
-            catch { InventoryStatBarDisabled = _textureFactory.CreateColoredTexture(40, 3, Color.Black); }
-            try { InventoryStatBarFull = _core.Content.Load<Texture2D>("Sprites/UI/Inventory/inventory_stat_bar_full"); }
-            catch { InventoryStatBarFull = _textureFactory.CreateColoredTexture(40, 3, Color.White); }
+            InventoryStatBarEmpty = LoadTex("Sprites/UI/Inventory/inventory_stat_bar_empty", 40, 3, Color.DarkGray);
+            InventoryStatBarDisabled = LoadTex("Sprites/UI/Inventory/inventory_stat_bar_disabled", 40, 3, Color.Black);
+            InventoryStatBarFull = LoadTex("Sprites/UI/Inventory/inventory_stat_bar_full", 40, 3, Color.White);
 
-            try
-            {
-                StatChangeIconsSpriteSheet = _core.Content.Load<Texture2D>("Sprites/UI/BasicIcons/stat_change_icons_spritesheet");
-                StatChangeIconsSpriteSheetSilhouette = CreateSilhouette(StatChangeIconsSpriteSheet);
-            }
-            catch
-            {
-                StatChangeIconsSpriteSheet = _textureFactory.CreateColoredTexture(9, 3, Color.Magenta);
-                StatChangeIconsSpriteSheetSilhouette = _textureFactory.CreateColoredTexture(9, 3, Color.White);
-            }
+            StatChangeIconsSpriteSheet = LoadTexWithSilhouette("Sprites/UI/BasicIcons/stat_change_icons_spritesheet", 9, 3, Color.Magenta, out var scisSil);
+            StatChangeIconsSpriteSheetSilhouette = scisSil;
 
             LoadPlayerPortraits();
         }
 
         private void LoadPlayerPortraits()
         {
-            try
-            {
-                PlayerMasterSpriteSheet = _core.Content.Load<Texture2D>("Sprites/Player/cat_portraits_32x32_spritesheet");
-                PlayerMasterSpriteSheetSilhouette = CreateSilhouette(PlayerMasterSpriteSheet);
-            }
-            catch
-            {
-                PlayerMasterSpriteSheet = _textureFactory.CreateColoredTexture(32, 32, Color.Magenta);
-                PlayerMasterSpriteSheetSilhouette = _textureFactory.CreateColoredTexture(32, 32, Color.White);
-            }
+            PlayerMasterSpriteSheet = LoadTexWithSilhouette("Sprites/Player/cat_portraits_32x32_spritesheet", 32, 32, Color.Magenta, out var pmsSil);
+            PlayerMasterSpriteSheetSilhouette = pmsSil;
         }
 
         public Rectangle GetPlayerSourceRect(int memberIndex, PlayerSpriteType type)
