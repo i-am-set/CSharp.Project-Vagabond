@@ -12,5 +12,10 @@ namespace ProjectVagabond.Battle
         public int Intelligence { get; set; }
         public int Tenacity { get; set; }
         public int Agility { get; set; }
+
+        public string Move1 { get; set; }
+        public string Move2 { get; set; }
+        public string Move3 { get; set; }
+        public string Move4 { get; set; }
     }
 }

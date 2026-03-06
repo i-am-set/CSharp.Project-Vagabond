@@ -12,16 +12,6 @@ namespace ProjectVagabond.Scenes
 {
     public class ArenaScene : GameScene
     {
-        private class ArenaWizard
-        {
-            public Vector2 Position;
-            public Vector2 TargetPosition;
-            public float Speed;
-            public int PortraitIndex;
-            public bool IsPlayer;
-            public float HopTimer;
-        }
-
         private readonly Global _global;
         private readonly SpriteManager _spriteManager;
         private readonly GameState _gameState;
@@ -29,6 +19,7 @@ namespace ProjectVagabond.Scenes
         private readonly SceneManager _sceneManager;
 
         private readonly List<ArenaWizard> _wizards = new List<ArenaWizard>();
+        private readonly List<ActiveAttack> _activeAttacks = new List<ActiveAttack>();
         private readonly Random _random = new Random();
 
         private float _stateTimer = 0f;
@@ -71,10 +62,44 @@ namespace ProjectVagabond.Scenes
             return Math.Min(maxDistEdge, maxDistBevel);
         }
 
+        public Vector2 GetRandomArenaPoint()
+        {
+            Vector2 target;
+            do
+            {
+                float angle = (float)(_random.NextDouble() * MathHelper.TwoPi);
+                float radius = ARENA_RADIUS * (float)Math.Sqrt(_random.NextDouble());
+                target = _arenaCenter + new Vector2(MathF.Cos(angle) * radius, MathF.Sin(angle) * radius);
+            }
+            while (Vector2.Distance(_arenaCenter, target) > GetMaxRadiusAtAngle(MathF.Atan2(target.Y - _arenaCenter.Y, target.X - _arenaCenter.X), 4f));
+
+            return target;
+        }
+
+        public IEnumerable<ArenaWizard> GetAllWizards() => _wizards;
+
+        public IEnumerable<ArenaWizard> GetWizardsInCircle(Vector2 center, float radius)
+        {
+            float wizardRadius = 8f;
+            return _wizards.Where(w => w.State != WizardState.Dead && CollisionMath.CircleIntersectsCircle(center, radius, w.Position, wizardRadius));
+        }
+
+        public IEnumerable<ArenaWizard> GetWizardsInOBB(Vector2 origin, Vector2 direction, float width, float length)
+        {
+            return _wizards.Where(w => w.State != WizardState.Dead && CollisionMath.PointInOBB(w.Position, origin, direction, width, length));
+        }
+
+        public void SpawnAttack(ActiveAttack attack)
+        {
+            attack.DeliveryInstance.Start(attack);
+            _activeAttacks.Add(attack);
+        }
+
         public override void Enter()
         {
             base.Enter();
             _wizards.Clear();
+            _activeAttacks.Clear();
             _stateTimer = 0f;
             _arenaCenter = new Vector2(Global.VIRTUAL_WIDTH / 2f, Global.VIRTUAL_HEIGHT / 2f);
             _arenaEdges = Math.Max(3, _arenaEdges);
@@ -105,15 +130,9 @@ namespace ProjectVagabond.Scenes
                 float spawnRadius = GetMaxRadiusAtAngle(angle, 10f);
                 Vector2 spawnPos = _arenaCenter + new Vector2(MathF.Cos(angle) * spawnRadius, MathF.Sin(angle) * spawnRadius);
 
-                _wizards.Add(new ArenaWizard
-                {
-                    Position = spawnPos,
-                    TargetPosition = spawnPos,
-                    Speed = data.Agility * 5f + 10f,
-                    PortraitIndex = int.TryParse(data.MemberID, out int pid) ? pid : 0,
-                    IsPlayer = (i == 0),
-                    HopTimer = (float)(_random.NextDouble() * MathHelper.TwoPi)
-                });
+                var wizard = new ArenaWizard();
+                wizard.Initialize(data, spawnPos, i == 0);
+                _wizards.Add(wizard);
             }
         }
 
@@ -133,27 +152,16 @@ namespace ProjectVagabond.Scenes
             {
                 foreach (var wizard in _wizards)
                 {
-                    float dist = Vector2.Distance(wizard.Position, wizard.TargetPosition);
-                    if (dist < 1f)
-                    {
-                        Vector2 target;
-                        do
-                        {
-                            float angle = (float)(_random.NextDouble() * MathHelper.TwoPi);
-                            float radius = ARENA_RADIUS * (float)Math.Sqrt(_random.NextDouble());
-                            target = _arenaCenter + new Vector2(MathF.Cos(angle) * radius, MathF.Sin(angle) * radius);
-                        }
-                        while (Vector2.Distance(_arenaCenter, target) > GetMaxRadiusAtAngle(MathF.Atan2(target.Y - _arenaCenter.Y, target.X - _arenaCenter.X), 4f));
+                    wizard.Update(dt, this);
+                }
 
-                        wizard.TargetPosition = target;
-                    }
-
-                    Vector2 dir = wizard.TargetPosition - wizard.Position;
-                    if (dir.LengthSquared() > 0)
+                for (int i = _activeAttacks.Count - 1; i >= 0; i--)
+                {
+                    var attack = _activeAttacks[i];
+                    attack.DeliveryInstance.Update(dt, this, attack);
+                    if (attack.DeliveryInstance.IsFinished)
                     {
-                        dir.Normalize();
-                        wizard.Position += dir * wizard.Speed * dt;
-                        wizard.HopTimer += dt * wizard.Speed * 0.25f;
+                        _activeAttacks.RemoveAt(i);
                     }
                 }
             }
@@ -167,12 +175,12 @@ namespace ProjectVagabond.Scenes
         protected override void DrawSceneContent(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Matrix transform)
         {
             var pixel = ServiceLocator.Get<Texture2D>();
-            spriteBatch.Draw(pixel, new Rectangle(0, 0, Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT), _global.Palette_Off);
+            spriteBatch.Draw(pixel, new Rectangle(0, 0, Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT), _global.Palette_Black);
 
             if (_arenaTexture != null)
             {
                 Vector2 origin = new Vector2(_arenaTexture.Width / 2f, _arenaTexture.Height / 2f);
-                spriteBatch.DrawSnapped(_arenaTexture, _arenaCenter, null, _global.Palette_Black, 0f, origin, 1f, SpriteEffects.None, 0f);
+                spriteBatch.DrawSnapped(_arenaTexture, _arenaCenter, null, _global.Palette_Off, 0f, origin, 1f, SpriteEffects.None, 0f);
             }
 
             var sheet = _spriteManager.PlayerMasterSpriteSheet;
@@ -183,23 +191,31 @@ namespace ProjectVagabond.Scenes
                 {
                     var sourceRect = _spriteManager.GetPlayerSourceRect(wizard.PortraitIndex, PlayerSpriteType.Portrait8x8);
 
-                    float hopOffset = -MathF.Abs(MathF.Sin(wizard.HopTimer)) * 4f;
+                    bool isDead = wizard.State == WizardState.Dead;
+                    float hopOffset = isDead ? 0f : -MathF.Abs(MathF.Sin(wizard.HopTimer)) * 4f;
                     Vector2 drawPos = new Vector2(MathF.Round(wizard.Position.X), MathF.Round(wizard.Position.Y + hopOffset));
+                    float rotation = isDead ? MathHelper.PiOver2 : 0f;
+                    Color color = isDead ? Color.Gray : Color.White;
 
-                    if (wizard.IsPlayer)
+                    if (wizard.IsPlayer && !isDead)
                     {
                         var silhouette = _spriteManager.PlayerMasterSpriteSheetSilhouette;
                         if (silhouette != null)
                         {
-                            spriteBatch.DrawSnapped(silhouette, drawPos + new Vector2(-1, 0), sourceRect, _global.Palette_Sun, 0f, origin, 1f, SpriteEffects.None, 0f);
-                            spriteBatch.DrawSnapped(silhouette, drawPos + new Vector2(1, 0), sourceRect, _global.Palette_Sun, 0f, origin, 1f, SpriteEffects.None, 0f);
-                            spriteBatch.DrawSnapped(silhouette, drawPos + new Vector2(0, -1), sourceRect, _global.Palette_Sun, 0f, origin, 1f, SpriteEffects.None, 0f);
-                            spriteBatch.DrawSnapped(silhouette, drawPos + new Vector2(0, 1), sourceRect, _global.Palette_Sun, 0f, origin, 1f, SpriteEffects.None, 0f);
+                            spriteBatch.DrawSnapped(silhouette, drawPos + new Vector2(-1, 0), sourceRect, _global.Palette_Sun, rotation, origin, 1f, SpriteEffects.None, 0f);
+                            spriteBatch.DrawSnapped(silhouette, drawPos + new Vector2(1, 0), sourceRect, _global.Palette_Sun, rotation, origin, 1f, SpriteEffects.None, 0f);
+                            spriteBatch.DrawSnapped(silhouette, drawPos + new Vector2(0, -1), sourceRect, _global.Palette_Sun, rotation, origin, 1f, SpriteEffects.None, 0f);
+                            spriteBatch.DrawSnapped(silhouette, drawPos + new Vector2(0, 1), sourceRect, _global.Palette_Sun, rotation, origin, 1f, SpriteEffects.None, 0f);
                         }
                     }
 
-                    spriteBatch.DrawSnapped(sheet, drawPos, sourceRect, Color.White, 0f, origin, 1f, SpriteEffects.None, 0f);
+                    spriteBatch.DrawSnapped(sheet, drawPos, sourceRect, color, rotation, origin, 1f, SpriteEffects.None, 0f);
                 }
+            }
+
+            foreach (var attack in _activeAttacks)
+            {
+                attack.DeliveryInstance.Draw(spriteBatch, attack);
             }
 
             string text = "";

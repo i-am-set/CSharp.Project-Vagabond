@@ -12,6 +12,7 @@ namespace ProjectVagabond.Battle
     public static class GameDataCache
     {
         public static Dictionary<string, WizardCatData> WizardCats { get; private set; }
+        public static Dictionary<string, MoveData> Moves { get; private set; }
 
         public static void LoadData(ContentManager content)
         {
@@ -23,7 +24,6 @@ namespace ProjectVagabond.Battle
                 Converters = { new JsonStringEnumConverter() }
             };
 
-            // --- PARTY MEMBERS ---
             string partyPath = Path.Combine(content.RootDirectory, "Data", "WizardCats.json");
             if (File.Exists(partyPath))
             {
@@ -32,6 +32,15 @@ namespace ProjectVagabond.Battle
                 WizardCats = partyList.ToDictionary(p => p.MemberID, p => p, StringComparer.OrdinalIgnoreCase);
             }
             else WizardCats = new Dictionary<string, WizardCatData>();
+
+            string movesPath = Path.Combine(content.RootDirectory, "Data", "Moves.json");
+            if (File.Exists(movesPath))
+            {
+                string movesJson = File.ReadAllText(movesPath);
+                var movesList = JsonSerializer.Deserialize<List<MoveData>>(movesJson, jsonOptions);
+                Moves = movesList.ToDictionary(m => m.ID, m => m, StringComparer.OrdinalIgnoreCase);
+            }
+            else Moves = new Dictionary<string, MoveData>();
         }
     }
 }
