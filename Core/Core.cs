@@ -6,10 +6,7 @@ using MonoGame.Extended.BitmapFonts;
 using MonoGame.Extended.Graphics;
 using ProjectVagabond;
 using ProjectVagabond.Battle;
-using ProjectVagabond.Battle.Abilities;
-using ProjectVagabond.Battle.UI;
 using ProjectVagabond.Particles;
-using ProjectVagabond.Progression;
 using ProjectVagabond.Scenes;
 using ProjectVagabond.Transitions;
 using ProjectVagabond.UI;
@@ -88,15 +85,11 @@ namespace ProjectVagabond
         private GameState _gameState;
         private InputManager _inputManager;
 
-        private MoveAcquisitionSystem _moveAcquisitionSystem;
-
         private SpriteManager _spriteManager;
         private LoadingScreen _loadingScreen;
         private DebugConsole _debugConsole;
-        private ProgressionManager _progressionManager;
         private CursorManager _cursorManager;
         private TransitionManager _transitionManager;
-        private HitstopManager _hitstopManager;
 
         private KeyboardState _previousKeyboardState;
         private MouseState _previousMouseState;
@@ -179,13 +172,8 @@ namespace ProjectVagabond
             _global = ServiceLocator.Get<Global>();
             ServiceLocator.Register<GraphicsDevice>(GraphicsDevice);
 
-            var dataManager = new DataManager();
-            ServiceLocator.Register<DataManager>(dataManager);
-
             _loadingScreen = new LoadingScreen();
             ServiceLocator.Register<LoadingScreen>(_loadingScreen);
-            var noiseManager = new NoiseMapManager();
-            ServiceLocator.Register<NoiseMapManager>(noiseManager);
             var textureFactory = new TextureFactory();
             ServiceLocator.Register<TextureFactory>(textureFactory);
             _spriteManager = new SpriteManager();
@@ -196,28 +184,20 @@ namespace ProjectVagabond
             ServiceLocator.Register<TooltipManager>(_tooltipManager);
             _particleSystemManager = new ParticleSystemManager();
             ServiceLocator.Register<ParticleSystemManager>(_particleSystemManager);
-
-            _gameState = new GameState(noiseManager, _global, _spriteManager);
+            _gameState = new GameState(_global, _spriteManager);
             ServiceLocator.Register<GameState>(_gameState);
-
-            _moveAcquisitionSystem = new MoveAcquisitionSystem();
             var autoCompleteManager = new AutoCompleteManager();
             ServiceLocator.Register<AutoCompleteManager>(autoCompleteManager);
             var commandProcessor = new CommandProcessor();
             ServiceLocator.Register<CommandProcessor>(commandProcessor);
-            _progressionManager = new ProgressionManager();
-            ServiceLocator.Register<ProgressionManager>(_progressionManager);
             _transitionManager = new TransitionManager();
             ServiceLocator.Register<TransitionManager>(_transitionManager);
             _sceneManager = new SceneManager();
             ServiceLocator.Register<SceneManager>(_sceneManager);
-
             _debugConsole = new DebugConsole();
             ServiceLocator.Register<DebugConsole>(_debugConsole);
             _cursorManager = new CursorManager();
             ServiceLocator.Register<CursorManager>(_cursorManager);
-            _hitstopManager = new HitstopManager();
-            ServiceLocator.Register<HitstopManager>(_hitstopManager);
 
             _inputManager = new InputManager();
             ServiceLocator.Register<InputManager>(_inputManager);
@@ -248,9 +228,6 @@ namespace ProjectVagabond
             _sceneManager.AddScene(GameSceneState.MainMenu, new MainMenuScene());
             _sceneManager.AddScene(GameSceneState.NewGameIntro, new NewGameIntroScene());
             _sceneManager.AddScene(GameSceneState.Settings, new SettingsScene());
-            _sceneManager.AddScene(GameSceneState.Battle, new BattleScene());
-            _sceneManager.AddScene(GameSceneState.Split, new SplitMapScene());
-            _sceneManager.AddScene(GameSceneState.GameOver, new GameOverScene());
             _sceneManager.AddScene(GameSceneState.Arena, new ArenaScene());
 
             _previousResolution = new Point(Window.ClientBounds.Width, Window.ClientBounds.Height);
@@ -319,11 +296,7 @@ namespace ProjectVagabond
 
             _spriteManager.LoadEssentialContent();
             _spriteManager.LoadGameContent();
-            BattleDataCache.LoadData(Content);
-            _progressionManager.LoadSplits();
-
-            var dataManager = ServiceLocator.Get<DataManager>();
-            dataManager.LoadData(Content.RootDirectory);
+            GameDataCache.LoadData(Content);
 
             _sceneManager.ChangeScene(GameSceneState.Startup, TransitionType.None, TransitionType.None);
         }
@@ -334,15 +307,6 @@ namespace ProjectVagabond
         public void TriggerFullscreenGlitch(float duration) { _glitchDuration = duration; _glitchTimer = duration; }
         public void RequestFullscreenOverlay(Action<SpriteBatch, Matrix> drawAction) { _fullscreenOverlays.Add(drawAction); }
 
-        public BattleCameraController? GetBattleCamera()
-        {
-            if (_sceneManager.CurrentActiveScene is BattleScene battleScene)
-            {
-                return battleScene.GetCamera();
-            }
-            return null;
-        }
-
         public void ResetGame()
         {
             _particleSystemManager.ClearAllEmitters();
@@ -350,8 +314,6 @@ namespace ProjectVagabond
             _tooltipManager.Hide();
             _loadingScreen.Clear();
             _debugConsole.ClearHistory();
-            _progressionManager.ClearCurrentSplitMap();
-            _hitstopManager.Reset();
             _transitionManager.Reset();
 
             _gameState.Reset();
@@ -438,8 +400,6 @@ namespace ProjectVagabond
             float elapsedSeconds = (float)gameTime.ElapsedGameTime.TotalSeconds;
             if (elapsedSeconds > 0.1f) elapsedSeconds = 0.1f;
 
-            float timeScale = _hitstopManager.Update(elapsedSeconds);
-
             _transitionManager.Update(gameTime);
 
             if (_loadingScreen.IsActive)
@@ -459,7 +419,7 @@ namespace ProjectVagabond
 
             if (!_transitionManager.IsScreenObscured)
             {
-                GameTime scaledGameTime = new GameTime(gameTime.TotalGameTime, TimeSpan.FromSeconds(elapsedSeconds * timeScale));
+                GameTime scaledGameTime = new GameTime(gameTime.TotalGameTime, TimeSpan.FromSeconds(elapsedSeconds));
                 _sceneManager.Update(scaledGameTime);
                 _cursorManager.Update(gameTime);
             }

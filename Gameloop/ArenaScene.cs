@@ -85,9 +85,9 @@ namespace ProjectVagabond.Scenes
             var playerLeader = _gameState.PlayerState.Leader;
             if (playerLeader == null) return;
 
-            var availableIds = BattleDataCache.PartyMembers.Keys.ToList();
+            var availableIds = GameDataCache.WizardCats.Keys.ToList();
 
-            var playerEntry = BattleDataCache.PartyMembers.FirstOrDefault(kvp => kvp.Value.Name == playerLeader.Name);
+            var playerEntry = GameDataCache.WizardCats.FirstOrDefault(kvp => kvp.Value.Name == playerLeader.Name);
             if (playerEntry.Key != null)
             {
                 availableIds.Remove(playerEntry.Key);
@@ -99,7 +99,7 @@ namespace ProjectVagabond.Scenes
             for (int i = 0; i < 8; i++)
             {
                 string id = selectedIds[i];
-                if (!BattleDataCache.PartyMembers.TryGetValue(id, out var data)) continue;
+                if (!GameDataCache.WizardCats.TryGetValue(id, out var data)) continue;
 
                 float angle = (i / 8f) * MathHelper.TwoPi;
                 float spawnRadius = GetMaxRadiusAtAngle(angle, 10f);

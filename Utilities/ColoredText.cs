@@ -2,7 +2,6 @@
 using Microsoft.Xna.Framework.Graphics;
 using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond.Battle;
-using ProjectVagabond.Progression;
 using ProjectVagabond.Scenes;
 using ProjectVagabond.UI; // Added to resolve TextEffectType
 using ProjectVagabond.Utils;

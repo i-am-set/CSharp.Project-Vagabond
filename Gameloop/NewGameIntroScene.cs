@@ -3,10 +3,7 @@ using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond.Battle;
-using ProjectVagabond.Battle.Abilities;
-using ProjectVagabond.Battle.UI;
 using ProjectVagabond.Particles;
-using ProjectVagabond.Progression;
 using ProjectVagabond.Scenes;
 using ProjectVagabond.Transitions;
 using ProjectVagabond.UI;
@@ -69,9 +66,6 @@ namespace ProjectVagabond.Scenes
         private int _lastScrollWheelValue;
         private int _scrollAccumulator;
 
-        // Cached Data for Display
-        private (string Name, string Description)? _cachedAbilityInfo;
-
         // HP Normalization Cache
         private int _globalMinHP = 0;
         private int _globalMaxHP = 0;
@@ -106,7 +100,6 @@ namespace ProjectVagabond.Scenes
             base.Enter();
             InitializeData();
             InitializeUI();
-            UpdateCachedAbilityInfo();
 
             _carouselSlideOffset = 0f;
             _titleWaveTimer = 0f;
@@ -174,7 +167,7 @@ namespace ProjectVagabond.Scenes
 
         private void InitializeData()
         {
-            _characterIds = BattleDataCache.PartyMembers.Keys.ToList();
+            _characterIds = GameDataCache.WizardCats.Keys.ToList();
             _characterIds.Sort((a, b) =>
             {
                 if (int.TryParse(a, out int idA) && int.TryParse(b, out int idB))
@@ -191,7 +184,7 @@ namespace ProjectVagabond.Scenes
 
             foreach (var id in _characterIds)
             {
-                if (BattleDataCache.PartyMembers.TryGetValue(id, out var data))
+                if (GameDataCache.WizardCats.TryGetValue(id, out var data))
                 {
                     int hp = data.Tenacity * 2;
                     if (hp < _globalMinHP) _globalMinHP = hp;
@@ -262,17 +255,7 @@ namespace ProjectVagabond.Scenes
             // Stats Height
             int statsHeight = (int)secondaryFont.LineHeight * 2 + 2; // 2 rows + gap
 
-            // Ability Height
-            int abilityLabelHeight = (int)tertiaryFont.LineHeight + 2; // Label + gap
-            int abilityNameHeight = (int)secondaryFont.LineHeight + 1; // Name + gap
-            int abilityDescHeight = ((int)tertiaryFont.LineHeight + 2) * 3; // 3 lines + gaps
-
-            // Ability name Y is: contentStartY + statsHeight + 4 + abilityLabelHeight
-            int abilityNameY = contentStartY + statsHeight + 4 + abilityLabelHeight;
-
-            // Select button is 6px below the ability DESCRIPTION area (which is 3 lines tall)
-            int abilityDescStartY = abilityNameY + abilityNameHeight;
-            int selectButtonY = abilityDescStartY + abilityDescHeight + 6;
+            int selectButtonY = 150;
 
             string selectText = "SELECT";
             Vector2 selectSize = secondaryFont.MeasureString(selectText);
@@ -312,64 +295,6 @@ namespace ProjectVagabond.Scenes
             if (_focusedIndex >= _characterIds.Count) _focusedIndex = 0;
 
             _carouselSlideOffset = direction;
-
-            UpdateCachedAbilityInfo();
-        }
-
-        private void UpdateCachedAbilityInfo()
-        {
-            if (_characterIds.Count == 0) return;
-            string charId = _characterIds[_focusedIndex];
-            if (!BattleDataCache.PartyMembers.TryGetValue(charId, out var data)) return;
-
-            if (data.PassiveAbilityPool != null && data.PassiveAbilityPool.Any())
-            {
-                var passiveDict = data.PassiveAbilityPool.First();
-                if (passiveDict.Count > 0)
-                {
-                    var kvp = passiveDict.First();
-                    _cachedAbilityInfo = GetAbilityInfo(kvp.Key, kvp.Value);
-                    return;
-                }
-            }
-            _cachedAbilityInfo = ("NONE", "");
-        }
-
-        private (string Name, string Description) GetAbilityInfo(string abilityId, string overrideDesc)
-        {
-            string friendlyName = abilityId;
-            string description = overrideDesc;
-
-            try
-            {
-                var typeName = $"ProjectVagabond.Battle.Abilities.{abilityId}Ability";
-                var type = Type.GetType(typeName);
-
-                if (type == null)
-                {
-                    foreach (var asm in AppDomain.CurrentDomain.GetAssemblies())
-                    {
-                        type = asm.GetType(typeName);
-                        if (type != null) break;
-                    }
-                }
-
-                if (type != null)
-                {
-                    var instance = Activator.CreateInstance(type) as IAbility;
-                    if (instance != null)
-                    {
-                        friendlyName = instance.Name;
-                        if (string.IsNullOrEmpty(description))
-                        {
-                            description = instance.Description;
-                        }
-                    }
-                }
-            }
-            catch { }
-
-            return (friendlyName, description);
         }
 
         private void ConfirmSelection()
@@ -625,7 +550,7 @@ namespace ProjectVagabond.Scenes
             _selectButton.Draw(spriteBatch, font, effectiveGameTime, Matrix.Identity, false, null, null, selectColor);
             spriteBatch.End();
 
-            // --- Stats and Abilities ---
+            // --- Stats ---
             float sScale = _isPlinkingIn ? _plinkStats.Scale : 1f;
             float sRot = _isPlinkingIn ? _plinkStats.Rotation : 0f;
 
@@ -638,7 +563,7 @@ namespace ProjectVagabond.Scenes
                                      Matrix.CreateTranslation(statsCenter.X, statsCenter.Y, 0);
 
                 spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp, null, null, null, statsMatrix * staticTransform);
-                DrawStatsAndAbilities(spriteBatch, secondaryFont, tertiaryFont);
+                DrawStats(spriteBatch, secondaryFont, tertiaryFont);
 
                 if (_isPlinkingIn && _plinkStats.FlashTint.HasValue)
                 {
@@ -659,11 +584,11 @@ namespace ProjectVagabond.Scenes
             return _global.StatColor_Low;
         }
 
-        private void DrawStatsAndAbilities(SpriteBatch spriteBatch, BitmapFont secondaryFont, BitmapFont tertiaryFont)
+        private void DrawStats(SpriteBatch spriteBatch, BitmapFont secondaryFont, BitmapFont tertiaryFont)
         {
             if (_characterIds.Count == 0) return;
             string charId = _characterIds[_focusedIndex];
-            if (!BattleDataCache.PartyMembers.TryGetValue(charId, out var data)) return;
+            if (!GameDataCache.WizardCats.TryGetValue(charId, out var data)) return;
 
             int centerX = Global.VIRTUAL_WIDTH / 2;
             int startY = BASE_CENTER_Y + 38;
@@ -708,52 +633,6 @@ namespace ProjectVagabond.Scenes
             }
 
             currentY += 4;
-
-            // --- Passive Ability Block ---
-            string abilityLabel = "ABILITY";
-            Vector2 abilityLabelSize = tertiaryFont.MeasureString(abilityLabel);
-            spriteBatch.DrawStringSnapped(tertiaryFont, abilityLabel, new Vector2(centerX - abilityLabelSize.X / 2f, currentY), _global.Palette_DarkestPale);
-            currentY += tertiaryFont.LineHeight + 2;
-
-            if (_cachedAbilityInfo.HasValue)
-            {
-                var (name, desc) = _cachedAbilityInfo.Value;
-
-                Vector2 nameSize = secondaryFont.MeasureString(name);
-                spriteBatch.DrawStringSnapped(secondaryFont, name, new Vector2(centerX - nameSize.X / 2f, currentY), _global.Palette_LightPale);
-                currentY += secondaryFont.LineHeight + 1;
-
-                float descLineHeight = tertiaryFont.LineHeight + 2;
-
-                if (!string.IsNullOrEmpty(desc))
-                {
-                    float maxWidth = 120f;
-                    var words = desc.Split(' ');
-                    string line = "";
-                    float localY = currentY;
-
-                    foreach (var word in words)
-                    {
-                        string testLine = string.IsNullOrEmpty(line) ? word : line + " " + word;
-                        if (tertiaryFont.MeasureString(testLine).Width > maxWidth)
-                        {
-                            Vector2 lineSize = tertiaryFont.MeasureString(line);
-                            spriteBatch.DrawStringSnapped(tertiaryFont, line, new Vector2(centerX - lineSize.X / 2f, localY), _global.Palette_Pale);
-                            localY += descLineHeight;
-                            line = word;
-                        }
-                        else
-                        {
-                            line = testLine;
-                        }
-                    }
-                    if (!string.IsNullOrEmpty(line))
-                    {
-                        Vector2 lineSize = tertiaryFont.MeasureString(line);
-                        spriteBatch.DrawStringSnapped(tertiaryFont, line, new Vector2(centerX - lineSize.X / 2f, localY), _global.Palette_Pale);
-                    }
-                }
-            }
         }
 
         private void DrawCarousel(SpriteBatch spriteBatch, BitmapFont font, BitmapFont tertiaryFont)
@@ -839,7 +718,7 @@ namespace ProjectVagabond.Scenes
                 }
 
                 // Draw Text (Only for center, uses the same plink scale)
-                if (isCenter && BattleDataCache.PartyMembers.TryGetValue(charId, out var data))
+                if (isCenter && GameDataCache.WizardCats.TryGetValue(charId, out var data))
                 {
                     string name = data.Name.ToUpper();
                     Vector2 nameSize = font.MeasureString(name);

@@ -1,12 +1,5 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
-using Microsoft.Xna.Framework.Input;
-using MonoGame.Extended.BitmapFonts;
-using ProjectVagabond;
-using ProjectVagabond.Battle;
-using ProjectVagabond.Battle.Abilities;
-using ProjectVagabond.UI;
-using ProjectVagabond.Utils;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -936,22 +929,6 @@ namespace ProjectVagabond
                 return offset;
             }
             return Vector2.Zero;
-        }
-
-        public Rectangle GetPermanentStatusIconSourceRect(StatusEffectType type, int frameIndex)
-        {
-            int x = 0;
-            switch (type)
-            {
-                case StatusEffectType.Poison: x = 0; break;
-                case StatusEffectType.Burn: x = 5; break;
-                case StatusEffectType.Frostbite: x = 10; break;
-                case StatusEffectType.Bleeding: x = 15; break;
-                default: return Rectangle.Empty;
-            }
-
-            int y = (frameIndex == 0) ? 0 : 5;
-            return new Rectangle(x, y, 5, 5);
         }
 
         private void LoadAndCacheCursorSprite(string assetName)

@@ -8,9 +8,9 @@ namespace ProjectVagabond
 {
     public class PlayerState
     {
-        public List<PartyMember> Party { get; set; } = new List<PartyMember>();
+        public List<WizardCat> Party { get; set; } = new List<WizardCat>();
         public HashSet<string> PastMemberIds { get; set; } = new HashSet<string>();
-        public PartyMember Leader => Party.Count > 0 ? Party[0] : null;
+        public WizardCat Leader => Party.Count > 0 ? Party[0] : null;
 
         public int MaxHP { get => Leader?.MaxHP ?? 100; }
         public int CurrentHP { get => Leader?.CurrentHP ?? 100; set { if (Leader != null) Leader.CurrentHP = value; } }
@@ -21,26 +21,22 @@ namespace ProjectVagabond
 
         public int PortraitIndex { get => Leader?.PortraitIndex ?? 0; set { if (Leader != null) Leader.PortraitIndex = value; } }
 
-        public MoveEntry? Spell1 { get => Leader?.Spell1; set { if (Leader != null) Leader.Spell1 = value; } }
-        public MoveEntry? Spell2 { get => Leader?.Spell2; set { if (Leader != null) Leader.Spell2 = value; } }
-        public MoveEntry? Spell3 { get => Leader?.Spell3; set { if (Leader != null) Leader.Spell3 = value; } }
-
         public PlayerState() { }
 
-        public bool AddPartyMember(PartyMember member)
+        public bool AddWizardCat(WizardCat member)
         {
             if (Party.Count >= 4) return false;
             if (Party.Any(m => m.Name.Equals(member.Name, StringComparison.OrdinalIgnoreCase))) return false;
 
             Party.Add(member);
 
-            var kvp = BattleDataCache.PartyMembers.FirstOrDefault(x => x.Value.Name == member.Name);
+            var kvp = GameDataCache.WizardCats.FirstOrDefault(x => x.Value.Name == member.Name);
             if (!string.IsNullOrEmpty(kvp.Key)) PastMemberIds.Add(kvp.Key);
 
             return true;
         }
 
-        public int GetBaseStat(PartyMember member, string statName)
+        public int GetBaseStat(WizardCat member, string statName)
         {
             if (member == null) return 0;
             switch (statName.ToLowerInvariant())
@@ -54,38 +50,9 @@ namespace ProjectVagabond
             }
         }
 
-        public int GetEffectiveStat(PartyMember member, string statName)
+        public int GetEffectiveStat(WizardCat member, string statName)
         {
             return GetBaseStat(member, statName);
-        }
-
-        public void AddMove(string moveId, PartyMember member = null)
-        {
-            var target = member ?? Leader;
-            if (target == null || !BattleDataCache.Moves.TryGetValue(moveId, out var moveData)) return;
-
-            if (target.Spell1 == null)
-            {
-                target.Spell1 = new MoveEntry(moveId, 0);
-            }
-            else if (target.Spell2 == null)
-            {
-                target.Spell2 = new MoveEntry(moveId, 0);
-            }
-            else
-            {
-                target.Spell3 = new MoveEntry(moveId, 0);
-            }
-        }
-
-        public void RemoveMove(string moveId, PartyMember member = null)
-        {
-            var target = member ?? Leader;
-            if (target == null) return;
-
-            if (target.Spell1?.MoveID == moveId) target.Spell1 = null;
-            if (target.Spell2?.MoveID == moveId) target.Spell2 = null;
-            if (target.Spell3?.MoveID == moveId) target.Spell3 = null;
         }
     }
 }

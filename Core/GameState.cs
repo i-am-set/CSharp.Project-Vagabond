@@ -4,9 +4,6 @@ using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond;
 using ProjectVagabond.Battle;
-using ProjectVagabond.Battle.Abilities;
-using ProjectVagabond.Battle.UI;
-using ProjectVagabond.Progression;
 using ProjectVagabond.Scenes;
 using ProjectVagabond.Transitions;
 using ProjectVagabond.UI;
@@ -21,7 +18,6 @@ namespace ProjectVagabond
 {
     public class GameState
     {
-        private readonly NoiseMapManager _noiseManager;
         private readonly Global _global;
         private readonly SpriteManager _spriteManager;
 
@@ -32,13 +28,11 @@ namespace ProjectVagabond
 
         public bool IsPausedByConsole { get; set; } = false;
         public bool IsPaused => _isPaused || IsPausedByConsole;
-        public NoiseMapManager NoiseManager => _noiseManager;
 
         public string LastRunKiller { get; set; } = "Unknown";
 
-        public GameState(NoiseMapManager noiseManager, Global global, SpriteManager spriteManager)
+        public GameState(Global global, SpriteManager spriteManager)
         {
-            _noiseManager = noiseManager;
             _global = global;
             _spriteManager = spriteManager;
         }
@@ -48,7 +42,7 @@ namespace ProjectVagabond
             PlayerState = new PlayerState();
             PlayerState.Party.Clear();
 
-            var member = PartyMemberFactory.CreateMember(startingMemberId);
+            var member = WizardCatFactory.CreateMember(startingMemberId);
             if (member == null) throw new Exception($"CRITICAL: Could not load starting member (ID: {startingMemberId})");
 
             PlayerState.Party.Add(member);

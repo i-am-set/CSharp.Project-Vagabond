@@ -3,10 +3,7 @@ using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond.Battle;
-using ProjectVagabond.Battle.Abilities;
-using ProjectVagabond.Battle.UI;
 using ProjectVagabond.Particles;
-using ProjectVagabond.Progression;
 using ProjectVagabond.Transitions;
 using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
@@ -18,7 +15,6 @@ using System.Globalization;
 using System.Linq;
 using System.Reflection;
 using System.Text;
-using static ProjectVagabond.GameEvents;
 
 namespace ProjectVagabond
 {
@@ -96,25 +92,6 @@ namespace ProjectVagabond
             FailedIndicatorColor = Color.Red;
             TenacityBrokenIndicatorColor = Palette_Rust;
             VulnerableDamageIndicatorColor = Palette_Shadow;
-
-            StatusEffectColors = new Dictionary<StatusEffectType, Color>
-            {
-                { StatusEffectType.Poison, Palette_Shadow },
-                { StatusEffectType.Stun, Palette_DarkSun },
-                { StatusEffectType.Regen, Palette_Leaf },
-                { StatusEffectType.Dodging, Palette_Sky },
-                { StatusEffectType.Burn, Palette_Rust },
-                { StatusEffectType.Frostbite, Palette_Sky },
-                { StatusEffectType.Silence, Palette_LightGray },
-                { StatusEffectType.Protected, Palette_Sun },
-                { StatusEffectType.Empowered, Palette_Fruit },
-                { StatusEffectType.TargetMe, Palette_Rust },
-                { StatusEffectType.Provoked, Palette_Fruit },
-                { StatusEffectType.Bleeding, Palette_Rust },
-                { StatusEffectType.Blind, Palette_DarkGray },
-                { StatusEffectType.Vulnerable, Palette_Pink },
-                { StatusEffectType.Trapped, Palette_DarkRust }
-            };
         }
 
         public static Global Instance => _instance;
@@ -335,8 +312,6 @@ namespace ProjectVagabond
         public Color TenacityBrokenIndicatorColor { get; set; }
         public Color VulnerableDamageIndicatorColor { get; set; }
 
-        public Dictionary<StatusEffectType, Color> StatusEffectColors { get; private set; }
-
         public Color GetNarrationColor(string tag)
         {
             string lowerTag = tag.ToLowerInvariant();
@@ -357,10 +332,6 @@ namespace ProjectVagabond
                 if (lowerTag == "cetc") return Palette_DarkShadow;
 
                 string effectName = lowerTag.Substring(1);
-                foreach (var kvp in StatusEffectColors)
-                {
-                    if (kvp.Key.ToString().ToLowerInvariant() == effectName) return kvp.Value;
-                }
 
                 if (lowerTag == "cdefault") return ColorNarration_Default;
                 if (lowerTag == "cemphasis") return ColorNarration_Emphasis;

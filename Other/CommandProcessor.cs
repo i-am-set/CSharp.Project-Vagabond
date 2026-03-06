@@ -4,9 +4,6 @@ using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond;
 using ProjectVagabond.Battle;
-using ProjectVagabond.Battle.UI;
-
-using ProjectVagabond.Progression;
 using ProjectVagabond.Scenes;
 using ProjectVagabond.Transitions;
 using ProjectVagabond.UI;
@@ -18,7 +15,6 @@ using System.Linq;
 using System.Reflection;
 using System.Text;
 using System.Text.RegularExpressions;
-
 
 namespace ProjectVagabond
 {
@@ -53,16 +49,7 @@ namespace ProjectVagabond
                 sb.AppendLine("    clear                              - Clears console.");
                 sb.AppendLine("    exit                               - Exits game.");
                 sb.AppendLine("    fps                                - Toggles FPS counter.");
-                sb.AppendLine("    debug_combat                       - Starts a random forest combat.");
-                sb.AppendLine("    debug_combatrun                    - Flees from combat.");
-                sb.AppendLine("    debug_givestatus <slot> <type> {dur} - Apply status.");
                 sb.AppendLine("    debug_consolefont <0|1|2>          - Sets the debug console font.");
-                sb.AppendLine("    debug_damageparty <slot> <%>             - Damages member.");
-                sb.AppendLine();
-                sb.AppendLine("  [Palette_Sky]Party & Inventory[/]");
-                sb.AppendLine("    addmember <id>                     - Adds a party member.");
-                sb.AppendLine("    inventory                          - Shows all inventories.");
-                sb.AppendLine("    givespell <id>                     - Adds a spell.");
 
                 foreach (var line in sb.ToString().Split(new[] { Environment.NewLine }, StringSplitOptions.None))
                 {
@@ -175,251 +162,6 @@ namespace ProjectVagabond
 
             }, "colors - Lists all MonoGame colors in rainbow order.");
 
-            // --- PARTY COMMANDS ---
-            _commands["addmember"] = new Command("addmember", (args) =>
-            {
-                _gameState ??= ServiceLocator.Get<GameState>();
-                if (_gameState.PlayerState == null) return;
-                if (args.Length < 2) { Log("[error]Usage: addmember <MemberID>"); return; }
-
-                string memberId = args[1];
-
-                var newMember = PartyMemberFactory.CreateMember(memberId);
-                if (newMember != null)
-                {
-                    if (_gameState.PlayerState.AddPartyMember(newMember))
-                    {
-                        Log($"[Palette_Sky]Added {newMember.Name} to the party!");
-                    }
-                    else
-                    {
-                        Log("[error]Failed to add member (Duplicate or Full).");
-                    }
-                }
-                else
-                {
-                    Log($"[error]Member ID '{memberId}' not found.");
-                }
-
-            }, "addmember <id> - Adds a party member.",
-            (args) => args.Length == 0 ? BattleDataCache.PartyMembers.Keys.ToList() : new List<string>());
-
-            _commands["debug_damagepartymember"] = new Command("damageparty", (args) =>
-            {
-                _gameState ??= ServiceLocator.Get<GameState>();
-                if (_gameState.PlayerState == null) return;
-
-                if (args.Length < 3)
-                {
-                    Log("[error]Usage: damageparty <slot 1-4> <percent>");
-                    return;
-                }
-
-                if (!int.TryParse(args[1], out int slot) || slot < 1 || slot > 4)
-                {
-                    Log("[error]Invalid slot. Use 1-4.");
-                    return;
-                }
-
-                if (!float.TryParse(args[2], out float percent))
-                {
-                    Log("[error]Invalid percentage.");
-                    return;
-                }
-
-                int index = slot - 1;
-                if (index >= _gameState.PlayerState.Party.Count)
-                {
-                    Log($"[error]Slot {slot} is empty.");
-                    return;
-                }
-
-                var member = _gameState.PlayerState.Party[index];
-                int damage = (int)(member.MaxHP * (percent / 100f));
-                int oldHP = member.CurrentHP;
-                member.CurrentHP = Math.Max(0, member.CurrentHP - damage);
-
-                Log($"[Palette_Rust]Damaged {member.Name} for {damage} HP ({oldHP} -> {member.CurrentHP}).");
-
-            }, "damageparty <slot> <percent> - Damages a party member by % of Max HP.",
-            (args) => args.Length == 0 ? new List<string> { "1", "2", "3", "4" } : new List<string>());
-
-            _commands["debug_passives"] = new Command("debug_passives", (args) =>
-            {
-                _gameState ??= ServiceLocator.Get<GameState>();
-                if (_gameState.PlayerState == null) { Log("[error]No active game state."); return; }
-
-                Log("[Palette_Sky]--- Party Passive Abilities ---[/]");
-                int slot = 1;
-                foreach (var member in _gameState.PlayerState.Party)
-                {
-                    Log($"[Palette_DarkSun]Slot {slot}: {member.Name}[/]");
-
-                    // Intrinsic
-                    bool hasIntrinsic = false;
-                    if (member.IntrinsicAbilities != null && member.IntrinsicAbilities.Count > 0)
-                    {
-                        foreach (var kvp in member.IntrinsicAbilities)
-                        {
-                            Log($"  [cGreen]Intrinsic:[/] {kvp.Key} ({kvp.Value})");
-                            hasIntrinsic = true;
-                        }
-                    }
-                    if (!hasIntrinsic) Log("  [cGreen]Intrinsic:[/] None");
-                    slot++;
-                }
-
-            }, "debug_passives - Lists intrinsic abilities.");
-
-            // --- INVENTORY COMMANDS ---
-            _commands["inventory"] = new Command("inventory", (args) => HandleShowInventory(), "inventory - Shows all inventories.");
-
-            // --- MOVE COMMANDS ---
-            _commands["givespell"] = new Command("givespell", (args) =>
-            {
-                if (args.Length < 2) { Log("[error]Usage: givespell <MoveID>"); return; }
-                EventBus.Publish(new GameEvents.PlayerMoveAdded { MoveID = args[1], Type = GameEvents.AcquisitionType.Add });
-            }, "givespell <id> - Adds spell.", (args) => args.Length == 0 ? BattleDataCache.Moves.Values.Where(m => m.MoveType == MoveType.Spell).Select(m => m.MoveID).ToList() : new List<string>());
-
-            _commands["removespell"] = new Command("removespell", (args) =>
-            {
-                if (args.Length < 2) { Log("[error]Usage: removespell <MoveID>"); return; }
-                EventBus.Publish(new GameEvents.PlayerMoveAdded { MoveID = args[1], Type = GameEvents.AcquisitionType.Remove });
-            }, "removespell <id>");
-
-            _commands["giveaction"] = new Command("giveaction", (args) =>
-            {
-                if (args.Length < 2) { Log("[error]Usage: giveaction <MoveID>"); return; }
-                EventBus.Publish(new GameEvents.PlayerMoveAdded { MoveID = args[1], Type = GameEvents.AcquisitionType.Add });
-            }, "giveaction <id> - Adds action.", (args) => args.Length == 0 ? BattleDataCache.Moves.Values.Where(m => m.MoveType == MoveType.Action).Select(m => m.MoveID).ToList() : new List<string>());
-
-            _commands["removeaction"] = new Command("removeaction", (args) =>
-            {
-                if (args.Length < 2) { Log("[error]Usage: removeaction <MoveID>"); return; }
-                EventBus.Publish(new GameEvents.PlayerMoveAdded { MoveID = args[1], Type = GameEvents.AcquisitionType.Remove });
-            }, "removeaction <id>");
-
-            // --- DEBUG COMBAT ---
-            _commands["debug_combat"] = new Command("debug_combat", (args) =>
-            {
-                var sceneManager = ServiceLocator.Get<SceneManager>();
-                if (sceneManager.CurrentActiveScene is SplitMapScene splitScene)
-                {
-                    var progressionManager = ServiceLocator.Get<ProgressionManager>();
-                    var encounter = progressionManager.GetRandomBattleFromSplit("Forest");
-
-                    if (encounter != null && encounter.Any())
-                    {
-                        splitScene.InitiateCombat(encounter);
-                        Log("[Palette_Leaf]Starting debug combat (Forest)...");
-                    }
-                    else
-                    {
-                        Log("[error]Could not load Forest encounter data.");
-                    }
-                }
-                else
-                {
-                    Log("[error]Command only available in Split Map Scene.");
-                }
-            }, "debugcombat - Starts a random forest encounter (SplitMap only).");
-
-            _commands["debug_combatrun"] = new Command("debug_combatrun", (args) =>
-            {
-                var sceneManager = ServiceLocator.Get<SceneManager>();
-                if (sceneManager.CurrentActiveScene is BattleScene battleScene)
-                {
-                    battleScene.TriggerFlee();
-                    Log("Attempting to flee...");
-                }
-                else
-                {
-                    Log("[error]Not in combat.");
-                }
-            }, "debug_combatrun - Flees from combat if active.");
-
-            _commands["debug_givestatus"] = new Command("debug_givestatus", (args) =>
-            {
-                var sceneManager = ServiceLocator.Get<SceneManager>();
-                if (!(sceneManager.CurrentActiveScene is BattleScene))
-                {
-                    Log("[error]Command only available in combat.");
-                    return;
-                }
-
-                if (args.Length < 3)
-                {
-                    Log("[error]Usage: debug_givestatus <party_slot_1-4> <StatusType> [duration]");
-                    return;
-                }
-
-                // 1. Parse Slot
-                if (!int.TryParse(args[1], out int slot) || slot < 1 || slot > 4)
-                {
-                    Log("[error]Invalid slot. Use 1-4.");
-                    return;
-                }
-
-                var gameState = ServiceLocator.Get<GameState>();
-                if (slot > gameState.PlayerState.Party.Count)
-                {
-                    Log($"[error]Slot {slot} is empty.");
-                    return;
-                }
-
-                var partyMember = gameState.PlayerState.Party[slot - 1];
-                var battleManager = ServiceLocator.Get<BattleManager>();
-                var combatant = battleManager.AllCombatants.FirstOrDefault(c => c.Name == partyMember.Name && c.IsPlayerControlled);
-
-                if (combatant == null)
-                {
-                    Log($"[error]Combatant for {partyMember.Name} not found in battle (maybe defeated/removed?).");
-                    return;
-                }
-
-                // 2. Parse Status Type
-                if (!Enum.TryParse<StatusEffectType>(args[2], true, out var statusType))
-                {
-                    Log($"[error]Invalid status type '{args[2]}'.");
-                    return;
-                }
-
-                // 3. Check Temp/Perm and Duration
-                bool isPerm = statusType == StatusEffectType.Poison ||
-                              statusType == StatusEffectType.Burn ||
-                              statusType == StatusEffectType.Frostbite;
-
-                int duration = -1;
-
-                if (!isPerm)
-                {
-                    if (args.Length < 4)
-                    {
-                        Log($"[error]Status '{statusType}' is temporary. Duration argument required.");
-                        return;
-                    }
-
-                    if (!int.TryParse(args[3], out duration) || duration <= 0)
-                    {
-                        Log("[error]Duration must be an integer > 0.");
-                        return;
-                    }
-                }
-
-                // 4. Apply
-                combatant.AddStatusEffect(new StatusEffectInstance(statusType, duration));
-                string durText = isPerm ? "Permanent" : $"{duration} turns";
-                Log($"[Palette_Sky]Applied {statusType} to {combatant.Name} ({durText}).");
-
-            }, "debug_givestatus <slot> <type> [dur] - Apply status to party member in combat.",
-            (args) =>
-            {
-                if (args.Length == 0) return new List<string> { "1", "2", "3", "4" };
-                if (args.Length == 1) return Enum.GetNames(typeof(StatusEffectType)).ToList();
-                if (args.Length == 2) return new List<string> { "1", "2", "3", "4", "5" };
-                return new List<string>();
-            });
-
             _commands["debug_consolefont"] = new Command("debug_consolefont", (args) =>
             {
                 if (args.Length < 2 || !int.TryParse(args[1], out int index))
@@ -441,27 +183,6 @@ namespace ProjectVagabond
         }
 
         // --- HANDLERS ---
-
-        private void HandleShowInventory()
-        {
-            _gameState ??= ServiceLocator.Get<GameState>();
-            if (_gameState.PlayerState == null) return;
-            var ps = _gameState.PlayerState;
-
-            Log("[Palette_Sky]Moves:[/]");
-
-            var leader = ps.Leader;
-            if (leader != null)
-            {
-                Log($"  Spell 1: {leader.Spell1?.MoveID ?? "Empty"} (Used: {leader.Spell1?.TimesUsed ?? 0})");
-                Log($"  Spell 2: {leader.Spell2?.MoveID ?? "Empty"} (Used: {leader.Spell2?.TimesUsed ?? 0})");
-                Log($"  Spell 3: {leader.Spell3?.MoveID ?? "Empty"} (Used: {leader.Spell3?.TimesUsed ?? 0})");
-            }
-            else
-            {
-                Log("  (No Leader)");
-            }
-        }
 
         public void ProcessCommand(string input)
         {
