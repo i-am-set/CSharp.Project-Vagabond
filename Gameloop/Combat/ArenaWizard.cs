@@ -42,7 +42,7 @@ namespace ProjectVagabond.Battle
         private Vector2 _queuedDirection;
         private ActiveAttack _currentActiveAttack;
 
-        private readonly Random _random = new Random();
+        private static readonly Random _random = new Random();
 
         public void Initialize(WizardCatData data, Vector2 startPos, bool isPlayer)
         {

@@ -389,7 +389,7 @@ namespace ProjectVagabond
             catch { HealthHeartsSpriteSheet = _textureFactory.CreateColoredTexture(30, 5, Color.Red); }
 
             try { HealthHearts3x3SpriteSheet = _core.Content.Load<Texture2D>("Sprites/UI/BattleUI/health_3x3_icon_spritesheet"); }
-            catch { HealthHearts3x3SpriteSheet = _textureFactory.CreateColoredTexture(9, 3, Color.Red); }
+            catch { HealthHearts3x3SpriteSheet = _textureFactory.CreateColoredTexture(15, 3, Color.Red); }
 
             try { InventoryPlayerHealthBarEmpty = _core.Content.Load<Texture2D>("Sprites/UI/Inventory/inventory_player_health_bar_empty"); }
             catch { InventoryPlayerHealthBarEmpty = _textureFactory.CreateColoredTexture(66, 7, Color.DarkGray); }
