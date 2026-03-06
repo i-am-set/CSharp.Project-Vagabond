@@ -2,7 +2,7 @@
   {
     "ID": "basic_strike",
     "Name": "Basic Strike",
-    "BasePower": 10,
+    "BasePower": 30,
     "ChargeTime": 0.5,
     "Weight": 30,
     "DeliveryType": "InstantAOE",
@@ -18,7 +18,7 @@
   {
     "ID": "magic_beam",
     "Name": "Magic Beam",
-    "BasePower": 5,
+    "BasePower": 30,
     "ChargeTime": 1.0,
     "Weight": 20,
     "DeliveryType": "TickingBeam",
@@ -50,7 +50,7 @@
   {
     "ID": "snipe",
     "Name": "Snipe",
-    "BasePower": 25,
+    "BasePower": 60,
     "ChargeTime": 1.5,
     "Weight": 15,
     "DeliveryType": "InstantAOE",

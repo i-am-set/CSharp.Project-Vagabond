@@ -57,7 +57,7 @@ namespace ProjectVagabond.Battle
         public void Apply(ArenaWizard caster, ArenaWizard target, MoveDefinition move)
         {
             int damage = Math.Max(1, (int)Math.Floor(move.BasePower * (caster.Strength + 10) / 200f));
-            target.CurrentHP -= damage;
+            target.TakeDamage(damage);
         }
     }
 
@@ -68,7 +68,7 @@ namespace ProjectVagabond.Battle
         public void Apply(ArenaWizard caster, ArenaWizard target, MoveDefinition move)
         {
             int heal = Math.Max(1, (int)(move.BasePower * HealPercentage));
-            target.CurrentHP = Math.Min(target.MaxHP, target.CurrentHP + heal);
+            target.Heal(heal);
         }
     }
 

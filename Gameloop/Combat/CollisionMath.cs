@@ -25,5 +25,20 @@ namespace ProjectVagabond.Utils
 
             return lateralDist <= (width / 2f);
         }
+
+        public static bool RectangleIntersectsCircle(Rectangle rect, Vector2 center, float radius)
+        {
+            float closestX = Math.Clamp(center.X, rect.Left, rect.Right);
+            float closestY = Math.Clamp(center.Y, rect.Top, rect.Bottom);
+            float distanceX = center.X - closestX;
+            float distanceY = center.Y - closestY;
+            return (distanceX * distanceX + distanceY * distanceY) <= (radius * radius);
+        }
+
+        public static bool AABBIntersectsOBB(Rectangle rect, Vector2 obbOrigin, Vector2 obbDirection, float width, float length)
+        {
+            Vector2 center = new Vector2(rect.Center.X, rect.Center.Y);
+            return PointInOBB(center, obbOrigin, obbDirection, width + rect.Width, length + rect.Height);
+        }
     }
 }

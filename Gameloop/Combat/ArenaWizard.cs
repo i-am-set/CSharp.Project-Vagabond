@@ -1,6 +1,7 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using ProjectVagabond.Scenes;
+using ProjectVagabond.Utils;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -26,7 +27,11 @@ namespace ProjectVagabond.Battle
         public float HopTimer;
 
         public int MaxHP;
-        public int CurrentHP;
+        public int CurrentHP { get; private set; }
+
+        public float InvincibilityDuration = 0.67f;
+        public float InvincibilityTimer { get; private set; }
+
         public int Strength;
         public int Intelligence;
         public int Tenacity;
@@ -41,6 +46,9 @@ namespace ProjectVagabond.Battle
         private Vector2 _queuedTargetPos;
         private Vector2 _queuedDirection;
         private ActiveAttack _currentActiveAttack;
+
+        private float[] _heartFlashTimers;
+        private int[] _heartFlashFrame;
 
         private static readonly Random _random = new Random();
 
@@ -58,6 +66,11 @@ namespace ProjectVagabond.Battle
             Agility = data.Agility;
 
             MaxHP = Tenacity * 2;
+
+            int maxHearts = (MaxHP + 1) / 2;
+            _heartFlashTimers = new float[maxHearts];
+            _heartFlashFrame = new int[maxHearts];
+
             CurrentHP = MaxHP;
             Speed = Agility * 5f + 10f;
 
@@ -80,11 +93,82 @@ namespace ProjectVagabond.Battle
             }
         }
 
+        public Rectangle GetHitbox(SpriteManager spriteManager)
+        {
+            var bounds = spriteManager.GetPlayerSpriteBounds(PortraitIndex);
+            float hopOffset = State == WizardState.Dead ? 0f : -MathF.Abs(MathF.Sin(HopTimer)) * 4f;
+            return new Rectangle(
+                (int)MathF.Round(Position.X) + bounds.X,
+                (int)MathF.Round(Position.Y + hopOffset) + bounds.Y,
+                bounds.Width,
+                bounds.Height
+            );
+        }
+
+        public void TakeDamage(int amount)
+        {
+            if (InvincibilityTimer > 0 || State == WizardState.Dead || CurrentHP <= 0) return;
+
+            int oldHP = CurrentHP;
+            CurrentHP = Math.Clamp(CurrentHP - amount, 0, MaxHP);
+
+            if (CurrentHP < oldHP)
+            {
+                TriggerHeartFlash(oldHP, CurrentHP);
+                InvincibilityTimer = InvincibilityDuration;
+            }
+        }
+
+        public void Heal(int amount)
+        {
+            if (State == WizardState.Dead) return;
+            CurrentHP = Math.Clamp(CurrentHP + amount, 0, MaxHP);
+        }
+
+        private void TriggerHeartFlash(int oldHP, int newHP)
+        {
+            if (_heartFlashTimers == null) return;
+            int maxHearts = _heartFlashTimers.Length;
+            for (int i = 0; i < maxHearts; i++)
+            {
+                int oldHeartVal = Math.Clamp(oldHP - i * 2, 0, 2);
+                int newHeartVal = Math.Clamp(newHP - i * 2, 0, 2);
+                if (oldHeartVal > newHeartVal)
+                {
+                    _heartFlashTimers[i] = 0.75f;
+                    if (oldHeartVal == 2 && newHeartVal == 0) _heartFlashFrame[i] = 4;
+                    else if (oldHeartVal == 2 && newHeartVal == 1) _heartFlashFrame[i] = 3;
+                    else if (oldHeartVal == 1 && newHeartVal == 0) _heartFlashFrame[i] = 5;
+                }
+            }
+        }
+
         public void Update(float dt, ArenaScene arena)
         {
+            if (InvincibilityTimer > 0)
+            {
+                InvincibilityTimer -= dt;
+            }
+
+            if (_heartFlashTimers != null)
+            {
+                for (int i = 0; i < _heartFlashTimers.Length; i++)
+                {
+                    if (_heartFlashTimers[i] > 0)
+                    {
+                        _heartFlashTimers[i] -= dt;
+                    }
+                }
+            }
+
+            if (State == WizardState.Dead) return;
+
             if (CurrentHP <= 0)
             {
-                State = WizardState.Dead;
+                if (InvincibilityTimer <= 0)
+                {
+                    State = WizardState.Dead;
+                }
                 return;
             }
 
@@ -207,8 +291,62 @@ namespace ProjectVagabond.Battle
             State = WizardState.Casting;
         }
 
-        public void DrawDebug(SpriteBatch spriteBatch)
+        public void DrawUI(SpriteBatch spriteBatch, SpriteManager spriteManager)
         {
+            if (State == WizardState.Dead) return;
+
+            var sheet = spriteManager.HealthHearts3x3SpriteSheet;
+            if (sheet == null) return;
+
+            int maxHearts = (MaxHP + 1) / 2;
+            int heartWidth = 3;
+            int spacing = 1;
+            int totalWidth = maxHearts * heartWidth + (maxHearts - 1) * spacing;
+
+            float hopOffset = State == WizardState.Dead ? 0f : -MathF.Abs(MathF.Sin(HopTimer)) * 4f;
+
+            int wizX = (int)MathF.Round(Position.X);
+            int wizY = (int)MathF.Round(Position.Y + hopOffset);
+
+            int startX = wizX - (totalWidth / 2) - 1;
+            int startY = wizY - 10;
+
+            for (int i = 0; i < maxHearts; i++)
+            {
+                int heartVal = Math.Clamp(CurrentHP - i * 2, 0, 2);
+                int frameIndex = 2;
+
+                if (heartVal == 2) frameIndex = 0;
+                else if (heartVal == 1) frameIndex = 1;
+
+                if (_heartFlashTimers != null && i < _heartFlashTimers.Length && _heartFlashTimers[i] > 0)
+                {
+                    bool isFlashFrame = (_heartFlashTimers[i] % 0.15f) > 0.075f;
+                    if (isFlashFrame)
+                    {
+                        frameIndex = _heartFlashFrame[i];
+                    }
+                }
+
+                var sourceRect = new Rectangle(frameIndex * heartWidth, 0, heartWidth, 3);
+                Vector2 pos = new Vector2(startX + i * (heartWidth + spacing), startY);
+
+                spriteBatch.DrawSnapped(sheet, pos, sourceRect, Color.White);
+            }
+        }
+
+        public void DrawDebug(SpriteBatch spriteBatch, SpriteManager spriteManager)
+        {
+            if (ServiceLocator.Get<Global>().ShowDebugOverlays)
+            {
+                var pixel = ServiceLocator.Get<Texture2D>();
+                var hitbox = GetHitbox(spriteManager);
+                spriteBatch.Draw(pixel, new Rectangle(hitbox.X, hitbox.Y, hitbox.Width, 1), Color.Lime * 0.5f);
+                spriteBatch.Draw(pixel, new Rectangle(hitbox.X, hitbox.Bottom - 1, hitbox.Width, 1), Color.Lime * 0.5f);
+                spriteBatch.Draw(pixel, new Rectangle(hitbox.X, hitbox.Y, 1, hitbox.Height), Color.Lime * 0.5f);
+                spriteBatch.Draw(pixel, new Rectangle(hitbox.Right - 1, hitbox.Y, 1, hitbox.Height), Color.Lime * 0.5f);
+            }
+
             if (State == WizardState.Telegraphing && _queuedMove != null)
             {
                 _queuedMove.Delivery.DrawTelegraph(spriteBatch, Position, _queuedDirection, _queuedTargetPos);

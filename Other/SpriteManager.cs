@@ -88,6 +88,7 @@ namespace ProjectVagabond
         private readonly Dictionary<string, (Texture2D Original, Texture2D Silhouette)> _itemSprites = new Dictionary<string, (Texture2D, Texture2D)>(StringComparer.OrdinalIgnoreCase);
         private readonly Dictionary<string, (Texture2D Original, Texture2D Silhouette)> _smallItemSprites = new Dictionary<string, (Texture2D, Texture2D)>(StringComparer.OrdinalIgnoreCase);
         private readonly Dictionary<string, (Texture2D Texture, Rectangle[] Frames)> _cursorSprites = new Dictionary<string, (Texture2D, Rectangle[])>();
+        private readonly Dictionary<int, Rectangle> _playerSpriteBoundsCache = new Dictionary<int, Rectangle>();
 
         private Texture2D _logoSprite;
         private Texture2D _playerSprite;
@@ -389,7 +390,7 @@ namespace ProjectVagabond
             catch { HealthHeartsSpriteSheet = _textureFactory.CreateColoredTexture(30, 5, Color.Red); }
 
             try { HealthHearts3x3SpriteSheet = _core.Content.Load<Texture2D>("Sprites/UI/BattleUI/health_3x3_icon_spritesheet"); }
-            catch { HealthHearts3x3SpriteSheet = _textureFactory.CreateColoredTexture(15, 3, Color.Red); }
+            catch { HealthHearts3x3SpriteSheet = _textureFactory.CreateColoredTexture(18, 3, Color.Red); }
 
             try { InventoryPlayerHealthBarEmpty = _core.Content.Load<Texture2D>("Sprites/UI/Inventory/inventory_player_health_bar_empty"); }
             catch { InventoryPlayerHealthBarEmpty = _textureFactory.CreateColoredTexture(66, 7, Color.DarkGray); }
@@ -1044,6 +1045,49 @@ namespace ProjectVagabond
             }
 
             return new Rectangle(col * spriteSize, row * spriteSize, spriteSize, spriteSize);
+        }
+
+        public Rectangle GetPlayerSpriteBounds(int portraitIndex)
+        {
+            if (_playerSpriteBoundsCache.TryGetValue(portraitIndex, out var bounds))
+                return bounds;
+
+            var sourceRect = GetPlayerSourceRect(portraitIndex, PlayerSpriteType.Portrait8x8);
+            if (PlayerMasterSpriteSheet == null) return new Rectangle(-8, -8, 16, 16);
+
+            Color[] data = new Color[sourceRect.Width * sourceRect.Height];
+            PlayerMasterSpriteSheet.GetData(0, sourceRect, data, 0, data.Length);
+
+            int minX = sourceRect.Width, maxX = 0, minY = sourceRect.Height, maxY = 0;
+            bool found = false;
+
+            for (int y = 0; y < sourceRect.Height; y++)
+            {
+                for (int x = 0; x < sourceRect.Width; x++)
+                {
+                    if (data[y * sourceRect.Width + x].A > 0)
+                    {
+                        if (x < minX) minX = x;
+                        if (x > maxX) maxX = x;
+                        if (y < minY) minY = y;
+                        if (y > maxY) maxY = y;
+                        found = true;
+                    }
+                }
+            }
+
+            if (!found)
+            {
+                bounds = new Rectangle(-8, -8, 16, 16);
+            }
+            else
+            {
+                // Origin is 16, 16
+                bounds = new Rectangle(minX - 16, minY - 16, maxX - minX + 1, maxY - minY + 1);
+            }
+
+            _playerSpriteBoundsCache[portraitIndex] = bounds;
+            return bounds;
         }
 
         private bool IsFrameNotEmpty(Color[] data, int texWidth, int x, int y, int w, int h)

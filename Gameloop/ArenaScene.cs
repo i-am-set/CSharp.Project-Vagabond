@@ -80,13 +80,12 @@ namespace ProjectVagabond.Scenes
 
         public IEnumerable<ArenaWizard> GetWizardsInCircle(Vector2 center, float radius)
         {
-            float wizardRadius = 8f;
-            return _wizards.Where(w => w.State != WizardState.Dead && CollisionMath.CircleIntersectsCircle(center, radius, w.Position, wizardRadius));
+            return _wizards.Where(w => w.State != WizardState.Dead && CollisionMath.RectangleIntersectsCircle(w.GetHitbox(_spriteManager), center, radius));
         }
 
         public IEnumerable<ArenaWizard> GetWizardsInOBB(Vector2 origin, Vector2 direction, float width, float length)
         {
-            return _wizards.Where(w => w.State != WizardState.Dead && CollisionMath.PointInOBB(w.Position, origin, direction, width, length));
+            return _wizards.Where(w => w.State != WizardState.Dead && CollisionMath.AABBIntersectsOBB(w.GetHitbox(_spriteManager), origin, direction, width, length));
         }
 
         public void SpawnAttack(ActiveAttack attack)
@@ -183,44 +182,29 @@ namespace ProjectVagabond.Scenes
                 spriteBatch.DrawSnapped(_arenaTexture, _arenaCenter, null, _global.Palette_Off, 0f, origin, 1f, SpriteEffects.None, 0f);
             }
 
-            var sheet = _spriteManager.PlayerMasterSpriteSheet;
-            if (sheet != null)
+            // 1. Draw Dead Wizards (Under everything)
+            foreach (var wizard in _wizards.Where(w => w.State == WizardState.Dead).OrderBy(w => w.Position.Y))
             {
-                Vector2 origin = new Vector2(16, 16);
-                foreach (var wizard in _wizards.OrderBy(w => w.Position.Y))
-                {
-                    var sourceRect = _spriteManager.GetPlayerSourceRect(wizard.PortraitIndex, PlayerSpriteType.Portrait8x8);
-
-                    bool isDead = wizard.State == WizardState.Dead;
-                    float hopOffset = isDead ? 0f : -MathF.Abs(MathF.Sin(wizard.HopTimer)) * 4f;
-                    Vector2 drawPos = new Vector2(MathF.Round(wizard.Position.X), MathF.Round(wizard.Position.Y + hopOffset));
-                    float rotation = isDead ? MathHelper.PiOver2 : 0f;
-                    Color color = isDead ? Color.Gray : Color.White;
-
-                    if (wizard.IsPlayer && !isDead)
-                    {
-                        var silhouette = _spriteManager.PlayerMasterSpriteSheetSilhouette;
-                        if (silhouette != null)
-                        {
-                            spriteBatch.DrawSnapped(silhouette, drawPos + new Vector2(-1, 0), sourceRect, _global.Palette_Sun, rotation, origin, 1f, SpriteEffects.None, 0f);
-                            spriteBatch.DrawSnapped(silhouette, drawPos + new Vector2(1, 0), sourceRect, _global.Palette_Sun, rotation, origin, 1f, SpriteEffects.None, 0f);
-                            spriteBatch.DrawSnapped(silhouette, drawPos + new Vector2(0, -1), sourceRect, _global.Palette_Sun, rotation, origin, 1f, SpriteEffects.None, 0f);
-                            spriteBatch.DrawSnapped(silhouette, drawPos + new Vector2(0, 1), sourceRect, _global.Palette_Sun, rotation, origin, 1f, SpriteEffects.None, 0f);
-                        }
-                    }
-
-                    spriteBatch.DrawSnapped(sheet, drawPos, sourceRect, color, rotation, origin, 1f, SpriteEffects.None, 0f);
-                }
+                DrawWizard(spriteBatch, wizard);
             }
 
+            // 2. Draw Attacks
             foreach (var attack in _activeAttacks)
             {
                 attack.DeliveryInstance.Draw(spriteBatch, attack);
             }
 
+            // 3. Draw Living Wizards
+            foreach (var wizard in _wizards.Where(w => w.State != WizardState.Dead).OrderBy(w => w.Position.Y))
+            {
+                DrawWizard(spriteBatch, wizard);
+            }
+
+            // 4. Draw UI & Debug
             foreach (var wizard in _wizards)
             {
-                wizard.DrawDebug(spriteBatch);
+                wizard.DrawUI(spriteBatch, _spriteManager);
+                wizard.DrawDebug(spriteBatch, _spriteManager);
             }
 
             string text = "";
@@ -235,6 +219,52 @@ namespace ProjectVagabond.Scenes
                 Vector2 size = mainFont.MeasureString(text);
                 Vector2 pos = _arenaCenter - (size / 2f);
                 spriteBatch.DrawStringOutlinedSnapped(mainFont, text, pos, _global.Palette_Sun, _global.Palette_DarkShadow);
+            }
+        }
+
+        private void DrawWizard(SpriteBatch spriteBatch, ArenaWizard wizard)
+        {
+            var sheet = _spriteManager.PlayerMasterSpriteSheet;
+            if (sheet == null) return;
+
+            Vector2 origin = new Vector2(16, 16);
+            var sourceRect = _spriteManager.GetPlayerSourceRect(wizard.PortraitIndex, PlayerSpriteType.Portrait8x8);
+
+            bool isDead = wizard.State == WizardState.Dead;
+            float hopOffset = isDead ? 0f : -MathF.Abs(MathF.Sin(wizard.HopTimer)) * 4f;
+            Vector2 drawPos = new Vector2(MathF.Round(wizard.Position.X), MathF.Round(wizard.Position.Y + hopOffset));
+            float rotation = isDead ? MathHelper.PiOver2 : 0f;
+            Color color = isDead ? Color.Gray : Color.White;
+
+            bool isInvincibleFlash = wizard.InvincibilityTimer > 0 && (wizard.InvincibilityTimer % 0.16f) > 0.08f;
+
+            if (wizard.IsPlayer && !isDead)
+            {
+                var silhouette = _spriteManager.PlayerMasterSpriteSheetSilhouette;
+                if (silhouette != null)
+                {
+                    spriteBatch.DrawSnapped(silhouette, drawPos + new Vector2(-1, 0), sourceRect, _global.Palette_Sun, rotation, origin, 1f, SpriteEffects.None, 0f);
+                    spriteBatch.DrawSnapped(silhouette, drawPos + new Vector2(1, 0), sourceRect, _global.Palette_Sun, rotation, origin, 1f, SpriteEffects.None, 0f);
+                    spriteBatch.DrawSnapped(silhouette, drawPos + new Vector2(0, -1), sourceRect, _global.Palette_Sun, rotation, origin, 1f, SpriteEffects.None, 0f);
+                    spriteBatch.DrawSnapped(silhouette, drawPos + new Vector2(0, 1), sourceRect, _global.Palette_Sun, rotation, origin, 1f, SpriteEffects.None, 0f);
+                }
+            }
+
+            if (isInvincibleFlash && !isDead)
+            {
+                var silhouette = _spriteManager.PlayerMasterSpriteSheetSilhouette;
+                if (silhouette != null)
+                {
+                    spriteBatch.DrawSnapped(silhouette, drawPos, sourceRect, _global.Palette_Sun, rotation, origin, 1f, SpriteEffects.None, 0f);
+                }
+                else
+                {
+                    spriteBatch.DrawSnapped(sheet, drawPos, sourceRect, _global.Palette_Sun, rotation, origin, 1f, SpriteEffects.None, 0f);
+                }
+            }
+            else
+            {
+                spriteBatch.DrawSnapped(sheet, drawPos, sourceRect, color, rotation, origin, 1f, SpriteEffects.None, 0f);
             }
         }
     }
