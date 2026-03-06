@@ -12,7 +12,8 @@
     "DeliveryLifetime": 0.0,
     "DeliveryTickRate": 0.0,
     "EffectType": "Damage",
-    "EffectArg": 0.0
+    "EffectArg": 0.0,
+    "CanTargetSelf": false
   },
   {
     "ID": "magic_beam",
@@ -27,29 +28,31 @@
     "DeliveryLifetime": 1.5,
     "DeliveryTickRate": 0.5,
     "EffectType": "Damage",
-    "EffectArg": 0.0
+    "EffectArg": 0.0,
+    "CanTargetSelf": false
   },
   {
     "ID": "heal_pulse",
     "Name": "Heal Pulse",
-    "BasePower": 20,
+    "BasePower": 5,
     "ChargeTime": 0.8,
-    "Weight": 15,
+    "Weight": 5,
     "DeliveryType": "InstantAOE",
-    "DeliveryRadius": 25.0,
+    "DeliveryRadius": 1.0,
     "DeliveryWidth": 0.0,
     "DeliveryLength": 0.0,
     "DeliveryLifetime": 0.0,
     "DeliveryTickRate": 0.0,
     "EffectType": "Heal",
-    "EffectArg": 0.5
+    "EffectArg": 0.5,
+    "CanTargetSelf": true
   },
   {
     "ID": "snipe",
     "Name": "Snipe",
     "BasePower": 25,
     "ChargeTime": 1.5,
-    "Weight": 10,
+    "Weight": 15,
     "DeliveryType": "InstantAOE",
     "DeliveryRadius": 5.0,
     "DeliveryWidth": 0.0,
@@ -57,6 +60,7 @@
     "DeliveryLifetime": 0.0,
     "DeliveryTickRate": 0.0,
     "EffectType": "Damage",
-    "EffectArg": 0.0
+    "EffectArg": 0.0,
+    "CanTargetSelf": false
   }
 ]

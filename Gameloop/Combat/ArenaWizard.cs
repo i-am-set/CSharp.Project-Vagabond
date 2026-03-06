@@ -1,4 +1,5 @@
 ﻿using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Graphics;
 using ProjectVagabond.Scenes;
 using System;
 using System.Collections.Generic;
@@ -10,6 +11,7 @@ namespace ProjectVagabond.Battle
     {
         Moving,
         Telegraphing,
+        Casting,
         Recovering,
         Dead
     }
@@ -38,6 +40,7 @@ namespace ProjectVagabond.Battle
         private MoveDefinition _queuedMove;
         private Vector2 _queuedTargetPos;
         private Vector2 _queuedDirection;
+        private ActiveAttack _currentActiveAttack;
 
         private readonly Random _random = new Random();
 
@@ -101,6 +104,14 @@ namespace ProjectVagabond.Battle
                     if (_stateTimer <= 0)
                     {
                         ExecuteAttack(arena);
+                    }
+                    break;
+
+                case WizardState.Casting:
+                    if (_currentActiveAttack == null || _currentActiveAttack.DeliveryInstance.IsFinished)
+                    {
+                        State = WizardState.Recovering;
+                        _stateTimer = 0.25f;
                     }
                     break;
 
@@ -190,15 +201,23 @@ namespace ProjectVagabond.Battle
                 DeliveryInstance = _queuedMove.Delivery.Clone()
             };
 
+            _currentActiveAttack = attack;
             arena.SpawnAttack(attack);
 
-            State = WizardState.Recovering;
-            _stateTimer = 0.25f;
+            State = WizardState.Casting;
+        }
+
+        public void DrawDebug(SpriteBatch spriteBatch)
+        {
+            if (State == WizardState.Telegraphing && _queuedMove != null)
+            {
+                _queuedMove.Delivery.DrawTelegraph(spriteBatch, Position, _queuedDirection, _queuedTargetPos);
+            }
         }
 
         private float GetRandomActionTime()
         {
-            return 1.0f + (float)_random.NextDouble() * 2.0f;
+            return 3.0f + (float)_random.NextDouble() * 4.0f;
         }
     }
 }

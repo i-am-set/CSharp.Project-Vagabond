@@ -218,6 +218,11 @@ namespace ProjectVagabond.Scenes
                 attack.DeliveryInstance.Draw(spriteBatch, attack);
             }
 
+            foreach (var wizard in _wizards)
+            {
+                wizard.DrawDebug(spriteBatch);
+            }
+
             string text = "";
             if (_stateTimer < 1f) text = "3";
             else if (_stateTimer < 2f) text = "2";

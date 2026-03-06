@@ -17,5 +17,6 @@
 
         public string EffectType { get; set; }
         public float EffectArg { get; set; }
+        public bool CanTargetSelf { get; set; }
     }
 }

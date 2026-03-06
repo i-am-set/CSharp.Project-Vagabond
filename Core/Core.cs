@@ -375,9 +375,14 @@ namespace ProjectVagabond
             {
                 if (_debugConsole.IsVisible) _debugConsole.Hide(); else _debugConsole.Show();
             }
+
             _global.ShowSplitMapGrid = currentKeyboardState.IsKeyDown(Keys.F1);
             _drawMouseDebugDot = currentKeyboardState.IsKeyDown(Keys.F2);
-            _global.ShowDebugOverlays = currentKeyboardState.IsKeyDown(Keys.F3);
+
+            if (KeyPressed(Keys.F3, currentKeyboardState, _previousKeyboardState))
+            {
+                _global.ShowDebugOverlays = !_global.ShowDebugOverlays;
+            }
 
             if (KeyPressed(Keys.F5, currentKeyboardState, _previousKeyboardState)) { ResetGame(); _sceneManager.ChangeScene(GameSceneState.MainMenu, TransitionType.None, TransitionType.None); }
             if (KeyPressed(Keys.F10, currentKeyboardState, _previousKeyboardState)) MaximizeWindow();
@@ -473,6 +478,13 @@ namespace ProjectVagabond
             if (!_loadingScreen.IsActive)
             {
                 _sceneManager.Draw(_spriteBatch, _defaultFont, gameTime, finalSceneTransform);
+
+                if (_global.ShowDebugOverlays)
+                {
+                    _spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp, null, null, null, finalSceneTransform);
+                    _spriteBatch.DrawStringSnapped(_defaultFont, "F3", new Vector2(2, 2), _global.Palette_Rust);
+                    _spriteBatch.End();
+                }
             }
 
             if (_transitionManager.IsTransitioning)

@@ -15,7 +15,8 @@ namespace ProjectVagabond.Battle
                 Name = data.Name,
                 BasePower = data.BasePower,
                 ChargeTime = data.ChargeTime,
-                Weight = data.Weight
+                Weight = data.Weight,
+                CanTargetSelf = data.CanTargetSelf
             };
 
             if (data.DeliveryType == "InstantAOE")
@@ -77,6 +78,7 @@ namespace ProjectVagabond.Battle
         void Start(ActiveAttack attack);
         void Update(float dt, ArenaScene arena, ActiveAttack attack);
         void Draw(SpriteBatch spriteBatch, ActiveAttack attack);
+        void DrawTelegraph(SpriteBatch spriteBatch, Vector2 origin, Vector2 direction, Vector2 targetPos);
         IDelivery Clone();
     }
 
@@ -101,6 +103,8 @@ namespace ProjectVagabond.Battle
             {
                 foreach (var target in arena.GetWizardsInCircle(attack.TargetPosition, Radius))
                 {
+                    if (!attack.Move.CanTargetSelf && target == attack.Caster) continue;
+
                     foreach (var effect in attack.Move.Effects)
                     {
                         effect.Apply(attack.Caster, target, attack.Move);
@@ -123,6 +127,19 @@ namespace ProjectVagabond.Battle
                 float scale = (Radius * 2f) / circle.Width;
                 Vector2 origin = new Vector2(circle.Width / 2f, circle.Height / 2f);
                 spriteBatch.Draw(circle, attack.TargetPosition, null, Color.Red * 0.3f, 0f, origin, scale, SpriteEffects.None, 0f);
+            }
+        }
+
+        public void DrawTelegraph(SpriteBatch spriteBatch, Vector2 origin, Vector2 direction, Vector2 targetPos)
+        {
+            if (!ServiceLocator.Get<Global>().ShowDebugOverlays) return;
+
+            var circle = ServiceLocator.Get<SpriteManager>().CircleTextureSprite;
+            if (circle != null)
+            {
+                float scale = (Radius * 2f) / circle.Width;
+                Vector2 texOrigin = new Vector2(circle.Width / 2f, circle.Height / 2f);
+                spriteBatch.Draw(circle, targetPos, null, Color.Blue * 0.3f, 0f, texOrigin, scale, SpriteEffects.None, 0f);
             }
         }
 
@@ -160,6 +177,8 @@ namespace ProjectVagabond.Battle
                 _tickTimer -= TickRate;
                 foreach (var target in arena.GetWizardsInOBB(attack.Origin, attack.Direction, Width, Length))
                 {
+                    if (!attack.Move.CanTargetSelf && target == attack.Caster) continue;
+
                     foreach (var effect in attack.Move.Effects)
                     {
                         effect.Apply(attack.Caster, target, attack.Move);
@@ -176,6 +195,16 @@ namespace ProjectVagabond.Battle
             float angle = (float)Math.Atan2(attack.Direction.Y, attack.Direction.X);
 
             spriteBatch.Draw(pixel, attack.Origin, null, Color.Red * 0.3f, angle, new Vector2(0, 0.5f), new Vector2(Length, Width), SpriteEffects.None, 0f);
+        }
+
+        public void DrawTelegraph(SpriteBatch spriteBatch, Vector2 origin, Vector2 direction, Vector2 targetPos)
+        {
+            if (!ServiceLocator.Get<Global>().ShowDebugOverlays) return;
+
+            var pixel = ServiceLocator.Get<Texture2D>();
+            float angle = (float)Math.Atan2(direction.Y, direction.X);
+
+            spriteBatch.Draw(pixel, origin, null, Color.Blue * 0.3f, angle, new Vector2(0, 0.5f), new Vector2(Length, Width), SpriteEffects.None, 0f);
         }
 
         public IDelivery Clone()
@@ -196,6 +225,7 @@ namespace ProjectVagabond.Battle
         public int BasePower { get; set; }
         public float ChargeTime { get; set; }
         public int Weight { get; set; }
+        public bool CanTargetSelf { get; set; }
         public IDelivery Delivery { get; set; }
         public List<IEffect> Effects { get; set; } = new List<IEffect>();
     }
