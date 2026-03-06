@@ -217,7 +217,7 @@ namespace ProjectVagabond.Battle
 
         private float GetRandomActionTime()
         {
-            return 3.0f + (float)_random.NextDouble() * 4.0f;
+            return 2.0f + (float)_random.NextDouble() * 6.0f;
         }
     }
 }
