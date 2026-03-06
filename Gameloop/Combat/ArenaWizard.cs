@@ -16,8 +16,7 @@ namespace ProjectVagabond.Battle
         Telegraphing,
         Casting,
         Recovering,
-        Dead,
-        Sparring
+        Dead
     }
 
     public class ArenaWizard
@@ -43,10 +42,6 @@ namespace ProjectVagabond.Battle
         public WizardState State = WizardState.Moving;
         public List<MoveDefinition> Moves = new List<MoveDefinition>();
 
-        public bool IsSparPassive;
-        public float SparCooldownTimer;
-        public MoveDefinition SparMove;
-
         public bool IsHovered;
 
         // --- Tunables ---
@@ -63,11 +58,6 @@ namespace ProjectVagabond.Battle
         private Vector2 _queuedTargetPos;
         private Vector2 _queuedDirection;
         private ActiveAttack _currentActiveAttack;
-
-        private ArenaWizard _sparOpponent;
-        private bool _isSparWinner;
-        private int _sparPhase;
-        private float _sparTimer;
 
         private float[] _heartFlashTimers;
         private int[] _heartFlashFrame;
@@ -107,34 +97,6 @@ namespace ProjectVagabond.Battle
             _actionTimer = GetRandomActionTime();
 
             LoadMoves(data);
-
-            string sparId = (data.SparName ?? "scratch").ToLowerInvariant();
-            if (GameDataCache.Moves.TryGetValue(sparId, out var sparData))
-            {
-                SparMove = MoveFactory.CreateMove(sparData);
-                if (data.SparBasePower > 0) SparMove.BasePower = data.SparBasePower;
-            }
-            else
-            {
-                SparMove = new MoveDefinition
-                {
-                    Name = data.SparName ?? "Scratch",
-                    BasePower = data.SparBasePower > 0 ? data.SparBasePower : 10,
-                    ChargeTime = 0,
-                    Weight = 0,
-                    CanTargetSelf = false,
-                    Delivery = new SelfDelivery()
-                };
-
-                if ((data.SparEffectType ?? "Damage") == "Damage")
-                {
-                    SparMove.Effects.Add(new DamageEffect());
-                }
-                else if (data.SparEffectType == "Heal")
-                {
-                    SparMove.Effects.Add(new HealEffect { HealPercentage = 1.0f });
-                }
-            }
         }
 
         private void LoadMoves(WizardCatData data)
@@ -201,21 +163,6 @@ namespace ProjectVagabond.Battle
             }
         }
 
-        public void InitiateSpar(ArenaWizard opponent, bool isWinner, ArenaScene arena)
-        {
-            State = WizardState.Sparring;
-            _sparOpponent = opponent;
-            _isSparWinner = isWinner;
-            _sparPhase = 0;
-            _sparTimer = 0.25f;
-
-            TargetPosition = arena.GetRandomArenaPoint();
-            _actionTimer = GetRandomActionTime();
-
-            _queuedMove = null;
-            _currentActiveAttack = null;
-        }
-
         public float GetDeathAlpha()
         {
             if (State != WizardState.Dead) return 1.0f;
@@ -228,11 +175,6 @@ namespace ProjectVagabond.Battle
             if (InvincibilityTimer > 0)
             {
                 InvincibilityTimer -= dt;
-            }
-
-            if (SparCooldownTimer > 0)
-            {
-                SparCooldownTimer -= dt;
             }
 
             if (_moveTextTimer > 0)
@@ -318,64 +260,6 @@ namespace ProjectVagabond.Battle
                     {
                         State = WizardState.Moving;
                         _actionTimer = GetRandomActionTime();
-                        IsSparPassive = true;
-                        SparCooldownTimer = 1.0f;
-                    }
-                    break;
-
-                case WizardState.Sparring:
-                    _sparTimer -= dt;
-                    if (_sparTimer <= 0)
-                    {
-                        if (_sparPhase == 0)
-                        {
-                            if (_isSparWinner && _sparOpponent != null && _sparOpponent.State != WizardState.Dead)
-                            {
-                                _activeMoveText = SparMove.Name;
-                                _moveTextTimer = 0.8f;
-                                _moveTextDuration = 0.8f;
-
-                                if (!string.IsNullOrEmpty(SparMove.AnimationID))
-                                {
-                                    var anim = AnimationFactory.CreateAnimation(SparMove.AnimationID);
-                                    if (anim != null)
-                                    {
-                                        var attack = new ActiveAttack
-                                        {
-                                            Caster = this,
-                                            Move = SparMove,
-                                            Origin = Position,
-                                            Direction = _sparOpponent.Position - Position,
-                                            TargetPosition = _sparOpponent.Position,
-                                            DeliveryInstance = new InstantAOEDelivery { Radius = 24f },
-                                            Animation = anim,
-                                            HasTriggeredImpact = true
-                                        };
-                                        arena.SpawnAttack(attack);
-                                    }
-                                }
-
-                                foreach (var effect in SparMove.Effects)
-                                {
-                                    effect.Apply(this, _sparOpponent, SparMove);
-                                }
-
-                                Vector2 midpoint = (Position + _sparOpponent.Position) / 2f;
-                                var psm = ServiceLocator.Get<ParticleSystemManager>();
-                                var emitter = psm.CreateEmitter(ParticleEffects.CreateHitSparks(0.5f));
-                                emitter.Position = midpoint;
-                                emitter.EmitBurst(5);
-                            }
-                            _sparPhase = 1;
-                            _sparTimer = 0.5f;
-                        }
-                        else if (_sparPhase == 1)
-                        {
-                            State = WizardState.Moving;
-                            IsSparPassive = true;
-                            SparCooldownTimer = 1.0f;
-                            _sparOpponent = null;
-                        }
                     }
                     break;
             }
@@ -434,7 +318,15 @@ namespace ProjectVagabond.Battle
                     _actionTimer = GetRandomActionTime();
                     return;
                 }
-                target = potentialTargets[_random.Next(potentialTargets.Count)];
+
+                if (_queuedMove.Delivery is DashMeleeDelivery)
+                {
+                    target = potentialTargets.OrderBy(w => Vector2.DistanceSquared(Position, w.Position)).First();
+                }
+                else
+                {
+                    target = potentialTargets[_random.Next(potentialTargets.Count)];
+                }
             }
 
             _queuedTargetPos = target.Position;

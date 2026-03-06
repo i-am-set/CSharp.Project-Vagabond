@@ -160,51 +160,6 @@ namespace ProjectVagabond.Scenes
                     wizard.Update(dt, this);
                 }
 
-                HashSet<ArenaWizard> overlappingWizards = new HashSet<ArenaWizard>();
-
-                for (int i = 0; i < _wizards.Count; i++)
-                {
-                    var w1 = _wizards[i];
-                    if (w1.State == WizardState.Dead) continue;
-
-                    var rect1 = w1.GetHitbox(_spriteManager);
-
-                    for (int j = i + 1; j < _wizards.Count; j++)
-                    {
-                        var w2 = _wizards[j];
-                        if (w2.State == WizardState.Dead) continue;
-
-                        var rect2 = w2.GetHitbox(_spriteManager);
-
-                        if (rect1.Intersects(rect2))
-                        {
-                            overlappingWizards.Add(w1);
-                            overlappingWizards.Add(w2);
-
-                            if (!w1.IsSparPassive && !w2.IsSparPassive && w1.State == WizardState.Moving && w2.State == WizardState.Moving)
-                            {
-                                float totalAgility = w1.Agility + w2.Agility;
-                                float p1Wins = totalAgility > 0 ? (float)w1.Agility / totalAgility : 0.5f;
-                                bool w1Wins = _random.NextDouble() < p1Wins;
-
-                                w1.InitiateSpar(w2, w1Wins, this);
-                                w2.InitiateSpar(w1, !w1Wins, this);
-                            }
-                        }
-                    }
-                }
-
-                foreach (var w in _wizards)
-                {
-                    if (w.IsSparPassive && w.SparCooldownTimer <= 0)
-                    {
-                        if (!overlappingWizards.Contains(w))
-                        {
-                            w.IsSparPassive = false;
-                        }
-                    }
-                }
-
                 for (int i = _activeAttacks.Count - 1; i >= 0; i--)
                 {
                     var attack = _activeAttacks[i];

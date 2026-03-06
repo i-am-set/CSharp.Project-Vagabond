@@ -11,10 +11,7 @@
     "Move1": "magic_beam",
     "Move2": "",
     "Move3": "",
-    "Move4": "",
-    "SparName": "Scratch",
-    "SparBasePower": 10,
-    "SparEffectType": "Damage"
+    "Move4": ""
   },
   {
     "MemberID": "1",
@@ -28,10 +25,7 @@
     "Move1": "fireball",
     "Move2": "",
     "Move3": "",
-    "Move4": "",
-    "SparName": "Scratch",
-    "SparBasePower": 10,
-    "SparEffectType": "Damage"
+    "Move4": ""
   },
   {
     "MemberID": "2",
@@ -45,10 +39,7 @@
     "Move1": "lick_wounds",
     "Move2": "",
     "Move3": "",
-    "Move4": "",
-    "SparName": "Scratch",
-    "SparBasePower": 10,
-    "SparEffectType": "Damage"
+    "Move4": ""
   },
   {
     "MemberID": "3",
@@ -62,10 +53,7 @@
     "Move1": "",
     "Move2": "",
     "Move3": "",
-    "Move4": "",
-    "SparName": "Scratch",
-    "SparBasePower": 10,
-    "SparEffectType": "Damage"
+    "Move4": ""
   },
   {
     "MemberID": "4",
@@ -79,10 +67,7 @@
     "Move1": "magic_beam",
     "Move2": "",
     "Move3": "",
-    "Move4": "",
-    "SparName": "Scratch",
-    "SparBasePower": 10,
-    "SparEffectType": "Damage"
+    "Move4": ""
   },
   {
     "MemberID": "5",
@@ -96,10 +81,7 @@
     "Move1": "lick_wounds",
     "Move2": "magic_beam",
     "Move3": "",
-    "Move4": "",
-    "SparName": "Scratch",
-    "SparBasePower": 10,
-    "SparEffectType": "Damage"
+    "Move4": ""
   },
   {
     "MemberID": "6",
@@ -113,10 +95,7 @@
     "Move1": "fireball",
     "Move2": "",
     "Move3": "",
-    "Move4": "",
-    "SparName": "Scratch",
-    "SparBasePower": 10,
-    "SparEffectType": "Damage"
+    "Move4": ""
   },
   {
     "MemberID": "7",
@@ -130,10 +109,7 @@
     "Move1": "lick_wounds",
     "Move2": "",
     "Move3": "",
-    "Move4": "",
-    "SparName": "Scratch",
-    "SparBasePower": 10,
-    "SparEffectType": "Damage"
+    "Move4": ""
   },
   {
     "MemberID": "8",
@@ -147,10 +123,7 @@
     "Move1": "magic_beam",
     "Move2": "",
     "Move3": "",
-    "Move4": "",
-    "SparName": "Scratch",
-    "SparBasePower": 10,
-    "SparEffectType": "Damage"
+    "Move4": ""
   },
   {
     "MemberID": "9",
@@ -164,10 +137,7 @@
     "Move1": "fireball",
     "Move2": "",
     "Move3": "",
-    "Move4": "",
-    "SparName": "Scratch",
-    "SparBasePower": 10,
-    "SparEffectType": "Damage"
+    "Move4": ""
   },
   {
     "MemberID": "10",
@@ -181,10 +151,7 @@
     "Move1": "lick_wounds",
     "Move2": "magic_beam",
     "Move3": "",
-    "Move4": "",
-    "SparName": "Scratch",
-    "SparBasePower": 10,
-    "SparEffectType": "Damage"
+    "Move4": ""
   },
   {
     "MemberID": "11",
@@ -198,10 +165,7 @@
     "Move1": "",
     "Move2": "",
     "Move3": "",
-    "Move4": "",
-    "SparName": "Scratch",
-    "SparBasePower": 10,
-    "SparEffectType": "Damage"
+    "Move4": ""
   },
   {
     "MemberID": "12",
@@ -215,10 +179,7 @@
     "Move1": "fireball",
     "Move2": "",
     "Move3": "",
-    "Move4": "",
-    "SparName": "Scratch",
-    "SparBasePower": 10,
-    "SparEffectType": "Damage"
+    "Move4": ""
   },
   {
     "MemberID": "13",
@@ -232,10 +193,7 @@
     "Move1": "lick_wounds",
     "Move2": "",
     "Move3": "",
-    "Move4": "",
-    "SparName": "Scratch",
-    "SparBasePower": 10,
-    "SparEffectType": "Damage"
+    "Move4": ""
   },
   {
     "MemberID": "14",
@@ -249,9 +207,6 @@
     "Move1": "magic_beam",
     "Move2": "",
     "Move3": "",
-    "Move4": "",
-    "SparName": "Scratch",
-    "SparBasePower": 10,
-    "SparEffectType": "Damage"
+    "Move4": ""
   }
 ]

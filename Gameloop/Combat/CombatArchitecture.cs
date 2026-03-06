@@ -39,6 +39,15 @@ namespace ProjectVagabond.Battle
             {
                 move.Delivery = new SelfDelivery();
             }
+            else if (data.DeliveryType == "DashMelee")
+            {
+                move.Delivery = new DashMeleeDelivery
+                {
+                    Width = data.DeliveryWidth,
+                    Length = data.DeliveryLength,
+                    Lifetime = data.DeliveryLifetime
+                };
+            }
 
             if (data.EffectType == "Damage")
             {
@@ -50,6 +59,79 @@ namespace ProjectVagabond.Battle
             }
 
             return move;
+        }
+    }
+
+    public class DashMeleeDelivery : IDelivery
+    {
+        public float Width { get; set; }
+        public float Length { get; set; }
+        public float Lifetime { get; set; }
+
+        private float _timer;
+        private HashSet<ArenaWizard> _hitTargets = new HashSet<ArenaWizard>();
+        private Vector2 _dashVelocity;
+
+        public bool IsFinished => _timer >= Lifetime;
+
+        public void Start(ActiveAttack attack)
+        {
+            _timer = 0f;
+            _hitTargets.Clear();
+            if (Lifetime > 0)
+                _dashVelocity = attack.Direction * (Length / Lifetime);
+            else
+                _dashVelocity = Vector2.Zero;
+        }
+
+        public void TriggerImpact(ArenaScene arena, ActiveAttack attack)
+        {
+            // Handled continuously in Update
+        }
+
+        public void Update(float dt, ArenaScene arena, ActiveAttack attack)
+        {
+            if (!attack.HasTriggeredImpact) return;
+
+            _timer += dt;
+
+            // Move the caster
+            attack.Caster.Position += _dashVelocity * dt;
+
+            // Check hitbox (OBB in front of caster)
+            foreach (var target in arena.GetWizardsInOBB(attack.Caster.Position, attack.Direction, Width, Length))
+            {
+                if (target == attack.Caster && !attack.Move.CanTargetSelf) continue;
+
+                if (_hitTargets.Add(target))
+                {
+                    foreach (var effect in attack.Move.Effects)
+                    {
+                        effect.Apply(attack.Caster, target, attack.Move);
+                    }
+                }
+            }
+        }
+
+        public void Draw(SpriteBatch spriteBatch, ActiveAttack attack)
+        {
+            if (!ServiceLocator.Get<Global>().ShowDebugOverlays) return;
+            var pixel = ServiceLocator.Get<Texture2D>();
+            float angle = (float)Math.Atan2(attack.Direction.Y, attack.Direction.X);
+            spriteBatch.Draw(pixel, attack.Caster.Position, null, Color.Red * 0.3f, angle, new Vector2(0, 0.5f), new Vector2(Length, Width), SpriteEffects.None, 0f);
+        }
+
+        public void DrawTelegraph(SpriteBatch spriteBatch, Vector2 origin, Vector2 direction, Vector2 targetPos)
+        {
+            if (!ServiceLocator.Get<Global>().ShowDebugOverlays) return;
+            var pixel = ServiceLocator.Get<Texture2D>();
+            float angle = (float)Math.Atan2(direction.Y, direction.X);
+            spriteBatch.Draw(pixel, origin, null, Color.Blue * 0.3f, angle, new Vector2(0, 0.5f), new Vector2(Length, Width), SpriteEffects.None, 0f);
+        }
+
+        public IDelivery Clone()
+        {
+            return new DashMeleeDelivery { Width = this.Width, Length = this.Length, Lifetime = this.Lifetime };
         }
     }
 
