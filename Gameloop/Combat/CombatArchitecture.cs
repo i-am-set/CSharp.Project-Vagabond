@@ -77,6 +77,16 @@ namespace ProjectVagabond.Battle
                     ProjectileAnimationID = data.DeliveryProjectileAnimation
                 };
             }
+            else if (data.DeliveryType == "MultiProjectile")
+            {
+                move.Delivery = new MultiProjectileDelivery
+                {
+                    ProjectileCount = data.DeliveryProjectileCount,
+                    Duration = data.DeliveryLifetime,
+                    ProjectileAnimationID = data.DeliveryProjectileAnimation,
+                    ProjectileTravelTime = data.DeliveryProjectileTravelTime
+                };
+            }
 
             if (data.EffectType == "Damage")
             {
@@ -88,6 +98,117 @@ namespace ProjectVagabond.Battle
             }
 
             return move;
+        }
+    }
+
+    public class MultiProjectileDelivery : IDelivery
+    {
+        public int ProjectileCount { get; set; }
+        public float Duration { get; set; }
+        public string ProjectileAnimationID { get; set; }
+        public float ProjectileTravelTime { get; set; }
+
+        private float _timer;
+        private int _projectilesSpawned;
+        private static readonly Random _random = new Random();
+
+        public bool IsFinished => _timer >= Duration;
+        public bool IsAnimationPaused => false;
+
+        public void Start(ActiveAttack attack)
+        {
+            _timer = 0f;
+            _projectilesSpawned = 0;
+        }
+
+        public void TriggerImpact(ArenaScene arena, ActiveAttack attack)
+        {
+            // The main delivery doesn't do damage itself, the child projectiles do.
+        }
+
+        public void Update(float dt, ArenaScene arena, ActiveAttack attack)
+        {
+            _timer += dt;
+
+            int expected = ProjectileCount;
+            if (Duration > 0)
+            {
+                float interval = Duration / ProjectileCount;
+                expected = Math.Min(ProjectileCount, (int)(_timer / interval) + 1);
+                if (_timer >= Duration) expected = ProjectileCount;
+            }
+
+            while (_projectilesSpawned < expected)
+            {
+                SpawnProjectile(arena, attack);
+                _projectilesSpawned++;
+            }
+        }
+
+        private void SpawnProjectile(ArenaScene arena, ActiveAttack parentAttack)
+        {
+            var validTargets = new List<ArenaWizard>();
+            foreach (var w in arena.Wizards)
+            {
+                if (w != parentAttack.Caster && w.CurrentHP > 0) validTargets.Add(w);
+            }
+
+            ArenaWizard target = null;
+            if (validTargets.Count > 0)
+            {
+                target = validTargets[_random.Next(validTargets.Count)];
+            }
+
+            Vector2 targetPos = target != null ? target.Position : parentAttack.Caster.Position + new Vector2(_random.Next(-50, 50), _random.Next(-50, 50));
+
+            Vector2 dir = targetPos - parentAttack.Caster.Position;
+            if (dir.LengthSquared() > 0) dir.Normalize();
+            else dir = new Vector2(1, 0);
+
+            var childMove = new MoveDefinition
+            {
+                Name = parentAttack.Move.Name + " (Missile)",
+                BasePower = parentAttack.Move.BasePower,
+                ChargeTime = ProjectileTravelTime > 0 ? ProjectileTravelTime : 0.4f, // Travel time
+                Weight = 0,
+                Knockback = parentAttack.Move.Knockback,
+                TargetSelf = false,
+                CanEffectSelf = parentAttack.Move.CanEffectSelf,
+                ExecuteOnChargeStart = true, // Skip telegraphing, execute immediately
+                RequiresFocus = false, // Once fired, it doesn't care if the caster is hit
+                ShowProjectileIndicator = false,
+                Delivery = new SingleTargetDelivery(),
+                Effects = parentAttack.Move.Effects.ToList()
+            };
+
+            var childAttack = new ActiveAttack
+            {
+                Caster = parentAttack.Caster,
+                TargetWizard = target,
+                Move = childMove,
+                Origin = parentAttack.Caster.Position,
+                Direction = dir,
+                TargetPosition = targetPos,
+                DeliveryInstance = childMove.Delivery.Clone(),
+                Animation = AnimationFactory.CreateAnimation(ProjectileAnimationID),
+                HasTriggeredImpact = false
+            };
+
+            arena.SpawnAttack(childAttack);
+        }
+
+        public void Draw(SpriteBatch spriteBatch, ActiveAttack attack) { }
+        public void DrawTelegraph(SpriteBatch spriteBatch, Vector2 origin, Vector2 direction, Vector2 targetPos) { }
+
+        public IDelivery Clone()
+        {
+            return new MultiProjectileDelivery
+            {
+                ProjectileCount = this.ProjectileCount,
+                Duration = this.Duration,
+                ProjectileAnimationID = this.ProjectileAnimationID,
+                ProjectileTravelTime = this.ProjectileTravelTime
+            };
         }
     }
 

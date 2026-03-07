@@ -37,6 +37,7 @@ namespace ProjectVagabond.Animations
     public class ParticleAnimationData
     {
         public string Mode { get; set; }
+        public string LobType { get; set; }
         public float Duration { get; set; }
         public float ProjectileSpeed { get; set; }
         public bool MaintainVisualSpeed { get; set; }
@@ -558,9 +559,15 @@ namespace ProjectVagabond.Animations
                 {
                     hasProjectiles = true;
                     float travelDuration = attack.Move.ChargeTime > 0 ? attack.Move.ChargeTime : 1.0f;
-                    float progress = Math.Clamp(_timer / travelDuration, 0f, 1f);
+                    float linearProgress = Math.Clamp(_timer / travelDuration, 0f, 1f);
 
-                    if (progress >= 1.0f)
+                    float progress = linearProgress;
+                    if (layer.LobType == "Missile")
+                    {
+                        progress = Easing.EaseInExpo(linearProgress);
+                    }
+
+                    if (linearProgress >= 1.0f)
                     {
                         _projectilePos = _targetPos;
                         _emitters[i].IsActive = false;
