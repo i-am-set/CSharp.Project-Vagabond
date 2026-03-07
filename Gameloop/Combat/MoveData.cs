@@ -30,5 +30,6 @@
 
         public bool ExecuteOnChargeStart { get; set; }
         public bool RequiresFocus { get; set; }
+        public bool ShowProjectileIndicator { get; set; }
     }
 }

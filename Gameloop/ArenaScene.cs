@@ -251,16 +251,16 @@ namespace ProjectVagabond.Scenes
                 spriteBatch.DrawSnapped(_arenaTexture, _arenaCenter, null, _global.Palette_Off, 0f, origin, 1f, SpriteEffects.None, 0f);
             }
 
+            foreach (var attack in _activeAttacks)
+            {
+                attack.DeliveryInstance.Draw(spriteBatch, attack);
+            }
+
             _wizards.Sort((a, b) => a.Position.Y.CompareTo(b.Position.Y));
 
             foreach (var wizard in _wizards)
             {
                 if (wizard.State == WizardState.Dead) DrawWizard(spriteBatch, wizard);
-            }
-
-            foreach (var attack in _activeAttacks)
-            {
-                attack.DeliveryInstance.Draw(spriteBatch, attack);
             }
 
             foreach (var wizard in _wizards)

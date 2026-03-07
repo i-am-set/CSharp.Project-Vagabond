@@ -22,7 +22,8 @@ namespace ProjectVagabond.Battle
                 CanEffectSelf = data.CanEffectSelf,
                 AnimationID = data.AnimationID,
                 ExecuteOnChargeStart = data.ExecuteOnChargeStart,
-                RequiresFocus = data.RequiresFocus
+                RequiresFocus = data.RequiresFocus,
+                ShowProjectileIndicator = data.ShowProjectileIndicator
             };
 
             if (data.DeliveryType == "InstantAOE")
@@ -141,9 +142,8 @@ namespace ProjectVagabond.Battle
                 }
                 else if (_timer >= SeekDuration)
                 {
-                    float angle = (float)(_random.NextDouble() * MathHelper.TwoPi);
-                    Vector2 dir = new Vector2(MathF.Cos(angle), MathF.Sin(angle));
-                    StartDash(attack, attack.Caster.Position + dir * 2f);
+                    IsFinished = true;
+                    attack.IsCanceled = true;
                 }
             }
             else if (_state == State.Dashing)
@@ -395,14 +395,23 @@ namespace ProjectVagabond.Battle
 
         public void Draw(SpriteBatch spriteBatch, ActiveAttack attack)
         {
-            if (!ServiceLocator.Get<Global>().ShowDebugOverlays) return;
-
+            var global = ServiceLocator.Get<Global>();
             var circle = ServiceLocator.Get<SpriteManager>().CircleTextureSprite;
             if (circle != null)
             {
                 float scale = (Radius * 2f) / circle.Width;
                 Vector2 origin = new Vector2(circle.Width / 2f, circle.Height / 2f);
-                spriteBatch.Draw(circle, attack.TargetPosition, null, Color.Red * 0.3f, 0f, origin, scale, SpriteEffects.None, 0f);
+
+                if (attack.Move.ShowProjectileIndicator && !attack.HasTriggeredImpact)
+                {
+                    float pulse = 0.225f + 0.125f * MathF.Sin(attack.ActiveTime * 12f);
+                    spriteBatch.Draw(circle, attack.TargetPosition, null, global.Palette_Rust * pulse, 0f, origin, scale, SpriteEffects.None, 0f);
+                }
+
+                if (global.ShowDebugOverlays)
+                {
+                    spriteBatch.Draw(circle, attack.TargetPosition, null, Color.Red * 0.3f, 0f, origin, scale, SpriteEffects.None, 0f);
+                }
             }
         }
 
@@ -542,13 +551,24 @@ namespace ProjectVagabond.Battle
 
         public void Draw(SpriteBatch spriteBatch, ActiveAttack attack)
         {
-            if (!ServiceLocator.Get<Global>().ShowDebugOverlays) return;
+            var global = ServiceLocator.Get<Global>();
             var circle = ServiceLocator.Get<SpriteManager>().CircleTextureSprite;
-            if (circle != null && attack.TargetWizard != null)
+            if (circle != null)
             {
+                Vector2 targetPos = attack.TargetWizard != null ? attack.TargetWizard.Position : attack.TargetPosition;
                 float scale = 16f / circle.Width;
                 Vector2 origin = new Vector2(circle.Width / 2f, circle.Height / 2f);
-                spriteBatch.Draw(circle, attack.TargetWizard.Position, null, Color.Lime * 0.3f, 0f, origin, scale, SpriteEffects.None, 0f);
+
+                if (attack.Move.ShowProjectileIndicator && !attack.HasTriggeredImpact)
+                {
+                    float pulse = 0.075f + 0.025f * MathF.Sin(attack.ActiveTime * 12f);
+                    spriteBatch.Draw(circle, targetPos, null, global.Palette_Rust * pulse, 0f, origin, scale, SpriteEffects.None, 0f);
+                }
+
+                if (global.ShowDebugOverlays)
+                {
+                    spriteBatch.Draw(circle, targetPos, null, Color.Lime * 0.3f, 0f, origin, scale, SpriteEffects.None, 0f);
+                }
             }
         }
 
@@ -582,6 +602,7 @@ namespace ProjectVagabond.Battle
         public bool CanEffectSelf { get; set; }
         public bool ExecuteOnChargeStart { get; set; }
         public bool RequiresFocus { get; set; }
+        public bool ShowProjectileIndicator { get; set; }
         public IDelivery Delivery { get; set; }
         public List<IEffect> Effects { get; set; } = new List<IEffect>();
     }
@@ -599,9 +620,12 @@ namespace ProjectVagabond.Battle
         public bool HasTriggeredImpact { get; set; }
         public bool IsCanceled { get; set; }
         public bool HasStartedAnimation { get; set; }
+        public float ActiveTime { get; private set; }
 
         public void Update(float dt, ArenaScene arena)
         {
+            ActiveTime += dt;
+
             if (IsCanceled)
             {
                 Animation?.Cancel();
@@ -609,6 +633,12 @@ namespace ProjectVagabond.Battle
             }
 
             DeliveryInstance.Update(dt, arena, this);
+
+            if (IsCanceled)
+            {
+                Animation?.Cancel();
+                return;
+            }
 
             if (!DeliveryInstance.IsAnimationPaused)
             {
