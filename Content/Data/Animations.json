@@ -224,7 +224,7 @@
           "EndSizeMax": 1.0,
           "InterpolateSize": false,
           "StartColor": "Palette_Leaf",
-          "EndColor": "Palette_Sun",
+          "EndColor": "Palette_Leaf",
           "StartAlpha": 1.0,
           "EndAlpha": 1.0,
           "BlendMode": "Additive",
