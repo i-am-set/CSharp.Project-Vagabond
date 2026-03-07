@@ -92,7 +92,7 @@
     "Name": "Bite",
     "AnimationID": "anim_bite",
     "BasePower": 30,
-    "ChargeTime": 0.0,
+    "ChargeTime": 1.0,
     "Weight": 40,
     "Knockback": 5.0,
     "DeliveryType": "SeekAndDash",

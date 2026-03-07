@@ -92,14 +92,14 @@ namespace ProjectVagabond.Battle
         private static readonly Random _random = new Random();
 
         public bool IsFinished { get; private set; }
-        public bool IsAnimationPaused => _state == State.Seeking || _state == State.Dashing;
+        public bool IsAnimationPaused => _state == State.Seeking;
 
         public void Start(ActiveAttack attack)
         {
             _state = State.Seeking;
             _timer = 0f;
             IsFinished = false;
-            attack.TargetWizard = null; // Clear the pre-selected target from the telegraph phase
+            attack.TargetWizard = null;
         }
 
         public void TriggerImpact(ArenaScene arena, ActiveAttack attack)
@@ -143,7 +143,7 @@ namespace ProjectVagabond.Battle
                 {
                     float angle = (float)(_random.NextDouble() * MathHelper.TwoPi);
                     Vector2 dir = new Vector2(MathF.Cos(angle), MathF.Sin(angle));
-                    StartDash(attack, attack.Caster.Position + dir * 2f); // Short dash if no target found
+                    StartDash(attack, attack.Caster.Position + dir * 2f);
                 }
             }
             else if (_state == State.Dashing)
@@ -155,6 +155,7 @@ namespace ProjectVagabond.Battle
                 if (attack.TargetWizard != null)
                 {
                     _dashTargetPos = attack.TargetWizard.Position;
+                    attack.TargetPosition = _dashTargetPos; // Keep animation target synced if they move
                     Vector2 dir = _dashTargetPos - _dashStartPos;
                     if (dir.LengthSquared() > 0)
                     {
@@ -169,14 +170,6 @@ namespace ProjectVagabond.Battle
                 {
                     _state = State.Biting;
                     attack.Origin = attack.Caster.Position;
-                    if (attack.TargetWizard != null)
-                    {
-                        attack.TargetPosition = attack.TargetWizard.Position;
-                    }
-                    else
-                    {
-                        attack.TargetPosition = attack.Caster.Position + attack.Direction * 10f;
-                    }
                 }
             }
             else if (_state == State.Biting)
@@ -205,7 +198,8 @@ namespace ProjectVagabond.Battle
                 attack.Direction = new Vector2(1, 0);
             }
 
-            _dashTargetPos = _dashStartPos + attack.Direction * DashDistance;
+            _dashTargetPos = attack.TargetWizard != null ? targetPos : _dashStartPos + attack.Direction * 2f;
+            attack.TargetPosition = _dashTargetPos; // Set immediately so animation spawns here
         }
 
         public void Draw(SpriteBatch spriteBatch, ActiveAttack attack)
