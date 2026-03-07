@@ -641,6 +641,6 @@ namespace ProjectVagabond.Battle
             }
         }
 
-        public bool IsFinished => (Animation == null || Animation.IsFinished) && DeliveryInstance.IsFinished;
+        public bool IsFinished => IsCanceled || ((Animation == null || Animation.IsFinished) && DeliveryInstance.IsFinished);
     }
 }
