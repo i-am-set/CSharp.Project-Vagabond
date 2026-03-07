@@ -1,5 +1,6 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using ProjectVagabond.Animations;
 using ProjectVagabond.Scenes;
 using System;
 using System.Collections.Generic;
@@ -64,6 +65,18 @@ namespace ProjectVagabond.Battle
                     DashDuration = data.DeliveryDashDuration
                 };
             }
+            else if (data.DeliveryType == "MeteorStrike")
+            {
+                move.Delivery = new MeteorStrikeDelivery
+                {
+                    Radius = data.DeliveryRadius,
+                    ProjectileCount = data.DeliveryProjectileCount,
+                    ProjectileRadius = data.DeliveryProjectileRadius,
+                    Duration = data.DeliveryLifetime,
+                    FallTime = data.DeliveryFallTime,
+                    ProjectileAnimationID = data.DeliveryProjectileAnimation
+                };
+            }
 
             if (data.EffectType == "Damage")
             {
@@ -75,6 +88,132 @@ namespace ProjectVagabond.Battle
             }
 
             return move;
+        }
+    }
+
+    public class MeteorStrikeDelivery : IDelivery
+    {
+        public float Radius { get; set; }
+        public int ProjectileCount { get; set; }
+        public float ProjectileRadius { get; set; }
+        public float Duration { get; set; }
+        public float FallTime { get; set; }
+        public string ProjectileAnimationID { get; set; }
+
+        private float _timer;
+        private int _projectilesSpawned;
+        private Vector2 _fixedCenter;
+        private static readonly Random _random = new Random();
+
+        public bool IsFinished => _timer >= Duration;
+        public bool IsAnimationPaused => false;
+
+        public void Start(ActiveAttack attack)
+        {
+            _timer = 0f;
+            _projectilesSpawned = 0;
+            _fixedCenter = attack.TargetWizard != null ? attack.TargetWizard.Position : attack.TargetPosition;
+        }
+
+        public void TriggerImpact(ArenaScene arena, ActiveAttack attack)
+        {
+            // The main delivery doesn't do damage itself, the child meteors do.
+        }
+
+        public void Update(float dt, ArenaScene arena, ActiveAttack attack)
+        {
+            _timer += dt;
+
+            int expected = Duration > 0 ? (int)((_timer / Duration) * ProjectileCount) : ProjectileCount;
+            expected = Math.Min(expected, ProjectileCount);
+
+            while (_projectilesSpawned < expected)
+            {
+                SpawnMeteor(arena, attack);
+                _projectilesSpawned++;
+            }
+        }
+
+        private void SpawnMeteor(ArenaScene arena, ActiveAttack parentAttack)
+        {
+            // Pick a random point within the main AOE radius
+            float angle = (float)(_random.NextDouble() * MathHelper.TwoPi);
+            float r = Radius * (float)Math.Sqrt(_random.NextDouble());
+            Vector2 targetPos = _fixedCenter + new Vector2(MathF.Cos(angle) * r, MathF.Sin(angle) * r);
+
+            // Spawn the meteor high up and slightly to the right so it falls diagonally
+            Vector2 origin = targetPos + new Vector2(60, -250);
+
+            var childMove = new MoveDefinition
+            {
+                Name = parentAttack.Move.Name + " (Meteor)",
+                BasePower = parentAttack.Move.BasePower,
+                ChargeTime = FallTime, // ParticleAnimationInstance uses ChargeTime for travel duration
+                Weight = 0,
+                Knockback = parentAttack.Move.Knockback,
+                TargetSelf = false,
+                CanEffectSelf = parentAttack.Move.CanEffectSelf,
+                ExecuteOnChargeStart = true, // Skip telegraphing, execute immediately
+                RequiresFocus = false,
+                ShowProjectileIndicator = true, // Show the small impact circle
+                Delivery = new InstantAOEDelivery { Radius = ProjectileRadius },
+                Effects = parentAttack.Move.Effects.ToList()
+            };
+
+            var childAttack = new ActiveAttack
+            {
+                Caster = parentAttack.Caster,
+                TargetWizard = null,
+                Move = childMove,
+                Origin = origin,
+                Direction = Vector2.Normalize(targetPos - origin),
+                TargetPosition = targetPos,
+                DeliveryInstance = childMove.Delivery.Clone(),
+                Animation = AnimationFactory.CreateAnimation(ProjectileAnimationID),
+                HasTriggeredImpact = false
+            };
+
+            arena.SpawnAttack(childAttack);
+        }
+
+        public void Draw(SpriteBatch spriteBatch, ActiveAttack attack)
+        {
+            var global = ServiceLocator.Get<Global>();
+            if (!global.ShowDebugOverlays) return;
+
+            var circle = ServiceLocator.Get<SpriteManager>().CircleTextureSprite;
+            if (circle != null)
+            {
+                float scale = (Radius * 2f) / circle.Width;
+                Vector2 origin = new Vector2(circle.Width / 2f, circle.Height / 2f);
+                spriteBatch.Draw(circle, _fixedCenter, null, Color.Red * 0.3f, 0f, origin, scale, SpriteEffects.None, 0f);
+            }
+        }
+
+        public void DrawTelegraph(SpriteBatch spriteBatch, Vector2 origin, Vector2 direction, Vector2 targetPos)
+        {
+            var global = ServiceLocator.Get<Global>();
+            if (!global.ShowDebugOverlays) return;
+            var circle = ServiceLocator.Get<SpriteManager>().CircleTextureSprite;
+            if (circle != null)
+            {
+                float scale = (Radius * 2f) / circle.Width;
+                Vector2 texOrigin = new Vector2(circle.Width / 2f, circle.Height / 2f);
+                spriteBatch.Draw(circle, targetPos, null, Color.Orange * 0.3f, 0f, texOrigin, scale, SpriteEffects.None, 0f);
+            }
+        }
+
+        public IDelivery Clone()
+        {
+            return new MeteorStrikeDelivery
+            {
+                Radius = this.Radius,
+                ProjectileCount = this.ProjectileCount,
+                ProjectileRadius = this.ProjectileRadius,
+                Duration = this.Duration,
+                FallTime = this.FallTime,
+                ProjectileAnimationID = this.ProjectileAnimationID
+            };
         }
     }
 
@@ -404,7 +543,7 @@ namespace ProjectVagabond.Battle
 
                 if (attack.Move.ShowProjectileIndicator && !attack.HasTriggeredImpact)
                 {
-                    float pulse = 0.225f + 0.125f * MathF.Sin(attack.ActiveTime * 12f);
+                    float pulse = 0.075f + 0.0f * MathF.Sin(attack.ActiveTime * 12f);
                     spriteBatch.Draw(circle, attack.TargetPosition, null, global.Palette_Rust * pulse, 0f, origin, scale, SpriteEffects.None, 0f);
                 }
 
@@ -561,7 +700,7 @@ namespace ProjectVagabond.Battle
 
                 if (attack.Move.ShowProjectileIndicator && !attack.HasTriggeredImpact)
                 {
-                    float pulse = 0.075f + 0.025f * MathF.Sin(attack.ActiveTime * 12f);
+                    float pulse = 0.05f + 0.00f * MathF.Sin(attack.ActiveTime * 12f);
                     spriteBatch.Draw(circle, targetPos, null, global.Palette_Rust * pulse, 0f, origin, scale, SpriteEffects.None, 0f);
                 }
 

@@ -111,5 +111,28 @@
     "ExecuteOnChargeStart": true,
     "RequiresFocus": true,
     "ShowProjectileIndicator": false
+  },
+  {
+    "ID": "meteor_shower",
+    "Name": "Meteor Shower",
+    "AnimationID": "anim_meteor_strike_cast",
+    "BasePower": 50,
+    "ChargeTime": 0.0,
+    "Weight": 20,
+    "Knockback": 10.0,
+    "DeliveryType": "MeteorStrike",
+    "DeliveryRadius": 20.0,
+    "DeliveryLifetime": 2.0,
+    "DeliveryProjectileCount": 12,
+    "DeliveryProjectileRadius": 12.0,
+    "DeliveryFallTime": 0.5,
+    "DeliveryProjectileAnimation": "anim_meteor_projectile",
+    "EffectType": "Damage",
+    "EffectArg": 0.0,
+    "TargetSelf": false,
+    "CanEffectSelf": true,
+    "ExecuteOnChargeStart": false,
+    "RequiresFocus": false,
+    "ShowProjectileIndicator": false
   }
 ]

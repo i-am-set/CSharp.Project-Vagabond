@@ -10,8 +10,8 @@
     "Agility": 4,
     "Move1": "ray_of_frost",
     "Move2": "scratch",
-    "Move3": "bite",
-    "Move4": ""
+    "Move3": "fireball",
+    "Move4": "meteor_strike"
   },
   {
     "MemberID": "1",
@@ -25,7 +25,7 @@
     "Move1": "fireball",
     "Move2": "scratch",
     "Move3": "bite",
-    "Move4": ""
+    "Move4": "meteor_shower"
   },
   {
     "MemberID": "2",
@@ -67,7 +67,7 @@
     "Move1": "ray_of_frost",
     "Move2": "scratch",
     "Move3": "bite",
-    "Move4": ""
+    "Move4": "meteor_shower"
   },
   {
     "MemberID": "5",
@@ -95,7 +95,7 @@
     "Move1": "fireball",
     "Move2": "scratch",
     "Move3": "bite",
-    "Move4": ""
+    "Move4": "meteor_shower"
   },
   {
     "MemberID": "7",
@@ -123,7 +123,7 @@
     "Move1": "ray_of_frost",
     "Move2": "scratch",
     "Move3": "bite",
-    "Move4": ""
+    "Move4": "meteor_shower"
   },
   {
     "MemberID": "9",
@@ -164,7 +164,7 @@
     "Agility": 2,
     "Move1": "scratch",
     "Move2": "bite",
-    "Move3": "",
+    "Move3": "meteor_shower",
     "Move4": ""
   },
   {
@@ -207,6 +207,6 @@
     "Move1": "ray_of_frost",
     "Move2": "scratch",
     "Move3": "bite",
-    "Move4": ""
+    "Move4": "meteor_shower"
   }
 ]

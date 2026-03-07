@@ -22,6 +22,11 @@
         public float DeliverySeekDuration { get; set; }
         public float DeliveryDashDuration { get; set; }
 
+        public int DeliveryProjectileCount { get; set; }
+        public float DeliveryProjectileRadius { get; set; }
+        public float DeliveryFallTime { get; set; }
+        public string DeliveryProjectileAnimation { get; set; }
+
         public string EffectType { get; set; }
         public float EffectArg { get; set; }
 
