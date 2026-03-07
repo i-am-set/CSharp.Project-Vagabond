@@ -55,6 +55,8 @@ namespace ProjectVagabond.Animations
         public string EmitFrom { get; set; }
         public float EmitterSizeX { get; set; }
         public float EmitterSizeY { get; set; }
+        public float OffsetX { get; set; }
+        public float OffsetY { get; set; }
         public float EmissionRate { get; set; }
         public int BurstCount { get; set; }
         public int MaxParticles { get; set; }
@@ -488,7 +490,7 @@ namespace ProjectVagabond.Animations
 
                 if (layer.Mode == "Spray")
                 {
-                    emitter.Position = attack.Origin;
+                    emitter.Position = attack.Origin + new Vector2(layer.Emitter.OffsetX, layer.Emitter.OffsetY);
                     _trailEmitters.Add(null);
                     _baseTrailSizes.Add(new FloatRange(0));
                 }
@@ -499,30 +501,30 @@ namespace ProjectVagabond.Animations
                         emitter.Settings.Shape = EmitterShape.Rectangle;
                         emitter.Settings.EmitterSize = new Vector2(beam.Length, beam.Width);
                         emitter.Settings.EmitterRotation = MathF.Atan2(attack.Direction.Y, attack.Direction.X);
-                        emitter.Position = attack.Origin + attack.Direction * (beam.Length / 2f);
+                        emitter.Position = attack.Origin + attack.Direction * (beam.Length / 2f) + new Vector2(layer.Emitter.OffsetX, layer.Emitter.OffsetY);
                     }
                     else if (attack.DeliveryInstance is InstantAOEDelivery aoe)
                     {
                         emitter.Settings.Shape = EmitterShape.Circle;
                         emitter.Settings.EmitterSize = new Vector2(aoe.Radius * 2f, aoe.Radius * 2f);
-                        emitter.Position = attack.TargetPosition;
+                        emitter.Position = attack.TargetPosition + new Vector2(layer.Emitter.OffsetX, layer.Emitter.OffsetY);
                     }
                     else
                     {
-                        emitter.Position = attack.TargetPosition;
+                        emitter.Position = attack.TargetPosition + new Vector2(layer.Emitter.OffsetX, layer.Emitter.OffsetY);
                     }
                     _trailEmitters.Add(null);
                     _baseTrailSizes.Add(new FloatRange(0));
                 }
                 else if (layer.Mode == "Projectile")
                 {
-                    emitter.Position = _projectilePos;
+                    emitter.Position = _projectilePos + new Vector2(layer.Emitter.OffsetX, layer.Emitter.OffsetY);
                     if (layer.Trail != null)
                     {
                         var trailSettings = AnimationFactory.MapEmitterData(layer.Trail);
                         _baseTrailSizes.Add(trailSettings.InitialSize);
                         var trail = psm.CreateEmitter(trailSettings);
-                        trail.Position = _projectilePos;
+                        trail.Position = _projectilePos + new Vector2(layer.Trail.OffsetX, layer.Trail.OffsetY);
                         _trailEmitters.Add(trail);
                     }
                     else

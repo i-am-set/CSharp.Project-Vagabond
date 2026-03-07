@@ -110,7 +110,6 @@ namespace ProjectVagabond.Scenes
         public void SpawnAttack(ActiveAttack attack)
         {
             attack.DeliveryInstance.Start(attack);
-            attack.Animation?.Start(attack, this);
             _activeAttacks.Add(attack);
         }
 

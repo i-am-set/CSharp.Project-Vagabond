@@ -497,7 +497,7 @@ namespace ProjectVagabond.Battle
             }
             else
             {
-                if (_queuedMove.Delivery is DashMeleeDelivery)
+                if (_queuedMove.Delivery is DashMeleeDelivery || _queuedMove.Delivery is SeekAndDashDelivery)
                 {
                     float closestDist = float.MaxValue;
                     foreach (var w in arena.Wizards)
@@ -538,7 +538,7 @@ namespace ProjectVagabond.Battle
                     }
                 }
 
-                if (target == null)
+                if (target == null && !(_queuedMove.Delivery is SeekAndDashDelivery))
                 {
                     _actionTimer = GetRandomActionTime();
                     return;
@@ -546,7 +546,7 @@ namespace ProjectVagabond.Battle
             }
 
             _queuedTargetWizard = target;
-            _queuedTargetPos = target.Position;
+            _queuedTargetPos = target != null ? target.Position : Position;
 
             _queuedDirection = _queuedTargetPos - Position;
             if (_queuedDirection.LengthSquared() > 0)
@@ -559,6 +559,10 @@ namespace ProjectVagabond.Battle
                 _queuedDirection = new Vector2(1, 0);
                 IsFacingRight = true;
             }
+
+            _activeMoveText = _queuedMove.Name;
+            _moveTextDuration = Math.Max(0.8f, _queuedMove.ChargeTime + 0.2f);
+            _moveTextTimer = _moveTextDuration;
 
             if (_queuedMove.ExecuteOnChargeStart)
             {
@@ -573,10 +577,6 @@ namespace ProjectVagabond.Battle
 
         private void ExecuteAttack(ArenaScene arena)
         {
-            _activeMoveText = _queuedMove.Name;
-            _moveTextTimer = 0.8f;
-            _moveTextDuration = 0.8f;
-
             var attack = new ActiveAttack
             {
                 Caster = this,

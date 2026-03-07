@@ -1,4 +1,3 @@
-// application/json
 [
   {
     "ID": "scratch",
@@ -87,5 +86,25 @@
     "CanEffectSelf": true,
     "ExecuteOnChargeStart": true,
     "RequiresFocus": false
+  },
+  {
+    "ID": "bite",
+    "Name": "Bite",
+    "AnimationID": "anim_bite",
+    "BasePower": 30,
+    "ChargeTime": 0.0,
+    "Weight": 40,
+    "Knockback": 5.0,
+    "DeliveryType": "SeekAndDash",
+    "DeliverySeekRadius": 20.0,
+    "DeliverySeekDuration": 1.0,
+    "DeliveryDashDistance": 10.0,
+    "DeliveryDashDuration": 0.1,
+    "EffectType": "Damage",
+    "EffectArg": 0.0,
+    "TargetSelf": false,
+    "CanEffectSelf": false,
+    "ExecuteOnChargeStart": true,
+    "RequiresFocus": true
   }
 ]

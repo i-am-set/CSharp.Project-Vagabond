@@ -3,6 +3,7 @@ using Microsoft.Xna.Framework.Graphics;
 using ProjectVagabond.Scenes;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace ProjectVagabond.Battle
 {
@@ -52,6 +53,16 @@ namespace ProjectVagabond.Battle
                     DashDistance = data.DeliveryDashDistance
                 };
             }
+            else if (data.DeliveryType == "SeekAndDash")
+            {
+                move.Delivery = new SeekAndDashDelivery
+                {
+                    SeekRadius = data.DeliverySeekRadius,
+                    SeekDuration = data.DeliverySeekDuration,
+                    DashDistance = data.DeliveryDashDistance,
+                    DashDuration = data.DeliveryDashDuration
+                };
+            }
 
             if (data.EffectType == "Damage")
             {
@@ -63,6 +74,165 @@ namespace ProjectVagabond.Battle
             }
 
             return move;
+        }
+    }
+
+    public class SeekAndDashDelivery : IDelivery
+    {
+        public float SeekRadius { get; set; }
+        public float SeekDuration { get; set; }
+        public float DashDistance { get; set; }
+        public float DashDuration { get; set; }
+
+        private enum State { Seeking, Dashing, Biting }
+        private State _state;
+        private float _timer;
+        private Vector2 _dashStartPos;
+        private Vector2 _dashTargetPos;
+        private static readonly Random _random = new Random();
+
+        public bool IsFinished { get; private set; }
+        public bool IsAnimationPaused => _state == State.Seeking || _state == State.Dashing;
+
+        public void Start(ActiveAttack attack)
+        {
+            _state = State.Seeking;
+            _timer = 0f;
+            IsFinished = false;
+            attack.TargetWizard = null; // Clear the pre-selected target from the telegraph phase
+        }
+
+        public void TriggerImpact(ArenaScene arena, ActiveAttack attack)
+        {
+            if (attack.TargetWizard != null && attack.TargetWizard.CurrentHP > 0)
+            {
+                foreach (var effect in attack.Move.Effects)
+                {
+                    effect.Apply(attack, attack.TargetWizard, arena);
+                }
+            }
+        }
+
+        public void Update(float dt, ArenaScene arena, ActiveAttack attack)
+        {
+            if (IsFinished) return;
+
+            if (_state == State.Seeking)
+            {
+                _timer += dt;
+                var targets = arena.GetWizardsInCircle(attack.Caster.Position, SeekRadius);
+                ArenaWizard selectedTarget = null;
+
+                var validTargets = new List<ArenaWizard>();
+                foreach (var t in targets)
+                {
+                    if (t != attack.Caster && t.CurrentHP > 0) validTargets.Add(t);
+                }
+
+                if (validTargets.Count > 0)
+                {
+                    selectedTarget = validTargets[_random.Next(validTargets.Count)];
+                }
+
+                if (selectedTarget != null)
+                {
+                    attack.TargetWizard = selectedTarget;
+                    StartDash(attack, selectedTarget.Position);
+                }
+                else if (_timer >= SeekDuration)
+                {
+                    float angle = (float)(_random.NextDouble() * MathHelper.TwoPi);
+                    Vector2 dir = new Vector2(MathF.Cos(angle), MathF.Sin(angle));
+                    StartDash(attack, attack.Caster.Position + dir * 2f); // Short dash if no target found
+                }
+            }
+            else if (_state == State.Dashing)
+            {
+                _timer += dt;
+                float progress = DashDuration > 0 ? Math.Clamp(_timer / DashDuration, 0f, 1f) : 1f;
+                float eased = Easing.EaseOutCubic(progress);
+
+                if (attack.TargetWizard != null)
+                {
+                    _dashTargetPos = attack.TargetWizard.Position;
+                    Vector2 dir = _dashTargetPos - _dashStartPos;
+                    if (dir.LengthSquared() > 0)
+                    {
+                        dir.Normalize();
+                        attack.Direction = dir;
+                    }
+                }
+
+                attack.Caster.Position = Vector2.Lerp(_dashStartPos, _dashTargetPos, eased);
+
+                if (progress >= 1f)
+                {
+                    _state = State.Biting;
+                    attack.Origin = attack.Caster.Position;
+                    if (attack.TargetWizard != null)
+                    {
+                        attack.TargetPosition = attack.TargetWizard.Position;
+                    }
+                    else
+                    {
+                        attack.TargetPosition = attack.Caster.Position + attack.Direction * 10f;
+                    }
+                }
+            }
+            else if (_state == State.Biting)
+            {
+                if (attack.HasTriggeredImpact && (attack.Animation == null || attack.Animation.IsFinished))
+                {
+                    IsFinished = true;
+                }
+            }
+        }
+
+        private void StartDash(ActiveAttack attack, Vector2 targetPos)
+        {
+            _state = State.Dashing;
+            _timer = 0f;
+            _dashStartPos = attack.Caster.Position;
+
+            Vector2 dir = targetPos - _dashStartPos;
+            if (dir.LengthSquared() > 0)
+            {
+                dir.Normalize();
+                attack.Direction = dir;
+            }
+            else
+            {
+                attack.Direction = new Vector2(1, 0);
+            }
+
+            _dashTargetPos = _dashStartPos + attack.Direction * DashDistance;
+        }
+
+        public void Draw(SpriteBatch spriteBatch, ActiveAttack attack)
+        {
+            if (!ServiceLocator.Get<Global>().ShowDebugOverlays) return;
+            var circle = ServiceLocator.Get<SpriteManager>().CircleTextureSprite;
+            if (circle != null && _state == State.Seeking)
+            {
+                float scale = (SeekRadius * 2f) / circle.Width;
+                Vector2 origin = new Vector2(circle.Width / 2f, circle.Height / 2f);
+                spriteBatch.Draw(circle, attack.Caster.Position, null, Color.Yellow * 0.3f, 0f, origin, scale, SpriteEffects.None, 0f);
+            }
+        }
+
+        public void DrawTelegraph(SpriteBatch spriteBatch, Vector2 origin, Vector2 direction, Vector2 targetPos)
+        {
+        }
+
+        public IDelivery Clone()
+        {
+            return new SeekAndDashDelivery
+            {
+                SeekRadius = this.SeekRadius,
+                SeekDuration = this.SeekDuration,
+                DashDistance = this.DashDistance,
+                DashDuration = this.DashDuration
+            };
         }
     }
 
@@ -81,6 +251,7 @@ namespace ProjectVagabond.Battle
         private Vector2 _targetPos;
 
         public bool IsFinished => _timer >= Lifetime;
+        public bool IsAnimationPaused => false;
 
         public void Start(ActiveAttack attack)
         {
@@ -92,7 +263,6 @@ namespace ProjectVagabond.Battle
 
         public void TriggerImpact(ArenaScene arena, ActiveAttack attack)
         {
-            // Handled continuously in Update
         }
 
         public void Update(float dt, ArenaScene arena, ActiveAttack attack)
@@ -104,10 +274,8 @@ namespace ProjectVagabond.Battle
             float progress = Lifetime > 0 ? Math.Clamp(_timer / Lifetime, 0f, 1f) : 1f;
             float easedProgress = Easing.EaseOutCubic(progress);
 
-            // Move the caster along the eased curve
             attack.Caster.Position = Vector2.Lerp(_startPos, _targetPos, easedProgress);
 
-            // Check hitbox (OBB in front of caster)
             foreach (var target in arena.GetWizardsInOBB(attack.Caster.Position, attack.Direction, Width, Length))
             {
                 if (target == attack.Caster && !attack.Move.CanEffectSelf) continue;
@@ -187,6 +355,7 @@ namespace ProjectVagabond.Battle
     public interface IDelivery
     {
         bool IsFinished { get; }
+        bool IsAnimationPaused { get; }
         void Start(ActiveAttack attack);
         void Update(float dt, ArenaScene arena, ActiveAttack attack);
         void Draw(SpriteBatch spriteBatch, ActiveAttack attack);
@@ -199,6 +368,7 @@ namespace ProjectVagabond.Battle
     {
         public float Radius { get; set; }
         public bool IsFinished { get; private set; }
+        public bool IsAnimationPaused => false;
 
         private float _visualTimer;
 
@@ -272,6 +442,7 @@ namespace ProjectVagabond.Battle
         private float _tickTimer;
 
         public bool IsFinished => _lifeTimer >= Lifetime;
+        public bool IsAnimationPaused => false;
 
         public void Start(ActiveAttack attack)
         {
@@ -347,6 +518,7 @@ namespace ProjectVagabond.Battle
     public class SingleTargetDelivery : IDelivery
     {
         public bool IsFinished { get; private set; }
+        public bool IsAnimationPaused => false;
         private float _visualTimer;
 
         public void Start(ActiveAttack attack)
@@ -432,6 +604,7 @@ namespace ProjectVagabond.Battle
         public ProjectVagabond.Animations.IAnimationInstance Animation { get; set; }
         public bool HasTriggeredImpact { get; set; }
         public bool IsCanceled { get; set; }
+        public bool HasStartedAnimation { get; set; }
 
         public void Update(float dt, ArenaScene arena)
         {
@@ -441,22 +614,31 @@ namespace ProjectVagabond.Battle
                 return;
             }
 
-            if (Animation != null)
+            DeliveryInstance.Update(dt, arena, this);
+
+            if (!DeliveryInstance.IsAnimationPaused)
             {
-                Animation.Update(dt, arena, this);
-                if (Animation.HasTriggeredImpact && !HasTriggeredImpact)
+                if (!HasStartedAnimation && Animation != null)
+                {
+                    Animation.Start(this, arena);
+                    HasStartedAnimation = true;
+                }
+
+                if (Animation != null)
+                {
+                    Animation.Update(dt, arena, this);
+                    if (Animation.HasTriggeredImpact && !HasTriggeredImpact)
+                    {
+                        HasTriggeredImpact = true;
+                        DeliveryInstance.TriggerImpact(arena, this);
+                    }
+                }
+                else if (!HasTriggeredImpact)
                 {
                     HasTriggeredImpact = true;
                     DeliveryInstance.TriggerImpact(arena, this);
                 }
             }
-            else if (!HasTriggeredImpact)
-            {
-                HasTriggeredImpact = true;
-                DeliveryInstance.TriggerImpact(arena, this);
-            }
-
-            DeliveryInstance.Update(dt, arena, this);
         }
 
         public bool IsFinished => (Animation == null || Animation.IsFinished) && DeliveryInstance.IsFinished;

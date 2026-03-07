@@ -233,5 +233,67 @@
         }
       }
     ]
+  },
+  {
+    "ID": "anim_bite",
+    "Type": "Particle",
+    "Particles": [
+      {
+        "Mode": "Volume",
+        "Duration": 0.2,
+        "Emitter": {
+          "Shape": "Rectangle",
+          "EmitFrom": "Volume",
+          "EmitterSizeX": 12.0,
+          "EmitterSizeY": 2.0,
+          "OffsetX": 0.0,
+          "OffsetY": -12.0,
+          "EmissionRate": 0.0,
+          "BurstCount": 15,
+          "VelocityPattern": "Cartesian",
+          "VelocityXMin": 0.0,
+          "VelocityXMax": 0.0,
+          "VelocityYMin": 80.0,
+          "VelocityYMax": 100.0,
+          "LifetimeMin": 0.15,
+          "LifetimeMax": 0.15,
+          "SizeMin": 1.5,
+          "SizeMax": 2.0,
+          "StartColor": "Palette_White",
+          "EndColor": "Palette_White",
+          "StartAlpha": 1.0,
+          "EndAlpha": 0.0,
+          "BlendMode": "Additive"
+        }
+      },
+      {
+        "Mode": "Volume",
+        "Duration": 0.2,
+        "Emitter": {
+          "Shape": "Rectangle",
+          "EmitFrom": "Volume",
+          "EmitterSizeX": 12.0,
+          "EmitterSizeY": 2.0,
+          "OffsetX": 0.0,
+          "OffsetY": 12.0,
+          "EmissionRate": 0.0,
+          "BurstCount": 15,
+          "VelocityPattern": "Cartesian",
+          "VelocityXMin": 0.0,
+          "VelocityXMax": 0.0,
+          "VelocityYMin": -100.0,
+          "VelocityYMax": -80.0,
+          "LifetimeMin": 0.15,
+          "LifetimeMax": 0.15,
+          "SizeMin": 1.5,
+          "SizeMax": 2.0,
+          "StartColor": "Palette_White",
+          "EndColor": "Palette_White",
+          "StartAlpha": 1.0,
+          "EndAlpha": 0.0,
+          "BlendMode": "Additive"
+        }
+      }
+    ]
   }
 ]

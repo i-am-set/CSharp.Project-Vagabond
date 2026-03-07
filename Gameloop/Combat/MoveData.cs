@@ -1,5 +1,4 @@
-﻿// text/plain
-namespace ProjectVagabond.Battle
+﻿namespace ProjectVagabond.Battle
 {
     public class MoveData
     {
@@ -18,6 +17,10 @@ namespace ProjectVagabond.Battle
         public float DeliveryLifetime { get; set; }
         public float DeliveryTickRate { get; set; }
         public float DeliveryDashDistance { get; set; }
+
+        public float DeliverySeekRadius { get; set; }
+        public float DeliverySeekDuration { get; set; }
+        public float DeliveryDashDuration { get; set; }
 
         public string EffectType { get; set; }
         public float EffectArg { get; set; }
