@@ -211,7 +211,7 @@
           "EmitterSizeX": 16.0,
           "EmitterSizeY": 16.0,
           "EmissionRate": 20.0,
-          "MaxParticles": 20,
+          "MaxParticles": 8,
           "VelocityPattern": "Cartesian",
           "VelocityXMin": -10.0,
           "VelocityXMax": 10.0,
