@@ -549,6 +549,12 @@ namespace ProjectVagabond.Animations
             if (IsFinished) return;
             _timer += dt;
 
+            // True Homing: Update target position dynamically if the target is still alive
+            if (attack.TargetWizard != null)
+            {
+                _targetPos = attack.TargetWizard.Position;
+            }
+
             bool allProjectilesArrived = true;
             bool hasProjectiles = false;
 
@@ -558,13 +564,13 @@ namespace ProjectVagabond.Animations
                 if (layer.Mode == "Projectile")
                 {
                     hasProjectiles = true;
-                    float travelDuration = attack.Move.ChargeTime > 0 ? attack.Move.ChargeTime : 1.0f;
+                    float travelDuration = attack.Move.ProjectileTravelTime > 0 ? attack.Move.ProjectileTravelTime : (attack.Move.ChargeTime > 0 ? attack.Move.ChargeTime : 1.0f);
                     float linearProgress = Math.Clamp(_timer / travelDuration, 0f, 1f);
 
                     float progress = linearProgress;
                     if (layer.LobType == "Missile")
                     {
-                        progress = Easing.EaseInExpo(linearProgress);
+                        progress = Easing.EaseInCubic(linearProgress);
                     }
 
                     if (linearProgress >= 1.0f)
@@ -641,7 +647,7 @@ namespace ProjectVagabond.Animations
             float maxDuration = _layers.Max(l => l.Duration);
             if (hasProjectiles)
             {
-                float travelDuration = attack.Move.ChargeTime > 0 ? attack.Move.ChargeTime : 1.0f;
+                float travelDuration = attack.Move.ProjectileTravelTime > 0 ? attack.Move.ProjectileTravelTime : (attack.Move.ChargeTime > 0 ? attack.Move.ChargeTime : 1.0f);
                 maxDuration = Math.Max(maxDuration, travelDuration + 0.5f);
             }
 

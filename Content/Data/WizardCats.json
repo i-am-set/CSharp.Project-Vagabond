@@ -24,7 +24,7 @@
     "Agility": 5,
     "Move1": "magic_missile",
     "Move2": "scratch",
-    "Move3": "bite",
+    "Move3": "magic_dart",
     "Move4": "meteor_shower"
   },
   {
@@ -39,7 +39,7 @@
     "Move1": "lick_wounds",
     "Move2": "scratch",
     "Move3": "bite",
-    "Move4": ""
+    "Move4": "magic_dart"
   },
   {
     "MemberID": "3",
@@ -150,7 +150,7 @@
     "Agility": 3,
     "Move1": "lick_wounds",
     "Move2": "ray_of_frost",
-    "Move3": "magic_missile",
+    "Move3": "magic_dart",
     "Move4": "bite"
   },
   {
@@ -165,7 +165,7 @@
     "Move1": "scratch",
     "Move2": "bite",
     "Move3": "meteor_shower",
-    "Move4": ""
+    "Move4": "magic_dart"
   },
   {
     "MemberID": "12",
@@ -179,7 +179,7 @@
     "Move1": "fireball",
     "Move2": "scratch",
     "Move3": "bite",
-    "Move4": ""
+    "Move4": "magic_dart"
   },
   {
     "MemberID": "13",
@@ -206,7 +206,7 @@
     "Agility": 5,
     "Move1": "ray_of_frost",
     "Move2": "scratch",
-    "Move3": "bite",
+    "Move3": "magic_dart",
     "Move4": "meteor_shower"
   }
 ]

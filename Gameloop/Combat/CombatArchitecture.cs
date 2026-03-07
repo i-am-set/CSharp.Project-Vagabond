@@ -21,6 +21,8 @@ namespace ProjectVagabond.Battle
                 Knockback = data.Knockback,
                 TargetSelf = data.TargetSelf,
                 CanEffectSelf = data.CanEffectSelf,
+                TargetClosest = data.TargetClosest,
+                ProjectileTravelTime = data.DeliveryProjectileTravelTime,
                 AnimationID = data.AnimationID,
                 ExecuteOnChargeStart = data.ExecuteOnChargeStart,
                 RequiresFocus = data.RequiresFocus,
@@ -860,6 +862,8 @@ namespace ProjectVagabond.Battle
         public float Knockback { get; set; }
         public bool TargetSelf { get; set; }
         public bool CanEffectSelf { get; set; }
+        public bool TargetClosest { get; set; }
+        public float ProjectileTravelTime { get; set; }
         public bool ExecuteOnChargeStart { get; set; }
         public bool RequiresFocus { get; set; }
         public bool ShowProjectileIndicator { get; set; }

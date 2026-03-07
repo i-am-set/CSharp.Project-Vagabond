@@ -33,6 +33,7 @@
 
         public bool TargetSelf { get; set; }
         public bool CanEffectSelf { get; set; }
+        public bool TargetClosest { get; set; }
 
         public bool ExecuteOnChargeStart { get; set; }
         public bool RequiresFocus { get; set; }

@@ -521,5 +521,68 @@
         ]
       }
     ]
+  },
+  {
+    "ID": "anim_magic_dart",
+    "Type": "Particle",
+    "Particles": [
+      {
+        "Mode": "Projectile",
+        "LobType": "Missile",
+        "ProjectileSpeed": 400.0,
+        "MaintainVisualSpeed": false,
+        "FixedLobHeight": 0.0,
+        "MinLobHeight": 0.0,
+        "MaxLobHeight": 0.0,
+        "LobScaleMultiplier": 0.1,
+        "Emitter": {
+          "EmissionRate": 0.0,
+          "BurstCount": 0
+        },
+        "Trail": {
+          "Shape": "Point",
+          "EmissionRate": 200.0,
+          "MaxParticles": 100,
+          "VelocityPattern": "Radial",
+          "LifetimeMin": 0.6,
+          "LifetimeMax": 1.0,
+          "SpeedMin": 5.0,
+          "SpeedMax": 15.0,
+          "SizeMin": 2.0,
+          "SizeMax": 4.0,
+          "EndSizeMin": 0.0,
+          "EndSizeMax": 0.0,
+          "InterpolateSize": true,
+          "StartColor": "Palette_Sky",
+          "EndColor": "Palette_Sun",
+          "StartAlpha": 0.8,
+          "EndAlpha": 0.0,
+          "BlendMode": "Additive"
+        },
+        "Impacts": [
+          {
+            "Shape": "Point",
+            "EmitFrom": "Center",
+            "BurstCount": 15,
+            "VelocityPattern": "Radial",
+            "LifetimeMin": 0.1,
+            "LifetimeMax": 0.2,
+            "SpeedMin": 30.0,
+            "SpeedMax": 80.0,
+            "Drag": 10.0,
+            "SizeMin": 1.0,
+            "SizeMax": 3.0,
+            "EndSizeMin": 0.0,
+            "EndSizeMax": 0.0,
+            "InterpolateSize": true,
+            "StartColor": "Palette_Sky",
+            "EndColor": "Palette_Sun",
+            "StartAlpha": 1.0,
+            "EndAlpha": 0.0,
+            "BlendMode": "Additive"
+          }
+        ]
+      }
+    ]
   }
 ]

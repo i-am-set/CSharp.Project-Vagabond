@@ -497,7 +497,7 @@ namespace ProjectVagabond.Battle
             }
             else
             {
-                if (_queuedMove.Delivery is DashMeleeDelivery || _queuedMove.Delivery is SeekAndDashDelivery)
+                if (_queuedMove.TargetClosest || _queuedMove.Delivery is DashMeleeDelivery || _queuedMove.Delivery is SeekAndDashDelivery)
                 {
                     float closestDist = float.MaxValue;
                     foreach (var w in arena.Wizards)
