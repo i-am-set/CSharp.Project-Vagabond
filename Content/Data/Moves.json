@@ -99,7 +99,7 @@
     "DeliverySeekRadius": 20.0,
     "DeliverySeekDuration": 1.0,
     "DeliveryDashDistance": 10.0,
-    "DeliveryDashDuration": 0.3,
+    "DeliveryDashDuration": 0.7,
     "EffectType": "Damage",
     "EffectArg": 0.0,
     "TargetSelf": false,
