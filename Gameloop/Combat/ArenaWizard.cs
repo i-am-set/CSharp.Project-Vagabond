@@ -119,7 +119,7 @@ namespace ProjectVagabond.Battle
             _heartFlashFrame = new int[maxHearts];
 
             CurrentHP = MaxHP;
-            Speed = Agility * 2.5f + 5f;
+            Speed = Agility * 1.5f + 2.5f;
 
             _healthBarAlpha = 0f;
             _actionTimer = GetRandomActionTime();
