@@ -204,7 +204,7 @@ namespace ProjectVagabond
             return texture;
         }
 
-        public Texture2D CreatePolygonTexture(int radius, int edges, int bevel = 0)
+        public Texture2D CreatePolygonTexture(int radius, int edges)
         {
             edges = Math.Max(3, edges);
             int size = radius * 2;
@@ -213,7 +213,6 @@ namespace ProjectVagabond
 
             float sectorAngle = MathHelper.TwoPi / edges;
             float apothem = radius * MathF.Cos(sectorAngle / 2f);
-            float bevelApothem = radius - bevel;
 
             for (int y = 0; y < size; y++)
             {
@@ -228,11 +227,7 @@ namespace ProjectVagabond
                     float localAngleEdge = Math.Abs((angle % sectorAngle) - (sectorAngle / 2f));
                     float maxDistEdge = apothem / MathF.Cos(localAngleEdge);
 
-                    float closestVertexAngle = MathF.Round(angle / sectorAngle) * sectorAngle;
-                    float localAngleVertex = Math.Abs(angle - closestVertexAngle);
-                    float maxDistBevel = bevelApothem / MathF.Cos(localAngleVertex);
-
-                    if (dist <= maxDistEdge && dist <= maxDistBevel)
+                    if (dist <= maxDistEdge)
                         colorData[y * size + x] = Color.White;
                     else
                         colorData[y * size + x] = Color.Transparent;

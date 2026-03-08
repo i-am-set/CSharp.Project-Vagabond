@@ -427,6 +427,7 @@ namespace ProjectVagabond.Battle
                 }
 
                 attack.Caster.Position = Vector2.Lerp(_dashStartPos, _dashTargetPos, eased);
+                attack.Caster.Position = arena.ClampToArena(attack.Caster.Position, 12f);
 
                 if (progress >= 1f)
                 {
@@ -531,6 +532,7 @@ namespace ProjectVagabond.Battle
             float easedProgress = Easing.EaseOutCubic(progress);
 
             attack.Caster.Position = Vector2.Lerp(_startPos, _targetPos, easedProgress);
+            attack.Caster.Position = arena.ClampToArena(attack.Caster.Position, 12f);
 
             foreach (var target in arena.GetWizardsInOBB(attack.Caster.Position, attack.Direction, Width, Length))
             {

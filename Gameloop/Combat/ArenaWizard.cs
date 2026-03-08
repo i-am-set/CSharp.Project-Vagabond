@@ -253,17 +253,7 @@ namespace ProjectVagabond.Battle
             _knockbackStartPos = Position;
             Vector2 desiredTarget = Position + dir * distance;
 
-            Vector2 center = new Vector2(Global.VIRTUAL_WIDTH / 2f, Global.VIRTUAL_HEIGHT / 2f);
-            Vector2 fromCenter = desiredTarget - center;
-            float angle = MathF.Atan2(fromCenter.Y, fromCenter.X);
-            float maxRadius = arena.GetMaxRadiusAtAngle(angle, 4f);
-
-            if (fromCenter.Length() > maxRadius)
-            {
-                desiredTarget = center + Vector2.Normalize(fromCenter) * maxRadius;
-            }
-
-            _knockbackTargetPos = desiredTarget;
+            _knockbackTargetPos = arena.ClampToArena(desiredTarget, 12f);
             _knockbackDuration = InvincibilityDuration;
             _knockbackTimer = _knockbackDuration;
         }
@@ -327,6 +317,7 @@ namespace ProjectVagabond.Battle
                 float progress = 1f - Math.Max(0, _knockbackTimer) / _knockbackDuration;
                 float eased = Easing.EaseOutCubic(progress);
                 Position = Vector2.Lerp(_knockbackStartPos, _knockbackTargetPos, eased);
+                Position = arena.ClampToArena(Position, 12f);
             }
             else
             {
@@ -458,6 +449,7 @@ namespace ProjectVagabond.Battle
             {
                 dir.Normalize();
                 Position += dir * Speed * dt;
+                Position = arena.ClampToArena(Position, 12f);
                 HopTimer += dt * Speed * 0.5f;
             }
         }

@@ -28,9 +28,9 @@ namespace ProjectVagabond.Scenes
         private float _stateTimer = 0f;
         private const float ARENA_RADIUS = 85f;
         private int _arenaEdges = 8;
-        private int _arenaBevel = 3;
         private Vector2 _arenaCenter;
         private Texture2D _arenaTexture;
+        private Texture2D _arenaOutlineTexture;
 
         public IReadOnlyList<ArenaWizard> Wizards => _wizards;
 
@@ -55,16 +55,10 @@ namespace ProjectVagabond.Scenes
             float effectiveRadius = ARENA_RADIUS - margin;
 
             float apothem = effectiveRadius * MathF.Cos(sectorAngle / 2f);
-            float bevelApothem = effectiveRadius - _arenaBevel;
-
             float localAngleEdge = Math.Abs((angle % sectorAngle) - (sectorAngle / 2f));
             float maxDistEdge = apothem / MathF.Cos(localAngleEdge);
 
-            float closestVertexAngle = MathF.Round(angle / sectorAngle) * sectorAngle;
-            float localAngleVertex = Math.Abs(angle - closestVertexAngle);
-            float maxDistBevel = bevelApothem / MathF.Cos(localAngleVertex);
-
-            return Math.Min(maxDistEdge, maxDistBevel);
+            return maxDistEdge;
         }
 
         public Vector2 GetRandomArenaPoint()
@@ -76,7 +70,7 @@ namespace ProjectVagabond.Scenes
                 float radius = ARENA_RADIUS * (float)Math.Sqrt(_random.NextDouble());
                 target = _arenaCenter + new Vector2(MathF.Cos(angle) * radius, MathF.Sin(angle) * radius);
             }
-            while (Vector2.Distance(_arenaCenter, target) > GetMaxRadiusAtAngle(MathF.Atan2(target.Y - _arenaCenter.Y, target.X - _arenaCenter.X), 4f));
+            while (Vector2.Distance(_arenaCenter, target) > GetMaxRadiusAtAngle(MathF.Atan2(target.Y - _arenaCenter.Y, target.X - _arenaCenter.X), 12f));
 
             return target;
         }
@@ -119,11 +113,15 @@ namespace ProjectVagabond.Scenes
             _wizards.Clear();
             _activeAttacks.Clear();
             _stateTimer = 0f;
-            _arenaCenter = new Vector2(Global.VIRTUAL_WIDTH / 2f, Global.VIRTUAL_HEIGHT / 2f);
+
+            _arenaCenter = new Vector2(Global.VIRTUAL_WIDTH - 4 - ARENA_RADIUS, Global.VIRTUAL_HEIGHT / 2f);
             _arenaEdges = Math.Max(3, _arenaEdges);
 
             _arenaTexture?.Dispose();
-            _arenaTexture = ServiceLocator.Get<TextureFactory>().CreatePolygonTexture((int)ARENA_RADIUS, _arenaEdges, _arenaBevel);
+            _arenaOutlineTexture?.Dispose();
+
+            _arenaOutlineTexture = ServiceLocator.Get<TextureFactory>().CreatePolygonTexture((int)ARENA_RADIUS + 2, _arenaEdges);
+            _arenaTexture = ServiceLocator.Get<TextureFactory>().CreatePolygonTexture((int)ARENA_RADIUS, _arenaEdges);
 
             var playerLeader = _gameState.PlayerState.Leader;
             if (playerLeader == null) return;
@@ -145,7 +143,7 @@ namespace ProjectVagabond.Scenes
                 if (!GameDataCache.WizardCats.TryGetValue(id, out var data)) continue;
 
                 float angle = (i / 6f) * MathHelper.TwoPi;
-                float spawnRadius = GetMaxRadiusAtAngle(angle, 10f);
+                float spawnRadius = GetMaxRadiusAtAngle(angle, 16f);
                 Vector2 spawnPos = _arenaCenter + new Vector2(MathF.Cos(angle) * spawnRadius, MathF.Sin(angle) * spawnRadius);
 
                 var wizard = new ArenaWizard();
@@ -162,41 +160,29 @@ namespace ProjectVagabond.Scenes
             int totalWizards = _wizards.Count;
             if (totalWizards == 0) return;
 
-            int leftCount = (totalWizards + 1) / 2;
-            int rightCount = totalWizards - leftCount;
-            int spacingY = 24;
-            int itemHeight = (int)secondaryFont.LineHeight + 5;
+            int spacingY = 26;
+            int itemHeight = (int)secondaryFont.LineHeight + 7;
 
-            int leftBlockHeight = (leftCount - 1) * spacingY + itemHeight;
-            int rightBlockHeight = (rightCount - 1) * spacingY + itemHeight;
+            int totalBlockHeight = (totalWizards - 1) * spacingY + itemHeight;
+            int startY = (Global.VIRTUAL_HEIGHT - totalBlockHeight) / 2;
 
-            int leftStartY = (Global.VIRTUAL_HEIGHT - leftBlockHeight) / 2;
-            int rightStartY = (Global.VIRTUAL_HEIGHT - rightBlockHeight) / 2;
-
-            int marginX = 12;
+            float uiCenterX = (Global.VIRTUAL_WIDTH - 4 - ARENA_RADIUS * 2) / 2f;
 
             for (int i = 0; i < totalWizards; i++)
             {
                 var w = _wizards[i];
-                bool isLeft = i < leftCount;
-                int sideIndex = isLeft ? i : i - leftCount;
-
-                w.HudIsLeft = isLeft;
+                w.HudIsLeft = true;
                 w.HudNameSize = secondaryFont.MeasureString(w.Name.ToUpper());
 
                 int maxHearts = (w.MaxHP + 1) / 2;
-                int heartWidth = 3;
+                int heartWidth = 5;
                 int heartSpacing = 1;
                 int heartsWidth = maxHearts * heartWidth + (maxHearts - 1) * heartSpacing;
 
-                float baseX = isLeft ? marginX : Global.VIRTUAL_WIDTH - marginX;
-                float nameX = isLeft ? baseX : baseX - w.HudNameSize.X;
-                float hX = isLeft ? baseX : baseX - heartsWidth;
+                float currentY = startY + i * spacingY;
 
-                float currentY = (isLeft ? leftStartY : rightStartY) + sideIndex * spacingY;
-
-                w.HudNamePos = new Vector2(nameX, currentY);
-                w.HudHeartStartPos = new Vector2(hX, currentY + w.HudNameSize.Y + 2);
+                w.HudNamePos = new Vector2(uiCenterX - w.HudNameSize.X / 2f, currentY);
+                w.HudHeartStartPos = new Vector2(uiCenterX - heartsWidth / 2f, currentY + w.HudNameSize.Y + 2);
             }
         }
 
@@ -204,6 +190,7 @@ namespace ProjectVagabond.Scenes
         {
             base.Exit();
             _arenaTexture?.Dispose();
+            _arenaOutlineTexture?.Dispose();
         }
 
         public Vector2 ClampToArena(Vector2 point, float margin = 4f)
@@ -267,11 +254,11 @@ namespace ProjectVagabond.Scenes
 
                             if (w1.State == WizardState.Moving)
                             {
-                                w1.TargetPosition = ClampToArena(w1.Position + pushDir * 50f);
+                                w1.TargetPosition = ClampToArena(w1.Position + pushDir * 50f, 12f);
                             }
                             if (w2.State == WizardState.Moving)
                             {
-                                w2.TargetPosition = ClampToArena(w2.Position - pushDir * 50f);
+                                w2.TargetPosition = ClampToArena(w2.Position - pushDir * 50f, 12f);
                             }
                         }
                     }
@@ -298,12 +285,18 @@ namespace ProjectVagabond.Scenes
         protected override void DrawSceneContent(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Matrix transform)
         {
             var pixel = ServiceLocator.Get<Texture2D>();
-            spriteBatch.Draw(pixel, new Rectangle(0, 0, Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT), _global.Palette_Black);
+            spriteBatch.Draw(pixel, new Rectangle(0, 0, Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT), _global.GameBg);
+
+            if (_arenaOutlineTexture != null)
+            {
+                Vector2 outlineOrigin = new Vector2(_arenaOutlineTexture.Width / 2f, _arenaOutlineTexture.Height / 2f);
+                spriteBatch.DrawSnapped(_arenaOutlineTexture, _arenaCenter, null, _global.Palette_Black, 0f, outlineOrigin, 1f, SpriteEffects.None, 0f);
+            }
 
             if (_arenaTexture != null)
             {
                 Vector2 origin = new Vector2(_arenaTexture.Width / 2f, _arenaTexture.Height / 2f);
-                spriteBatch.DrawSnapped(_arenaTexture, _arenaCenter, null, _global.Palette_Off, 0f, origin, 1f, SpriteEffects.None, 0f);
+                spriteBatch.DrawSnapped(_arenaTexture, _arenaCenter, null, _global.GameBg, 0f, origin, 1f, SpriteEffects.None, 0f);
             }
 
             foreach (var attack in _activeAttacks)
@@ -358,11 +351,11 @@ namespace ProjectVagabond.Scenes
         private void DrawSideHUD(SpriteBatch spriteBatch)
         {
             var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
-            var sheet = _spriteManager.HealthHearts3x3SpriteSheet;
+            var sheet = _spriteManager.HealthHeartsSpriteSheet;
             var pixel = ServiceLocator.Get<Texture2D>();
             if (sheet == null || _wizards.Count == 0) return;
 
-            int heartWidth = 3;
+            int heartWidth = 5;
             int heartSpacing = 1;
 
             foreach (var w in _wizards)
@@ -382,7 +375,7 @@ namespace ProjectVagabond.Scenes
                 if (w.State == WizardState.Dead)
                 {
                     float fadeProgress = Math.Clamp(w.TimeSinceDeath / 0.5f, 0f, 1f);
-                    nameColor = Color.Lerp(baseNameColor, _global.Palette_Off, fadeProgress);
+                    nameColor = Color.Lerp(baseNameColor, _global.Palette_Black, fadeProgress);
                 }
 
                 Vector2 finalNamePos = new Vector2(MathF.Round(w.HudNamePos.X + shakeX), MathF.Round(w.HudNamePos.Y + shakeY));
@@ -395,7 +388,7 @@ namespace ProjectVagabond.Scenes
                     if (currentLineWidth > 0)
                     {
                         int lineY = (int)MathF.Round(finalNamePos.Y + w.HudNameSize.Y / 2f);
-                        spriteBatch.Draw(pixel, new Rectangle((int)finalNamePos.X, lineY, currentLineWidth, 1), _global.Palette_Off);
+                        spriteBatch.Draw(pixel, new Rectangle((int)finalNamePos.X, lineY, currentLineWidth, 1), _global.Palette_Black);
                     }
                 }
 
@@ -410,7 +403,7 @@ namespace ProjectVagabond.Scenes
                     int flashFrame = w.GetHeartFlashFrame(h);
                     if (flashFrame != -1) frameIndex = flashFrame;
 
-                    var sourceRect = new Rectangle(frameIndex * heartWidth, 0, heartWidth, 3);
+                    var sourceRect = new Rectangle(frameIndex * heartWidth, 0, heartWidth, 5);
                     Color heartColor = w.State == WizardState.Dead ? Color.Gray : Color.White;
 
                     Vector2 finalHeartPos = new Vector2(MathF.Round(w.HudHeartStartPos.X + h * (heartWidth + heartSpacing) + shakeX), MathF.Round(w.HudHeartStartPos.Y + shakeY));
