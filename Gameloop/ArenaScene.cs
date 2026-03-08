@@ -206,6 +206,22 @@ namespace ProjectVagabond.Scenes
             _arenaTexture?.Dispose();
         }
 
+        public Vector2 ClampToArena(Vector2 point, float margin = 4f)
+        {
+            Vector2 fromCenter = point - _arenaCenter;
+            if (fromCenter.LengthSquared() == 0) return point;
+
+            float angle = MathF.Atan2(fromCenter.Y, fromCenter.X);
+            float maxRadius = GetMaxRadiusAtAngle(angle, margin);
+
+            if (fromCenter.Length() > maxRadius)
+            {
+                return _arenaCenter + Vector2.Normalize(fromCenter) * maxRadius;
+            }
+
+            return point;
+        }
+
         public override void Update(GameTime gameTime)
         {
             base.Update(gameTime);
@@ -220,6 +236,45 @@ namespace ProjectVagabond.Scenes
                 {
                     wizard.IsHovered = wizard.State != WizardState.Dead && wizard.GetHitbox(_spriteManager).Contains(virtualMousePos);
                     wizard.Update(dt, this);
+                }
+
+                // --- Anti-Bunching Logic ---
+                for (int i = 0; i < _wizards.Count; i++)
+                {
+                    var w1 = _wizards[i];
+                    if (w1.State == WizardState.Dead) continue;
+
+                    for (int j = i + 1; j < _wizards.Count; j++)
+                    {
+                        var w2 = _wizards[j];
+                        if (w2.State == WizardState.Dead) continue;
+
+                        var box1 = w1.GetHitbox(_spriteManager);
+                        var box2 = w2.GetHitbox(_spriteManager);
+
+                        if (box1.Intersects(box2))
+                        {
+                            Vector2 center1 = new Vector2(box1.Center.X, box1.Center.Y);
+                            Vector2 center2 = new Vector2(box2.Center.X, box2.Center.Y);
+
+                            Vector2 pushDir = center1 - center2;
+                            if (pushDir.LengthSquared() == 0)
+                            {
+                                pushDir = new Vector2((float)_random.NextDouble() - 0.5f, (float)_random.NextDouble() - 0.5f);
+                                if (pushDir.LengthSquared() == 0) pushDir = new Vector2(1, 0);
+                            }
+                            pushDir.Normalize();
+
+                            if (w1.State == WizardState.Moving)
+                            {
+                                w1.TargetPosition = ClampToArena(w1.Position + pushDir * 50f);
+                            }
+                            if (w2.State == WizardState.Moving)
+                            {
+                                w2.TargetPosition = ClampToArena(w2.Position - pushDir * 50f);
+                            }
+                        }
+                    }
                 }
 
                 for (int i = _activeAttacks.Count - 1; i >= 0; i--)
