@@ -119,7 +119,7 @@ namespace ProjectVagabond.Battle
             _heartFlashFrame = new int[maxHearts];
 
             CurrentHP = MaxHP;
-            Speed = Agility * 1.5f + 2.5f;
+            Speed = Agility * 2.0f + 2.5f;
 
             _healthBarAlpha = 0f;
             _actionTimer = GetRandomActionTime();
@@ -717,7 +717,10 @@ namespace ProjectVagabond.Battle
 
         private float GetRandomActionTime()
         {
-            return 2.0f + (float)_random.NextDouble() * 6.0f;
+            float baseTime = 2.0f + (float)_random.NextDouble() * 6.0f;
+            float speedMultiplier = 1.0f + (Agility - 5) * 0.1f;
+            speedMultiplier = Math.Clamp(speedMultiplier, 0.1f, 3.0f);
+            return baseTime / speedMultiplier;
         }
     }
 }
