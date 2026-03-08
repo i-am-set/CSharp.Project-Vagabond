@@ -24,9 +24,8 @@ namespace ProjectVagabond
         private Global()
         {
             // Color reference initialization
-            GameBg = Palette_Black;
+            GameBg = Palette_Off;
             TerminalBg = Palette_Black;
-            MapBg = Palette_Black;
             GameTextColor = Palette_Sun;
             EmphasisTextColor = Palette_DarkSun;
             HighlightTextColor = Palette_Fruit;
@@ -246,7 +245,6 @@ namespace ProjectVagabond
         public Color PlayerColor { get; private set; } = new Color(181, 65, 49);
         public Color GameBg { get; private set; }
         public Color TerminalBg { get; private set; }
-        public Color MapBg { get; private set; }
         public Color GameTextColor { get; private set; }
         public Color EmphasisTextColor { get; private set; }
         public Color HighlightTextColor { get; private set; }
