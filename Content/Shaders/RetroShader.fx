@@ -40,8 +40,8 @@ uniform int PaletteCount;
 #define ENABLE_HALATION
 
 // --- Tuning ---
-static const float CURVATURE = 0.15; 
-static const float ZOOM = 1.03;
+static const float CURVATURE = 0.1; 
+static const float ZOOM = 1.02;
 static const float BLACK_LEVEL = 0.01; 
 static const float LCD_GAP_SIZE = 0.04;      
 static const float LCD_GAP_SOFTNESS = 0.2;  
@@ -67,13 +67,13 @@ static const float JITTER_SMOOTHNESS_MIN     = 20.0;
 static const float JITTER_SMOOTHNESS_MAX     = 60.0;
 static const float HUM_BAR_SPEED = 0.2;
 static const float HUM_BAR_OPACITY = 0.05;
-static const float VIGNETTE_INTENSITY = 1.40;
+static const float VIGNETTE_INTENSITY = 1.30;
 
 // --- Color Tuning Defaults ---
 // These are applied ON TOP of the Uniforms.
 // Use these to set a "Base" look if Uniforms are left at default.
 static const float TUNING_SATURATION_BASE = 1.05; 
-static const float TUNING_VIBRANCE_BASE = 0.05;   
+static const float TUNING_VIBRANCE_BASE = 0.25;   
 
 // --- Globals ---
 Texture2D SpriteTexture;
