@@ -130,6 +130,8 @@ namespace ProjectVagabond
         public float HoverHapticStrength { get; set; } = 0.75f;
         public float ButtonHapticStrength { get; set; } = 0.5f;
 
+        public int StartingGold { get; set; } = 10;
+
         // Mechanics Tuning
         public float PoisonBasePercent { get; set; } = 0.10f;
         public float BleedBasePercent { get; set; } = 0.0625f;

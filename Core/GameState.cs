@@ -46,6 +46,7 @@ namespace ProjectVagabond
             if (member == null) throw new Exception($"CRITICAL: Could not load starting member (ID: {startingMemberId})");
 
             PlayerState.Party.Add(member);
+            PlayerState.Gold = _global.StartingGold;
         }
 
         public void Reset()

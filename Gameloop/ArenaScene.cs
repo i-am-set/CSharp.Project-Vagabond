@@ -160,7 +160,7 @@ namespace ProjectVagabond.Scenes
             int totalWizards = _wizards.Count;
             if (totalWizards == 0) return;
 
-            int spacingY = 26;
+            int spacingY = 20;
             int itemHeight = (int)secondaryFont.LineHeight + 7;
 
             int totalBlockHeight = (totalWizards - 1) * spacingY + itemHeight;
@@ -332,6 +332,7 @@ namespace ProjectVagabond.Scenes
             }
 
             DrawSideHUD(spriteBatch);
+            DrawTopHUD(spriteBatch);
 
             string text = "";
             if (_stateTimer < 1f) text = "3";
@@ -346,6 +347,25 @@ namespace ProjectVagabond.Scenes
                 Vector2 pos = _arenaCenter - (size / 2f);
                 spriteBatch.DrawStringSnapped(mainFont, text, pos, _global.Palette_Sun);
             }
+        }
+
+        private void DrawTopHUD(SpriteBatch spriteBatch)
+        {
+            var core = ServiceLocator.Get<Core>();
+            var tertiaryFont = core.TertiaryFont;
+            var defaultFont = core.DefaultFont;
+
+            string amountText = _gameState.PlayerState.Gold.ToString();
+            string gText = "G";
+
+            Vector2 amountPos = new Vector2(18, 12);
+            spriteBatch.DrawStringSnapped(defaultFont, amountText, amountPos, _global.Palette_Sun);
+
+            float amountWidth = defaultFont.MeasureString(amountText).Width;
+            float yOffset = MathF.Max(0, defaultFont.LineHeight - tertiaryFont.LineHeight);
+
+            Vector2 gPos = new Vector2(amountPos.X + amountWidth + 2, 11 + yOffset);
+            spriteBatch.DrawStringSnapped(tertiaryFont, gText, gPos, _global.Palette_DarkSun);
         }
 
         private void DrawSideHUD(SpriteBatch spriteBatch)

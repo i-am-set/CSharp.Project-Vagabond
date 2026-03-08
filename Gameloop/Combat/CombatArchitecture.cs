@@ -162,6 +162,7 @@ namespace ProjectVagabond.Battle
             }
 
             Vector2 targetPos = target != null ? target.Position : parentAttack.Caster.Position + new Vector2(_random.Next(-50, 50), _random.Next(-50, 50));
+            targetPos = arena.ClampToArena(targetPos, 4f);
 
             Vector2 dir = targetPos - parentAttack.Caster.Position;
             if (dir.LengthSquared() > 0) dir.Normalize();
@@ -263,6 +264,9 @@ namespace ProjectVagabond.Battle
             float angle = (float)(_random.NextDouble() * MathHelper.TwoPi);
             float r = Radius * (float)Math.Sqrt(_random.NextDouble());
             Vector2 targetPos = _fixedCenter + new Vector2(MathF.Cos(angle) * r, MathF.Sin(angle) * r);
+
+            // Clamp to arena so meteors don't fall outside
+            targetPos = arena.ClampToArena(targetPos, 4f);
 
             // Spawn the meteor high up and slightly to the right so it falls diagonally
             Vector2 origin = targetPos + new Vector2(60, -250);

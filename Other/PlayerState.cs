@@ -21,6 +21,8 @@ namespace ProjectVagabond
 
         public int PortraitIndex { get => Leader?.PortraitIndex ?? 0; set { if (Leader != null) Leader.PortraitIndex = value; } }
 
+        public int Gold { get; set; }
+
         public PlayerState() { }
 
         public bool AddWizardCat(WizardCat member)
