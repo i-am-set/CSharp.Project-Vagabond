@@ -590,8 +590,8 @@ namespace ProjectVagabond.Scenes
             }
 
             // --- Stats Block ---
-            string[] labels = { "POW", "INT", "TEN", "AGI" };
-            int[] values = { data.Power, data.Intelligence, data.Tenacity, data.Agility };
+            string[] labels = { "POW", "TEN", "AGI" };
+            int[] values = { data.Power, data.Tenacity, data.Agility };
 
             int statBlockX = centerX - 30;
             float standardLabelWidth = secondaryFont.MeasureString("POW").Width;

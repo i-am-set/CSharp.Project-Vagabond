@@ -10,7 +10,6 @@ namespace ProjectVagabond.Battle
 
         public int HP { get; set; }
         public int Power { get; set; }
-        public int Intelligence { get; set; }
         public int Tenacity { get; set; }
         public int Agility { get; set; }
 

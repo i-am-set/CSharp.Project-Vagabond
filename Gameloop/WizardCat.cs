@@ -10,7 +10,6 @@ namespace ProjectVagabond
         public int MaxHP => HP * 3;
         public int CurrentHP { get; set; }
         public int Power { get; set; }
-        public int Intelligence { get; set; }
         public int Tenacity { get; set; }
         public int Agility { get; set; }
 

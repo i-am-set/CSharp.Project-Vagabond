@@ -24,7 +24,6 @@ namespace ProjectVagabond.Battle
                 Name = data.Name,
                 HP = data.HP,
                 Power = data.Power,
-                Intelligence = data.Intelligence,
                 Tenacity = data.Tenacity,
                 Agility = data.Agility,
                 PortraitIndex = int.TryParse(data.MemberID, out int pid) ? pid : 0
