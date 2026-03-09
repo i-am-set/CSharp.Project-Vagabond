@@ -6,7 +6,8 @@ namespace ProjectVagabond
     public class WizardCat
     {
         public string Name { get; set; }
-        public int MaxHP => Tenacity * 2;
+        public int HP { get; set; }
+        public int MaxHP => HP * 2;
         public int CurrentHP { get; set; }
         public int Power { get; set; }
         public int Intelligence { get; set; }

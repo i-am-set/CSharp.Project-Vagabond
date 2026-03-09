@@ -186,7 +186,7 @@ namespace ProjectVagabond.Scenes
             {
                 if (GameDataCache.WizardCats.TryGetValue(id, out var data))
                 {
-                    int hp = data.Tenacity * 2;
+                    int hp = data.HP * 2;
                     if (hp < _globalMinHP) _globalMinHP = hp;
                     if (hp > _globalMaxHP) _globalMaxHP = hp;
                 }
@@ -596,7 +596,7 @@ namespace ProjectVagabond.Scenes
 
             // --- Stats Block ---
             string[] labels = { "HP", "POW", "INT", "TEN", "AGI" };
-            int[] values = { data.Tenacity * 2, data.Power, data.Intelligence, data.Tenacity, data.Agility };
+            int[] values = { data.HP * 2, data.Power, data.Intelligence, data.Tenacity, data.Agility };
 
             int statBlockX = centerX - 30;
             float standardLabelWidth = secondaryFont.MeasureString("POW").Width;

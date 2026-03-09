@@ -38,6 +38,7 @@ namespace ProjectVagabond.Battle
         public float InvincibilityTimer { get; private set; }
         public float HudShakeTimer { get; private set; }
 
+        public int HP;
         public int Power;
         public int Intelligence;
         public int Tenacity;
@@ -107,12 +108,13 @@ namespace ProjectVagabond.Battle
             HopTimer = (float)(_random.NextDouble() * MathHelper.TwoPi);
             IsFacingRight = false;
 
+            HP = data.HP;
             Power = data.Power;
             Intelligence = data.Intelligence;
             Tenacity = data.Tenacity;
             Agility = data.Agility;
 
-            MaxHP = Tenacity * 2;
+            MaxHP = HP * 2;
 
             int maxHearts = (MaxHP + 1) / 2;
             _heartFlashTimers = new float[maxHearts];

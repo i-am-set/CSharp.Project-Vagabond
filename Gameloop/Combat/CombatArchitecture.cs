@@ -587,9 +587,25 @@ namespace ProjectVagabond.Battle
 
     public class DamageEffect : IEffect
     {
+        private static readonly Random _random = new Random();
+
+        // Maps Intelligence (1-10) to the denominator for the 1/X crit chance.
+        private static readonly int[] _critDenominators = { 48, 42, 36, 30, 24, 21, 18, 15, 13, 12 };
+
         public void Apply(ActiveAttack attack, ArenaWizard target, ArenaScene arena)
         {
-            int damage = Math.Max(1, (int)Math.Floor(attack.Move.BasePower * (attack.Caster.Power + 10) / 200f));
+            int intStat = Math.Clamp(attack.Caster.Intelligence, 1, 10);
+            int critDenom = _critDenominators[intStat - 1];
+            bool isCrit = _random.Next(critDenom) == 0;
+
+            int targetTenacity = target.Tenacity;
+            if (isCrit)
+            {
+                targetTenacity = Math.Max(1, targetTenacity / 2);
+            }
+
+            int damage = Math.Max(1, (int)Math.Floor(attack.Move.BasePower * (attack.Caster.Power + 10) / ((targetTenacity + 10) * 13.33f)));
+
             bool tookDamage = target.TakeDamage(damage);
 
             if (tookDamage && attack.Move.Knockback > 0)

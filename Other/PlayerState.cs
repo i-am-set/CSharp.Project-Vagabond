@@ -12,6 +12,7 @@ namespace ProjectVagabond
         public HashSet<string> PastMemberIds { get; set; } = new HashSet<string>();
         public WizardCat Leader => Party.Count > 0 ? Party[0] : null;
 
+        public int HP { get => Leader?.HP ?? 10; set { if (Leader != null) Leader.HP = value; } }
         public int MaxHP { get => Leader?.MaxHP ?? 100; }
         public int CurrentHP { get => Leader?.CurrentHP ?? 100; set { if (Leader != null) Leader.CurrentHP = value; } }
         public int Power { get => Leader?.Power ?? 10; set { if (Leader != null) Leader.Power = value; } }
@@ -43,6 +44,7 @@ namespace ProjectVagabond
             if (member == null) return 0;
             switch (statName.ToLowerInvariant())
             {
+                case "hp": return member.HP;
                 case "power": return member.Power;
                 case "intelligence": return member.Intelligence;
                 case "tenacity": return member.Tenacity;
