@@ -6,7 +6,7 @@
     "BasePower": 15,
     "ChargeTime": 0.15,
     "Weight": 50,
-    "Knockback": 15.0,
+    "Knockback": 10.0,
     "DeliveryType": "DashMelee",
     "DeliveryRadius": 0.0,
     "DeliveryWidth": 24.0,

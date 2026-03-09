@@ -266,7 +266,8 @@ namespace ProjectVagabond.Battle
             Vector2 desiredTarget = Position + dir * distance;
 
             _knockbackTargetPos = arena.ClampToArena(desiredTarget, 12f);
-            _knockbackDuration = InvincibilityDuration;
+            
+            _knockbackDuration = 0.5f + (distance / 80f);
             _knockbackTimer = _knockbackDuration;
         }
 
@@ -327,14 +328,14 @@ namespace ProjectVagabond.Battle
             if (FloatingHeartWaveTimer > FloatingHeartWaveInterval + waveDuration)
             {
                 FloatingHeartWaveTimer = 0f;
-                FloatingHeartWaveInterval = 1f + (float)_random.NextDouble() * 4f;
+                FloatingHeartWaveInterval = 2f + (float)_random.NextDouble() * 4f;
             }
 
             HudHeartWaveTimer += dt;
             if (HudHeartWaveTimer > HudHeartWaveInterval + waveDuration)
             {
                 HudHeartWaveTimer = 0f;
-                HudHeartWaveInterval = 1f + (float)_random.NextDouble() * 4f;
+                HudHeartWaveInterval = 2f + (float)_random.NextDouble() * 4f;
             }
 
             if (InvincibilityTimer > 0)
@@ -346,7 +347,10 @@ namespace ProjectVagabond.Battle
             {
                 _knockbackTimer -= dt;
                 float progress = 1f - Math.Max(0, _knockbackTimer) / _knockbackDuration;
-                float eased = Easing.EaseOutCubic(progress);
+
+                // Use EaseOutQuad instead of Cubic for a softer, less jarring initial push
+                float eased = Easing.EaseOutQuad(progress);
+
                 Position = Vector2.Lerp(_knockbackStartPos, _knockbackTargetPos, eased);
                 Position = arena.ClampToArena(Position, 12f);
             }
