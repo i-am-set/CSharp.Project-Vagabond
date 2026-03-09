@@ -468,24 +468,49 @@ namespace ProjectVagabond.Battle
                 return;
             }
 
-            int totalWeight = 0;
+            // --- INTELLIGENCE WEIGHT NORMALIZATION ---
+            // 1. Find the maximum weight in the movepool to act as our normalization target
+            int maxWeight = 1;
             foreach (var move in Moves)
             {
-                totalWeight += move.Weight;
+                if (move.Weight > maxWeight) maxWeight = move.Weight;
             }
 
+            // 2. Calculate the flattening factor based on Intelligence (1-10)
+            // INT 1 = 0.0f (no change), INT 10 = 0.8f (weights are heavily normalized towards the max)
+            float flattenFactor = Math.Clamp((Intelligence - 1) / 9.0f, 0f, 1f) * 0.8f;
+
+            int totalWeight = 0;
+            int[] adjustedWeights = new int[Moves.Count];
+
+            // 3. Calculate adjusted weights
+            for (int i = 0; i < Moves.Count; i++)
+            {
+                int originalWeight = Moves[i].Weight;
+
+                // Lerp the original weight towards the max weight based on INT
+                adjustedWeights[i] = (int)MathF.Round(MathHelper.Lerp(originalWeight, maxWeight, flattenFactor));
+
+                // Safety fallback to ensure a move can always be rolled
+                if (adjustedWeights[i] < 1) adjustedWeights[i] = 1;
+
+                totalWeight += adjustedWeights[i];
+            }
+
+            // 4. Roll for the move using the new adjusted weights
             int roll = _random.Next(totalWeight);
             int currentWeight = 0;
 
-            foreach (var move in Moves)
+            for (int i = 0; i < Moves.Count; i++)
             {
-                currentWeight += move.Weight;
+                currentWeight += adjustedWeights[i];
                 if (roll < currentWeight)
                 {
-                    _queuedMove = move;
+                    _queuedMove = Moves[i];
                     break;
                 }
             }
+            // -----------------------------------------
 
             ArenaWizard target = null;
 
