@@ -114,9 +114,9 @@ namespace ProjectVagabond.Battle
             Tenacity = data.Tenacity;
             Agility = data.Agility;
 
-            MaxHP = HP * 2;
+            MaxHP = HP * 3;
 
-            int maxHearts = (MaxHP + 1) / 2;
+            int maxHearts = (MaxHP + 2) / 3;
             _heartFlashTimers = new float[maxHearts];
             _heartFlashFrame = new int[maxHearts];
 
@@ -266,14 +266,16 @@ namespace ProjectVagabond.Battle
             int maxHearts = _heartFlashTimers.Length;
             for (int i = 0; i < maxHearts; i++)
             {
-                int oldHeartVal = Math.Clamp(oldHP - i * 2, 0, 2);
-                int newHeartVal = Math.Clamp(newHP - i * 2, 0, 2);
+                int oldHeartVal = Math.Clamp(oldHP - i * 3, 0, 3);
+                int newHeartVal = Math.Clamp(newHP - i * 3, 0, 3);
                 if (oldHeartVal > newHeartVal)
                 {
                     _heartFlashTimers[i] = 0.75f;
-                    if (oldHeartVal == 2 && newHeartVal == 0) _heartFlashFrame[i] = 4;
-                    else if (oldHeartVal == 2 && newHeartVal == 1) _heartFlashFrame[i] = 3;
-                    else if (oldHeartVal == 1 && newHeartVal == 0) _heartFlashFrame[i] = 5;
+                    if (oldHeartVal == 3 && newHeartVal == 2) _heartFlashFrame[i] = 5; // 3/3 only flash
+                    else if (oldHeartVal == 2 && newHeartVal == 1) _heartFlashFrame[i] = 6; // 2/3 only flash
+                    else if (oldHeartVal == 1 && newHeartVal == 0) _heartFlashFrame[i] = 7; // 1/3 only flash
+                    else if (oldHeartVal == 2 && newHeartVal == 0) _heartFlashFrame[i] = 8; // 1/3 and 2/3 flash
+                    else _heartFlashFrame[i] = 4; // Full flash (covers 3->0 and 3->1)
                 }
             }
         }
@@ -643,17 +645,19 @@ namespace ProjectVagabond.Battle
                 if (ft.Number > 4)
                 {
                     font = core.DefaultFont;
-                } else if (ft.Number > 2)
+                }
+                else if (ft.Number > 2)
                 {
                     font = core.SecondaryFont;
-                } else
+                }
+                else
                 {
                     font = core.TertiaryFont;
                 }
 
-                    Color textColor = ft.IsHealing
-                        ? (isFlash ? global.Palette_Sun : global.Palette_Leaf)
-                        : (isFlash ? global.Palette_Sun : global.Palette_Rust);
+                Color textColor = ft.IsHealing
+                    ? (isFlash ? global.Palette_Sun : global.Palette_Leaf)
+                    : (isFlash ? global.Palette_Sun : global.Palette_Rust);
 
                 float alphaMult = Math.Clamp(ft.Timer / 0.2f, 0f, 1f);
                 Color finalTextColor = textColor * alphaMult;
@@ -671,7 +675,7 @@ namespace ProjectVagabond.Battle
             var sheet = spriteManager.HealthHearts3x3SpriteSheet;
             if (sheet == null) return;
 
-            int maxHearts = (MaxHP + 1) / 2;
+            int maxHearts = (MaxHP + 2) / 3;
             int heartWidth = 3;
             int spacing = 1;
             int totalWidth = maxHearts * heartWidth + (maxHearts - 1) * spacing;
@@ -683,11 +687,12 @@ namespace ProjectVagabond.Battle
 
             for (int i = 0; i < maxHearts; i++)
             {
-                int heartVal = Math.Clamp(CurrentHP - i * 2, 0, 2);
-                int frameIndex = 2;
+                int heartVal = Math.Clamp(CurrentHP - i * 3, 0, 3);
+                int frameIndex = 3; // 0/3
 
-                if (heartVal == 2) frameIndex = 0;
-                else if (heartVal == 1) frameIndex = 1;
+                if (heartVal == 3) frameIndex = 0; // 3/3
+                else if (heartVal == 2) frameIndex = 1; // 2/3
+                else if (heartVal == 1) frameIndex = 2; // 1/3
 
                 int flashFrame = GetHeartFlashFrame(i);
                 if (flashFrame != -1) frameIndex = flashFrame;

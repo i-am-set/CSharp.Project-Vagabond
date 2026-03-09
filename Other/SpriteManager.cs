@@ -304,8 +304,8 @@ namespace ProjectVagabond
             RestBorderMain = LoadTex("Sprites/UI/Rest/rest_border_main", 320, 180, Color.Magenta);
             RestActionIconsSpriteSheet = LoadTex("Sprites/UI/Rest/rest_action_icons", 24, 32, Color.Magenta);
             TargetingButtonSpriteSheet = LoadTex("Sprites/UI/BattleUI/ui_choose_a_target_button_spritesheet", 450, 22, Color.Magenta);
-            HealthHeartsSpriteSheet = LoadTex("Sprites/UI/BattleUI/health_5x5_icon_spritesheet", 30, 5, Color.Red);
-            HealthHearts3x3SpriteSheet = LoadTex("Sprites/UI/BattleUI/health_3x3_icon_spritesheet", 18, 3, Color.Red);
+            HealthHeartsSpriteSheet = LoadTex("Sprites/UI/BattleUI/health_5x5_icon_spritesheet", 45, 5, Color.Red);
+            HealthHearts3x3SpriteSheet = LoadTex("Sprites/UI/BattleUI/health_3x3_icon_spritesheet", 27, 3, Color.Red);
             InventoryPlayerHealthBarEmpty = LoadTex("Sprites/UI/Inventory/inventory_player_health_bar_empty", 66, 7, Color.DarkGray);
             InventoryPlayerHealthBarDisabled = LoadTex("Sprites/UI/Inventory/inventory_player_health_bar_disabled", 66, 7, Color.Black);
             InventoryPlayerHealthBarFull = LoadTex("Sprites/UI/Inventory/inventory_player_health_bar_full", 64, 7, Color.Red);

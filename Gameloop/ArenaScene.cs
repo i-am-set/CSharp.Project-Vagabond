@@ -174,7 +174,7 @@ namespace ProjectVagabond.Scenes
                 w.HudIsLeft = true;
                 w.HudNameSize = secondaryFont.MeasureString(w.Name.ToUpper());
 
-                int maxHearts = (w.MaxHP + 1) / 2;
+                int maxHearts = (w.MaxHP + 2) / 3;
                 int heartWidth = 5;
                 int heartSpacing = 1;
                 int heartsWidth = maxHearts * heartWidth + (maxHearts - 1) * heartSpacing;
@@ -412,13 +412,14 @@ namespace ProjectVagabond.Scenes
                     }
                 }
 
-                int maxHearts = (w.MaxHP + 1) / 2;
+                int maxHearts = (w.MaxHP + 2) / 3;
                 for (int h = 0; h < maxHearts; h++)
                 {
-                    int heartVal = Math.Clamp(w.CurrentHP - h * 2, 0, 2);
-                    int frameIndex = 2;
-                    if (heartVal == 2) frameIndex = 0;
-                    else if (heartVal == 1) frameIndex = 1;
+                    int heartVal = Math.Clamp(w.CurrentHP - h * 3, 0, 3);
+                    int frameIndex = 3; // 0/3
+                    if (heartVal == 3) frameIndex = 0; // 3/3
+                    else if (heartVal == 2) frameIndex = 1; // 2/3
+                    else if (heartVal == 1) frameIndex = 2; // 1/3
 
                     int flashFrame = w.GetHeartFlashFrame(h);
                     if (flashFrame != -1) frameIndex = flashFrame;

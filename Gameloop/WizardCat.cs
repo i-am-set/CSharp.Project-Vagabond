@@ -7,7 +7,7 @@ namespace ProjectVagabond
     {
         public string Name { get; set; }
         public int HP { get; set; }
-        public int MaxHP => HP * 2;
+        public int MaxHP => HP * 3;
         public int CurrentHP { get; set; }
         public int Power { get; set; }
         public int Intelligence { get; set; }

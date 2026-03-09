@@ -66,10 +66,6 @@ namespace ProjectVagabond.Scenes
         private int _lastScrollWheelValue;
         private int _scrollAccumulator;
 
-        // HP Normalization Cache
-        private int _globalMinHP = 0;
-        private int _globalMaxHP = 0;
-
         // Layout Constants
         private const int BASE_CENTER_Y = 50;
 
@@ -177,25 +173,6 @@ namespace ProjectVagabond.Scenes
 
             int oakleyIndex = _characterIds.IndexOf("0");
             _focusedIndex = oakleyIndex != -1 ? oakleyIndex : 0;
-
-            // Calculate Min/Max HP for normalization
-            _globalMinHP = int.MaxValue;
-            _globalMaxHP = int.MinValue;
-
-            foreach (var id in _characterIds)
-            {
-                if (GameDataCache.WizardCats.TryGetValue(id, out var data))
-                {
-                    int hp = data.HP * 2;
-                    if (hp < _globalMinHP) _globalMinHP = hp;
-                    if (hp > _globalMaxHP) _globalMaxHP = hp;
-                }
-            }
-
-            // Safety if list is empty or single item
-            if (_globalMinHP == int.MaxValue) _globalMinHP = 0;
-            if (_globalMaxHP == int.MinValue) _globalMaxHP = 100;
-            if (_globalMaxHP == _globalMinHP) _globalMaxHP++; // Prevent divide by zero
         }
 
         private void InitializeUI()
@@ -594,9 +571,27 @@ namespace ProjectVagabond.Scenes
             int startY = BASE_CENTER_Y + 38;
             int currentY = startY;
 
+            // --- Draw Hearts ---
+            var heartSheet = _spriteManager.HealthHeartsSpriteSheet;
+            if (heartSheet != null)
+            {
+                int hpStat = data.HP;
+                int heartWidth = 5;
+                int heartSpacing = 1;
+                int totalHeartsWidth = hpStat * heartWidth + (hpStat - 1) * heartSpacing;
+                int heartsStartX = centerX - (totalHeartsWidth / 2);
+
+                for (int i = 0; i < hpStat; i++)
+                {
+                    var sourceRect = new Rectangle(0, 0, heartWidth, 5); // Frame 0 is full heart
+                    spriteBatch.DrawSnapped(heartSheet, new Vector2(heartsStartX + i * (heartWidth + heartSpacing), currentY), sourceRect, Color.White);
+                }
+                currentY += 5 + 1; // Heart height + padding before stats
+            }
+
             // --- Stats Block ---
-            string[] labels = { "HP", "POW", "INT", "TEN", "AGI" };
-            int[] values = { data.HP * 2, data.Power, data.Intelligence, data.Tenacity, data.Agility };
+            string[] labels = { "POW", "INT", "TEN", "AGI" };
+            int[] values = { data.Power, data.Intelligence, data.Tenacity, data.Agility };
 
             int statBlockX = centerX - 30;
             float standardLabelWidth = secondaryFont.MeasureString("POW").Width;
