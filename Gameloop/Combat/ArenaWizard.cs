@@ -47,6 +47,9 @@ namespace ProjectVagabond.Battle
         public int Tenacity;
         public int Agility;
 
+        public int Rating { get; private set; }
+        public float PayoutMultiplier { get; set; }
+
         public WizardState State = WizardState.Moving;
         public List<MoveDefinition> Moves = new List<MoveDefinition>();
 
@@ -123,6 +126,7 @@ namespace ProjectVagabond.Battle
             Agility = data.Agility;
 
             MaxHP = HP * 3;
+            Rating = (Power + Tenacity + Agility) * MaxHP;
 
             int maxHearts = (MaxHP + 2) / 3;
             _heartFlashTimers = new float[maxHearts];
@@ -758,10 +762,13 @@ namespace ProjectVagabond.Battle
                 var sourceRect = new Rectangle(frameIndex * heartWidth, 0, heartWidth, 3);
 
                 int yOffset = 0;
-                float localWaveTime = FloatingHeartWaveTimer - FloatingHeartWaveInterval - (i * 0.08f);
-                if (localWaveTime > 0 && localWaveTime < 0.15f)
+                if (CurrentHP > 0)
                 {
-                    yOffset = -1;
+                    float localWaveTime = FloatingHeartWaveTimer - FloatingHeartWaveInterval - (i * 0.08f);
+                    if (localWaveTime > 0 && localWaveTime < 0.15f)
+                    {
+                        yOffset = -1;
+                    }
                 }
 
                 Vector2 pos = new Vector2(startX + i * (heartWidth + spacing), startY + yOffset);

@@ -38,8 +38,8 @@ namespace ProjectVagabond.Scenes
         private readonly NavigationGroup _navigationGroup;
 
         // Intro Text
-        private const string INTRO_LINE_1 = "CHOOSE AN";
-        private const string INTRO_LINE_2 = "ADVENTURER";
+        private const string INTRO_LINE_1 = "CHOOSE A";
+        private const string INTRO_LINE_2 = "WIZARD CAT";
 
         // --- Plink Animation State ---
         private bool _isPlinkingIn = true;

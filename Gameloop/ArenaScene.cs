@@ -151,17 +151,32 @@ namespace ProjectVagabond.Scenes
                 _wizards.Add(wizard);
             }
 
+            int totalRating = _wizards.Sum(w => w.Rating);
+            foreach (var w in _wizards)
+            {
+                if (totalRating > 0 && w.Rating > 0)
+                {
+                    float winProb = (float)w.Rating / totalRating;
+                    float rawOdds = 1.0f / winProb;
+                    w.PayoutMultiplier = (float)Math.Round(rawOdds * 0.9f, 1);
+                }
+                else
+                {
+                    w.PayoutMultiplier = 1.0f;
+                }
+            }
+
             CalculateHUDLayout();
         }
 
         private void CalculateHUDLayout()
         {
-            var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
+            var defaultFont = ServiceLocator.Get<Core>().DefaultFont;
             int totalWizards = _wizards.Count;
             if (totalWizards == 0) return;
 
             int spacingY = 20;
-            int itemHeight = (int)secondaryFont.LineHeight + 7;
+            int itemHeight = (int)defaultFont.LineHeight + 7;
 
             int totalBlockHeight = (totalWizards - 1) * spacingY + itemHeight;
             int startY = (Global.VIRTUAL_HEIGHT - totalBlockHeight) / 2;
@@ -172,7 +187,7 @@ namespace ProjectVagabond.Scenes
             {
                 var w = _wizards[i];
                 w.HudIsLeft = true;
-                w.HudNameSize = secondaryFont.MeasureString(w.Name.ToUpper());
+                w.HudNameSize = defaultFont.MeasureString(w.Name.ToUpper());
 
                 int maxHearts = (w.MaxHP + 2) / 3;
                 int heartWidth = 5;
@@ -370,7 +385,9 @@ namespace ProjectVagabond.Scenes
 
         private void DrawSideHUD(SpriteBatch spriteBatch)
         {
+            var defaultFont = ServiceLocator.Get<Core>().DefaultFont;
             var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
+            var tertiaryFont = ServiceLocator.Get<Core>().TertiaryFont;
             var sheet = _spriteManager.HealthHeartsSpriteSheet;
             var pixel = ServiceLocator.Get<Texture2D>();
             if (sheet == null || _wizards.Count == 0) return;
@@ -399,7 +416,18 @@ namespace ProjectVagabond.Scenes
                 }
 
                 Vector2 finalNamePos = new Vector2(MathF.Round(w.HudNamePos.X + shakeX), MathF.Round(w.HudNamePos.Y + shakeY));
-                spriteBatch.DrawStringSnapped(secondaryFont, w.Name.ToUpper(), finalNamePos, nameColor);
+                spriteBatch.DrawStringSnapped(defaultFont, w.Name.ToUpper(), finalNamePos, nameColor);
+
+                string ratingText = w.Rating.ToString();
+                Vector2 ratingSize = tertiaryFont.MeasureString(ratingText);
+                float ratingYOffset = MathF.Max(0, (defaultFont.LineHeight - tertiaryFont.LineHeight) / 2f);
+                Vector2 ratingPos = new Vector2(finalNamePos.X - ratingSize.X - 4, finalNamePos.Y + ratingYOffset);
+                spriteBatch.DrawStringSnapped(tertiaryFont, ratingText, ratingPos, _global.Palette_DarkShadow);
+
+                string multText = $"{w.PayoutMultiplier:F1}x";
+                float multYOffset = MathF.Max(0, (defaultFont.LineHeight - secondaryFont.LineHeight) / 2f);
+                Vector2 multPos = new Vector2(finalNamePos.X + w.HudNameSize.X + 4, finalNamePos.Y + multYOffset);
+                spriteBatch.DrawStringSnapped(secondaryFont, multText, multPos, _global.Palette_DarkPale);
 
                 if (w.State == WizardState.Dead)
                 {
@@ -428,10 +456,13 @@ namespace ProjectVagabond.Scenes
                     Color heartColor = w.State == WizardState.Dead ? Color.Gray : Color.White;
 
                     int yOffset = 0;
-                    float localWaveTime = w.HudHeartWaveTimer - w.HudHeartWaveInterval - (h * 0.08f);
-                    if (localWaveTime > 0 && localWaveTime < 0.15f)
+                    if (w.CurrentHP > 0)
                     {
-                        yOffset = -1;
+                        float localWaveTime = w.HudHeartWaveTimer - w.HudHeartWaveInterval - (h * 0.08f);
+                        if (localWaveTime > 0 && localWaveTime < 0.15f)
+                        {
+                            yOffset = -1;
+                        }
                     }
 
                     Vector2 finalHeartPos = new Vector2(MathF.Round(w.HudHeartStartPos.X + h * (heartWidth + heartSpacing) + shakeX), MathF.Round(w.HudHeartStartPos.Y + shakeY) + yOffset);
