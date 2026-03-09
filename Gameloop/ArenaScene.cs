@@ -327,7 +327,7 @@ namespace ProjectVagabond.Scenes
 
             foreach (var wizard in _wizards)
             {
-                wizard.DrawUI(spriteBatch, _spriteManager);
+                wizard.DrawUI(spriteBatch, _spriteManager, gameTime);
                 wizard.DrawDebug(spriteBatch, _spriteManager);
             }
 

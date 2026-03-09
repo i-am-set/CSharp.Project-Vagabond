@@ -103,8 +103,8 @@ namespace ProjectVagabond.UI
         public static float WobbleYAmplitude = 1.0f;
 
         // Shake
-        public static float ShakeSpeed = 30f;
-        public static float ShakeAmplitude = 1.0f;
+        public static float ShakeSpeed = 10f;
+        public static float ShakeAmplitude = 0.75f;
 
         // Nervous
         public static float NervousSpeed = 25f;

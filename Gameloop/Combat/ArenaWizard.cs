@@ -4,11 +4,10 @@ using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond.Animations;
 using ProjectVagabond.Particles;
 using ProjectVagabond.Scenes;
+using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
 using System.Collections.Generic;
-using static System.Net.Mime.MediaTypeNames;
-using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace ProjectVagabond.Battle
 {
@@ -91,6 +90,7 @@ namespace ProjectVagabond.Battle
         {
             public int Number;
             public bool IsHealing;
+            public bool IsCrit;
             public float Timer;
             public float Duration;
             public Vector2 LocalOffset;
@@ -168,7 +168,7 @@ namespace ProjectVagabond.Battle
             );
         }
 
-        public bool TakeDamage(int amount)
+        public bool TakeDamage(int amount, bool isCrit = false)
         {
             if (InvincibilityTimer > 0 || State == WizardState.Dead || CurrentHP <= 0) return false;
 
@@ -193,6 +193,7 @@ namespace ProjectVagabond.Battle
                 {
                     Number = actualDamage,
                     IsHealing = false,
+                    IsCrit = isCrit,
                     Duration = 1.0f,
                     Timer = 1.0f,
                     LocalOffset = centerOffset + new Vector2(_random.Next(-8, 9), 0)
@@ -221,6 +222,7 @@ namespace ProjectVagabond.Battle
                 {
                     Number = actualHeal,
                     IsHealing = true,
+                    IsCrit = false,
                     Duration = 1.0f,
                     Timer = 1.0f,
                     LocalOffset = centerOffset + new Vector2(_random.Next(-8, 9), 0)
@@ -592,7 +594,7 @@ namespace ProjectVagabond.Battle
             State = WizardState.Casting;
         }
 
-        public void DrawUI(SpriteBatch spriteBatch, SpriteManager spriteManager)
+        public void DrawUI(SpriteBatch spriteBatch, SpriteManager spriteManager, GameTime gameTime)
         {
             int wizX = (int)MathF.Round(Position.X);
             float hopOffset = State == WizardState.Dead ? 0f : -MathF.Abs(MathF.Sin(HopTimer)) * 4f;
@@ -668,6 +670,33 @@ namespace ProjectVagabond.Battle
                 Vector2 origin = new Vector2(MathF.Round(textSize.X / 2f), MathF.Round(textSize.Y / 2f));
 
                 spriteBatch.DrawStringOutlinedSnapped(font, text, textPos, finalTextColor, outlineColor, 0f, origin, 1f, SpriteEffects.None, 0f);
+
+                if (ft.IsCrit)
+                {
+                    string critText = "CRIT";
+                    BitmapFont critFont = core.TertiaryFont;
+                    Vector2 critSize = critFont.MeasureString(critText);
+
+                    // Position it centered above the damage number
+                    Vector2 critCenter = textPos - new Vector2(0, MathF.Round(textSize.Y / 2f + critSize.Y / 2f + 1));
+                    Vector2 critTopLeft = critCenter - new Vector2(MathF.Round(critSize.X / 2f), MathF.Round(critSize.Y / 2f));
+
+                    Color critTextColor = isFlash ? global.Palette_Sun : global.CritcalHitIndicatorColor;
+                    Color finalCritTextColor = critTextColor * alphaMult;
+
+                    TextAnimator.DrawTextWithEffectOutlined(
+                        spriteBatch,
+                        critFont,
+                        critText,
+                        critTopLeft,
+                        finalCritTextColor,
+                        outlineColor,
+                        TextEffectType.Shake,
+                        (float)gameTime.TotalGameTime.TotalSeconds,
+                        Vector2.One,
+                        0f
+                    );
+                }
             }
 
             if (State == WizardState.Dead || _healthBarAlpha <= 0f) return;

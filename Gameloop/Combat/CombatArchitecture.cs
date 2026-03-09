@@ -606,7 +606,7 @@ namespace ProjectVagabond.Battle
 
             int damage = Math.Max(1, (int)Math.Floor(attack.Move.BasePower * (attack.Caster.Power + 10) / ((targetTenacity + 10) * 13.33f)));
 
-            bool tookDamage = target.TakeDamage(damage);
+            bool tookDamage = target.TakeDamage(damage, isCrit);
 
             if (tookDamage && attack.Move.Knockback > 0)
             {
