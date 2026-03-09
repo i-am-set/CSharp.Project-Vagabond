@@ -56,6 +56,8 @@ namespace ProjectVagabond.Scenes
         // Idle Animation State
         private float _idleTimer = 0f;
         private float _titleWaveTimer = 0f;
+        private float _introHeartWaveTimer = 0f;
+        private float _introHeartWaveInterval = 3f;
 
         // Arrow Simulation State
         private float _leftArrowSimTimer = 0f;
@@ -102,6 +104,8 @@ namespace ProjectVagabond.Scenes
             _idleTimer = 0f;
             _leftArrowSimTimer = 0f;
             _rightArrowSimTimer = 0f;
+            _introHeartWaveTimer = 0f;
+            _introHeartWaveInterval = 2f + (float)new Random().NextDouble() * 4f;
 
             _lastScrollWheelValue = _inputManager.GetEffectiveMouseState().ScrollWheelValue;
             _scrollAccumulator = 0;
@@ -315,6 +319,13 @@ namespace ProjectVagabond.Scenes
 
             _idleTimer += dt;
             _titleWaveTimer += dt;
+
+            _introHeartWaveTimer += dt;
+            if (_introHeartWaveTimer > _introHeartWaveInterval + 1.0f)
+            {
+                _introHeartWaveTimer = 0f;
+                _introHeartWaveInterval = 2f + (float)new Random().NextDouble() * 4f;
+            }
 
             if (_leftArrowSimTimer > 0f)
             {
@@ -583,8 +594,15 @@ namespace ProjectVagabond.Scenes
 
                 for (int i = 0; i < hpStat; i++)
                 {
+                    int yOffset = 0;
+                    float localWaveTime = _introHeartWaveTimer - _introHeartWaveInterval - (i * 0.08f);
+                    if (localWaveTime > 0 && localWaveTime < 0.15f)
+                    {
+                        yOffset = -1;
+                    }
+
                     var sourceRect = new Rectangle(0, 0, heartWidth, 5); // Frame 0 is full heart
-                    spriteBatch.DrawSnapped(heartSheet, new Vector2(heartsStartX + i * (heartWidth + heartSpacing), currentY), sourceRect, Color.White);
+                    spriteBatch.DrawSnapped(heartSheet, new Vector2(heartsStartX + i * (heartWidth + heartSpacing), currentY + yOffset), sourceRect, Color.White);
                 }
                 currentY += 5 + 1; // Heart height + padding before stats
             }

@@ -427,7 +427,14 @@ namespace ProjectVagabond.Scenes
                     var sourceRect = new Rectangle(frameIndex * heartWidth, 0, heartWidth, 5);
                     Color heartColor = w.State == WizardState.Dead ? Color.Gray : Color.White;
 
-                    Vector2 finalHeartPos = new Vector2(MathF.Round(w.HudHeartStartPos.X + h * (heartWidth + heartSpacing) + shakeX), MathF.Round(w.HudHeartStartPos.Y + shakeY));
+                    int yOffset = 0;
+                    float localWaveTime = w.HudHeartWaveTimer - w.HudHeartWaveInterval - (h * 0.08f);
+                    if (localWaveTime > 0 && localWaveTime < 0.15f)
+                    {
+                        yOffset = -1;
+                    }
+
+                    Vector2 finalHeartPos = new Vector2(MathF.Round(w.HudHeartStartPos.X + h * (heartWidth + heartSpacing) + shakeX), MathF.Round(w.HudHeartStartPos.Y + shakeY) + yOffset);
                     spriteBatch.DrawSnapped(sheet, finalHeartPos, sourceRect, heartColor);
                 }
             }

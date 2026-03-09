@@ -37,6 +37,11 @@ namespace ProjectVagabond.Battle
         public float InvincibilityTimer { get; private set; }
         public float HudShakeTimer { get; private set; }
 
+        public float FloatingHeartWaveTimer { get; private set; }
+        public float FloatingHeartWaveInterval { get; private set; }
+        public float HudHeartWaveTimer { get; private set; }
+        public float HudHeartWaveInterval { get; private set; }
+
         public int HP;
         public int Power;
         public int Tenacity;
@@ -106,6 +111,11 @@ namespace ProjectVagabond.Battle
             PortraitIndex = int.TryParse(data.MemberID, out int pid) ? pid : 0;
             HopTimer = (float)(_random.NextDouble() * MathHelper.TwoPi);
             IsFacingRight = false;
+
+            FloatingHeartWaveInterval = 1f + (float)_random.NextDouble() * 4f;
+            FloatingHeartWaveTimer = 0f;
+            HudHeartWaveInterval = 1f + (float)_random.NextDouble() * 4f;
+            HudHeartWaveTimer = 0f;
 
             HP = data.HP;
             Power = data.Power;
@@ -308,6 +318,23 @@ namespace ProjectVagabond.Battle
                 {
                     _floatingTexts.RemoveAt(i);
                 }
+            }
+
+            int maxHearts = (MaxHP + 2) / 3;
+            float waveDuration = maxHearts * 0.08f + 0.15f;
+
+            FloatingHeartWaveTimer += dt;
+            if (FloatingHeartWaveTimer > FloatingHeartWaveInterval + waveDuration)
+            {
+                FloatingHeartWaveTimer = 0f;
+                FloatingHeartWaveInterval = 1f + (float)_random.NextDouble() * 4f;
+            }
+
+            HudHeartWaveTimer += dt;
+            if (HudHeartWaveTimer > HudHeartWaveInterval + waveDuration)
+            {
+                HudHeartWaveTimer = 0f;
+                HudHeartWaveInterval = 1f + (float)_random.NextDouble() * 4f;
             }
 
             if (InvincibilityTimer > 0)
@@ -725,7 +752,15 @@ namespace ProjectVagabond.Battle
                 if (flashFrame != -1) frameIndex = flashFrame;
 
                 var sourceRect = new Rectangle(frameIndex * heartWidth, 0, heartWidth, 3);
-                Vector2 pos = new Vector2(startX + i * (heartWidth + spacing), startY);
+
+                int yOffset = 0;
+                float localWaveTime = FloatingHeartWaveTimer - FloatingHeartWaveInterval - (i * 0.08f);
+                if (localWaveTime > 0 && localWaveTime < 0.15f)
+                {
+                    yOffset = -1;
+                }
+
+                Vector2 pos = new Vector2(startX + i * (heartWidth + spacing), startY + yOffset);
 
                 spriteBatch.DrawSnapped(sheet, pos, sourceRect, drawColor);
             }
