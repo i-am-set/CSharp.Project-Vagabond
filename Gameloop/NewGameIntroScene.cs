@@ -595,11 +595,11 @@ namespace ProjectVagabond.Scenes
             int currentY = startY;
 
             // --- Stats Block ---
-            string[] labels = { "HP", "STR", "INT", "TEN", "AGI" };
-            int[] values = { data.Tenacity * 2, data.Strength, data.Intelligence, data.Tenacity, data.Agility };
+            string[] labels = { "HP", "POW", "INT", "TEN", "AGI" };
+            int[] values = { data.Tenacity * 2, data.Power, data.Intelligence, data.Tenacity, data.Agility };
 
             int statBlockX = centerX - 30;
-            float standardLabelWidth = secondaryFont.MeasureString("STR").Width;
+            float standardLabelWidth = secondaryFont.MeasureString("POW").Width;
 
             Texture2D statBg = _spriteManager.InventoryStatBarEmpty;
             Texture2D statFull = _spriteManager.InventoryStatBarFull;

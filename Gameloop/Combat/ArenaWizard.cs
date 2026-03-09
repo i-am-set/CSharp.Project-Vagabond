@@ -38,7 +38,7 @@ namespace ProjectVagabond.Battle
         public float InvincibilityTimer { get; private set; }
         public float HudShakeTimer { get; private set; }
 
-        public int Strength;
+        public int Power;
         public int Intelligence;
         public int Tenacity;
         public int Agility;
@@ -107,7 +107,7 @@ namespace ProjectVagabond.Battle
             HopTimer = (float)(_random.NextDouble() * MathHelper.TwoPi);
             IsFacingRight = false;
 
-            Strength = data.Strength;
+            Power = data.Power;
             Intelligence = data.Intelligence;
             Tenacity = data.Tenacity;
             Agility = data.Agility;

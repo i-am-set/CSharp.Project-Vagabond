@@ -22,7 +22,7 @@ namespace ProjectVagabond.Battle
             var member = new WizardCat
             {
                 Name = data.Name,
-                Strength = data.Strength,
+                Power = data.Power,
                 Intelligence = data.Intelligence,
                 Tenacity = data.Tenacity,
                 Agility = data.Agility,

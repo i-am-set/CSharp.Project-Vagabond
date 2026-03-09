@@ -589,7 +589,7 @@ namespace ProjectVagabond.Battle
     {
         public void Apply(ActiveAttack attack, ArenaWizard target, ArenaScene arena)
         {
-            int damage = Math.Max(1, (int)Math.Floor(attack.Move.BasePower * (attack.Caster.Strength + 10) / 200f));
+            int damage = Math.Max(1, (int)Math.Floor(attack.Move.BasePower * (attack.Caster.Power + 10) / 200f));
             bool tookDamage = target.TakeDamage(damage);
 
             if (tookDamage && attack.Move.Knockback > 0)

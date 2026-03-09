@@ -318,7 +318,7 @@ namespace ProjectVagabond
 
             if (lowerTag.StartsWith("c"))
             {
-                if (lowerTag == "cstr") return Palette_Sun;
+                if (lowerTag == "cpow") return Palette_Sun;
                 if (lowerTag == "cint") return Palette_Sun;
                 if (lowerTag == "cten") return Palette_Sun;
                 if (lowerTag == "cagi") return Palette_Sun;

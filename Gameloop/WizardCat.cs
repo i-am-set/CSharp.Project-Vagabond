@@ -8,7 +8,7 @@ namespace ProjectVagabond
         public string Name { get; set; }
         public int MaxHP => Tenacity * 2;
         public int CurrentHP { get; set; }
-        public int Strength { get; set; }
+        public int Power { get; set; }
         public int Intelligence { get; set; }
         public int Tenacity { get; set; }
         public int Agility { get; set; }
