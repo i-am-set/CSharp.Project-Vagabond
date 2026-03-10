@@ -1,5 +1,6 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond.Animations;
 using ProjectVagabond.Battle;
@@ -15,6 +16,32 @@ namespace ProjectVagabond.Scenes
 {
     public class ArenaScene : GameScene
     {
+        private enum ArenaState
+        {
+            Betting,
+            LockingIn,
+            Countdown,
+            Fighting,
+            MatchOver
+        }
+
+        private class BetTicket
+        {
+            public int BetAmount;
+            public float Multiplier;
+            public int WizardNumber;
+            public float AnimTimer;
+            public float TargetX;
+
+            public Vector2 Position;
+            public Vector2 Velocity;
+            public bool IsDragging;
+            public Vector2 DragOffset;
+            public bool IsDispensed;
+            public float Rotation;
+            public float RotationVelocity;
+        }
+
         private readonly Global _global;
         private readonly SpriteManager _spriteManager;
         private readonly GameState _gameState;
@@ -23,18 +50,32 @@ namespace ProjectVagabond.Scenes
         private readonly TransitionManager _transitionManager;
 
         private readonly List<ArenaWizard> _wizards = new List<ArenaWizard>();
+        private List<ArenaWizard> _wizardsByHudOrder = new List<ArenaWizard>();
         private readonly List<ActiveAttack> _activeAttacks = new List<ActiveAttack>();
         private readonly List<ArenaWizard> _queryResults = new List<ArenaWizard>();
+        private readonly List<BetTicket> _tickets = new List<BetTicket>();
         private readonly Random _random = new Random();
 
-        private float _stateTimer = 0f;
+        private ArenaState _arenaState;
+        private float _phaseTimer = 0f;
+        private int _lastBettingSecond = 0;
+        private int _lockedInIndex = 0;
+
+        private PlinkAnimator _plinkPlaceBets;
+        private PlinkAnimator _plinkBetCountdown;
+        private PlinkAnimator _plinkLockedIn;
+        private PlinkAnimator _plinkFight;
+
+        private Button _skipButton;
+        private NavigationGroup _navigationGroup;
+        private MouseState _lastMouseState;
+
         private const float ARENA_RADIUS = 85f;
         private int _arenaEdges = 8;
         private Vector2 _arenaCenter;
         private Texture2D _arenaTexture;
         private Texture2D _arenaOutlineTexture;
 
-        private bool _isMatchOver = false;
         private float _matchOverTimer = 0f;
         private string _matchResultText = "";
         private Color _matchResultColor = Color.White;
@@ -133,13 +174,26 @@ namespace ProjectVagabond.Scenes
         {
             base.Enter();
             _wizards.Clear();
+            _wizardsByHudOrder.Clear();
             _activeAttacks.Clear();
+            _tickets.Clear();
             _multSteps.Clear();
             _multPlinks.Clear();
             _winProbabilities.Clear();
 
-            _stateTimer = 0f;
-            _isMatchOver = false;
+            _arenaState = ArenaState.Betting;
+            _phaseTimer = 10.0f;
+            _lastBettingSecond = 10;
+            _lockedInIndex = 0;
+
+            _plinkPlaceBets = new PlinkAnimator();
+            _plinkBetCountdown = new PlinkAnimator();
+            _plinkLockedIn = new PlinkAnimator();
+            _plinkFight = new PlinkAnimator();
+
+            _plinkPlaceBets.Start(0f, 0.3f);
+            _plinkBetCountdown.Start(0f, 0.3f);
+
             _matchOverTimer = 0f;
             _matchResultText = "";
             _goldWon = 0;
@@ -152,6 +206,23 @@ namespace ProjectVagabond.Scenes
 
             _arenaOutlineTexture = ServiceLocator.Get<TextureFactory>().CreatePolygonTexture((int)ARENA_RADIUS + 2, _arenaEdges);
             _arenaTexture = ServiceLocator.Get<TextureFactory>().CreatePolygonTexture((int)ARENA_RADIUS, _arenaEdges);
+
+            _skipButton = new Button(new Rectangle((int)_arenaCenter.X - 30, (int)_arenaCenter.Y + 20, 60, 15), "SKIP", font: ServiceLocator.Get<Core>().SecondaryFont)
+            {
+                HoverAnimation = HoverAnimationType.Hop,
+                TriggerHapticOnHover = true
+            };
+            _skipButton.OnClick += () => {
+                if (_arenaState == ArenaState.Betting)
+                {
+                    _phaseTimer = 0f;
+                    ServiceLocator.Get<HapticsManager>().TriggerUICompoundShake(_global.ButtonHapticStrength);
+                }
+            };
+
+            _navigationGroup = new NavigationGroup(wrapNavigation: false);
+            _navigationGroup.Add(_skipButton);
+            if (_inputManager.CurrentInputDevice != InputDeviceType.Mouse) _navigationGroup.SelectFirst();
 
             var playerLeader = _gameState.PlayerState.Leader;
             if (playerLeader == null) return;
@@ -189,7 +260,7 @@ namespace ProjectVagabond.Scenes
                     float winProb = (float)w.Rating / totalRating;
                     _winProbabilities[w] = winProb;
                     float rawOdds = 1.0f / winProb;
-                    w.PayoutMultiplier = (float)Math.Round(rawOdds * 0.9f, 1);
+                    w.PayoutMultiplier = (float)Math.Round(rawOdds * 1.0f, 1); // Pre-bet odds
                 }
                 else
                 {
@@ -202,6 +273,21 @@ namespace ProjectVagabond.Scenes
             }
 
             CalculateHUDLayout();
+
+            _wizardsByHudOrder = _wizards.OrderBy(w => w.HudNamePos.Y).ToList();
+
+            if (_wizards.Count > 0)
+            {
+                _tickets.Add(new BetTicket
+                {
+                    BetAmount = _gameState.CurrentEntryFee,
+                    Multiplier = _wizards[0].PayoutMultiplier,
+                    WizardNumber = 1,
+                    AnimTimer = 0f,
+                    TargetX = 28,
+                    Position = new Vector2(28, Global.VIRTUAL_HEIGHT + 22)
+                });
+            }
         }
 
         private void CalculateHUDLayout()
@@ -277,11 +363,71 @@ namespace ProjectVagabond.Scenes
             return point;
         }
 
+        private void UpdateTicketDispense(BetTicket ticket, float dt)
+        {
+            ticket.AnimTimer += dt;
+            float startY = Global.VIRTUAL_HEIGHT + 22;
+            float dispenseY = Global.VIRTUAL_HEIGHT - 8;
+
+            float t1 = 0.25f; // Jerk 1 duration
+            float t2 = t1 + 0.5f; // Wait 1
+            float t3 = t2 + 0.25f; // Jerk 2 duration
+            float t4 = t3 + 0.5f; // Wait 2
+            float t5 = t4 + 1.0f; // Long Dispense duration
+            float t6 = t5 + 0.5f; // Wait 3 (Hang before drop)
+
+            float progress = 0f;
+
+            if (ticket.AnimTimer < t1)
+            {
+                float p = ticket.AnimTimer / t1;
+                progress = MathHelper.Lerp(0f, 0.2f, p);
+            }
+            else if (ticket.AnimTimer < t2)
+            {
+                progress = 0.2f;
+            }
+            else if (ticket.AnimTimer < t3)
+            {
+                float p = (ticket.AnimTimer - t2) / (t3 - t2);
+                progress = MathHelper.Lerp(0.2f, 0.4f, p);
+            }
+            else if (ticket.AnimTimer < t4)
+            {
+                progress = 0.4f;
+            }
+            else if (ticket.AnimTimer < t5)
+            {
+                float p = (ticket.AnimTimer - t4) / (t5 - t4);
+                progress = MathHelper.Lerp(0.4f, 1.0f, p);
+            }
+            else if (ticket.AnimTimer < t6)
+            {
+                progress = 1.0f;
+            }
+            else
+            {
+                progress = 1.0f;
+                ticket.IsDispensed = true;
+
+                // Increased velocity to shoot the card further out
+                ticket.Velocity = new Vector2((float)(_random.NextDouble() * 160 - 80), -400f);
+                ticket.RotationVelocity = (float)(_random.NextDouble() * 4.0 - 2.0);
+            }
+
+            ticket.Position.Y = MathHelper.Lerp(startY, dispenseY, progress);
+            ticket.Position.X = ticket.TargetX;
+        }
+
         public override void Update(GameTime gameTime)
         {
             base.Update(gameTime);
             float dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
-            _stateTimer += dt;
+
+            _plinkPlaceBets?.Update(gameTime, _arenaCenter);
+            _plinkBetCountdown?.Update(gameTime, _arenaCenter);
+            _plinkLockedIn?.Update(gameTime, _arenaCenter);
+            _plinkFight?.Update(gameTime, _arenaCenter);
 
             foreach (var w in _wizards)
             {
@@ -291,9 +437,225 @@ namespace ProjectVagabond.Scenes
                 }
             }
 
-            if (_stateTimer >= 3.0f)
+            var mouseState = _inputManager.GetEffectiveMouseState();
+            Vector2 virtualMousePos = Core.TransformMouse(mouseState.Position);
+            bool isClicking = mouseState.LeftButton == ButtonState.Pressed;
+            bool justClicked = isClicking && _lastMouseState.LeftButton == ButtonState.Released;
+
+            BetTicket draggedTicket = _tickets.FirstOrDefault(t => t.IsDragging);
+
+            if (justClicked && draggedTicket == null && _inputManager.IsMouseClickAvailable())
             {
-                Vector2 virtualMousePos = Core.TransformMouse(_inputManager.GetEffectiveMouseState().Position);
+                for (int i = _tickets.Count - 1; i >= 0; i--)
+                {
+                    var t = _tickets[i];
+                    if (!t.IsDispensed) continue;
+
+                    Matrix transform = Matrix.CreateTranslation(-t.Position.X, -t.Position.Y, 0) *
+                                       Matrix.CreateRotationZ(-t.Rotation) *
+                                       Matrix.CreateTranslation(t.Position.X, t.Position.Y, 0);
+                    Vector2 localMouse = Vector2.Transform(virtualMousePos, transform);
+                    Rectangle localBounds = new Rectangle((int)t.Position.X - 15, (int)t.Position.Y - 22, 30, 44);
+
+                    if (localBounds.Contains(localMouse))
+                    {
+                        t.IsDragging = true;
+                        t.DragOffset = t.Position - virtualMousePos;
+                        t.Velocity = Vector2.Zero;
+                        t.RotationVelocity = 0f;
+                        draggedTicket = t;
+                        _inputManager.ConsumeMouseClick();
+
+                        _tickets.RemoveAt(i);
+                        _tickets.Add(t);
+                        break;
+                    }
+                }
+            }
+
+            if (draggedTicket != null)
+            {
+                if (isClicking)
+                {
+                    Vector2 prevPos = draggedTicket.Position;
+                    draggedTicket.Position = virtualMousePos + draggedTicket.DragOffset;
+
+                    if (dt > 0)
+                    {
+                        draggedTicket.Velocity = (draggedTicket.Position - prevPos) / dt;
+                    }
+
+                    // Smoothly rotate upright while dragging
+                    draggedTicket.Rotation = MathHelper.Lerp(draggedTicket.Rotation, 0f, 20f * dt);
+                    draggedTicket.RotationVelocity = 0f;
+                }
+                else
+                {
+                    draggedTicket.IsDragging = false;
+                    // Apply rotation velocity based on horizontal movement speed
+                    draggedTicket.RotationVelocity = draggedTicket.Velocity.X * 0.015f;
+                    draggedTicket = null;
+                }
+            }
+
+            bool hoveringTicket = false;
+            for (int i = _tickets.Count - 1; i >= 0; i--)
+            {
+                var t = _tickets[i];
+                if (!t.IsDispensed)
+                {
+                    UpdateTicketDispense(t, dt);
+                }
+                else
+                {
+                    if (!t.IsDragging)
+                    {
+                        t.Position += t.Velocity * dt;
+                        t.Rotation += t.RotationVelocity * dt;
+
+                        float friction = 20.0f;
+                        t.Velocity -= t.Velocity * friction * dt;
+                        t.RotationVelocity -= t.RotationVelocity * friction * dt;
+
+                        if (t.Velocity.LengthSquared() < 1f) t.Velocity = Vector2.Zero;
+                        if (Math.Abs(t.RotationVelocity) < 0.01f) t.RotationVelocity = 0f;
+
+                        if (t.Position.X < -100 || t.Position.X > Global.VIRTUAL_WIDTH + 100 ||
+                            t.Position.Y < -100 || t.Position.Y > Global.VIRTUAL_HEIGHT + 100)
+                        {
+                            _tickets.RemoveAt(i);
+                            continue;
+                        }
+                    }
+
+                    if (!hoveringTicket && draggedTicket == null)
+                    {
+                        Matrix transform = Matrix.CreateTranslation(-t.Position.X, -t.Position.Y, 0) *
+                                           Matrix.CreateRotationZ(-t.Rotation) *
+                                           Matrix.CreateTranslation(t.Position.X, t.Position.Y, 0);
+                        Vector2 localMouse = Vector2.Transform(virtualMousePos, transform);
+                        Rectangle localBounds = new Rectangle((int)t.Position.X - 15, (int)t.Position.Y - 22, 30, 44);
+                        if (localBounds.Contains(localMouse))
+                        {
+                            hoveringTicket = true;
+                        }
+                    }
+                }
+            }
+
+            if (hoveringTicket || draggedTicket != null)
+            {
+                ServiceLocator.Get<CursorManager>().SetState(draggedTicket != null ? CursorState.Dragging : CursorState.HoverDraggable);
+            }
+
+            if (_arenaState == ArenaState.Betting)
+            {
+                _phaseTimer -= dt;
+                int currentSecond = (int)Math.Ceiling(_phaseTimer);
+                if (currentSecond != _lastBettingSecond && currentSecond > 0)
+                {
+                    _lastBettingSecond = currentSecond;
+                    _plinkBetCountdown.Start(0f, 0.2f);
+                }
+
+                for (int i = 0; i < _wizardsByHudOrder.Count; i++)
+                {
+                    var w = _wizardsByHudOrder[i];
+                    Rectangle hudRect = new Rectangle((int)_hudBaseX - 2, (int)w.HudNamePos.Y - 2, (int)(_hudMultCenterX - _hudBaseX + 30), 20);
+
+                    if (hudRect.Contains(virtualMousePos) && justClicked && _inputManager.IsMouseClickAvailable())
+                    {
+                        if (_gameState.PlayerState.Gold >= 5)
+                        {
+                            _inputManager.ConsumeMouseClick();
+                            _gameState.PlayerState.Gold -= 5;
+                            ServiceLocator.Get<HapticsManager>().TriggerUICompoundShake(_global.ButtonHapticStrength);
+
+                            _tickets.Add(new BetTicket
+                            {
+                                BetAmount = 5,
+                                Multiplier = w.PayoutMultiplier,
+                                WizardNumber = _wizards.IndexOf(w) + 1,
+                                AnimTimer = 0f,
+                                TargetX = 28 + _tickets.Count * 34,
+                                Position = new Vector2(28 + _tickets.Count * 34, Global.VIRTUAL_HEIGHT + 22)
+                            });
+                        }
+                        else
+                        {
+                            ServiceLocator.Get<HapticsManager>().TriggerUICompoundShake(_global.ButtonHapticStrength * 0.5f);
+                        }
+                    }
+                }
+
+                _skipButton.Update(mouseState);
+
+                if (_inputManager.CurrentInputDevice == InputDeviceType.Mouse)
+                {
+                    _navigationGroup.DeselectAll();
+                }
+                else
+                {
+                    _navigationGroup.UpdateInput(_inputManager);
+                }
+
+                if (_phaseTimer <= 0)
+                {
+                    _arenaState = ArenaState.LockingIn;
+                    _phaseTimer = 1.0f;
+                    _lockedInIndex = 0;
+                    _plinkLockedIn.Start(0f, 0.3f);
+                }
+            }
+            else if (_arenaState == ArenaState.LockingIn)
+            {
+                _phaseTimer -= dt;
+
+                int expectedIndex = (int)((1.0f - _phaseTimer) / (1.0f / _wizardsByHudOrder.Count));
+                while (_lockedInIndex < expectedIndex && _lockedInIndex < _wizardsByHudOrder.Count)
+                {
+                    var w = _wizardsByHudOrder[_lockedInIndex];
+                    float prob = _winProbabilities[w];
+                    if (prob > 0)
+                    {
+                        float rawOdds = 1.0f / prob;
+                        w.PayoutMultiplier = (float)Math.Round(Math.Max(1.1f, rawOdds * 0.65f), 1);
+                    }
+                    int step = GetMultiplierStep(w.PayoutMultiplier);
+                    _multSteps[w] = step;
+                    _multPlinks[w].Start(0f, 0.3f);
+                    _lockedInIndex++;
+                }
+
+                if (_phaseTimer <= 0)
+                {
+                    _arenaState = ArenaState.Countdown;
+                    _phaseTimer = 3.0f;
+                    _lastBettingSecond = 3;
+                    _plinkFight.Start(0f, 0.2f);
+                }
+            }
+            else if (_arenaState == ArenaState.Countdown)
+            {
+                _phaseTimer -= dt;
+                int currentSecond = (int)Math.Ceiling(_phaseTimer);
+                if (currentSecond != _lastBettingSecond && currentSecond > 0)
+                {
+                    _lastBettingSecond = currentSecond;
+                    _plinkFight.Start(0f, 0.2f);
+                }
+
+                if (_phaseTimer <= 0)
+                {
+                    _arenaState = ArenaState.Fighting;
+                    _phaseTimer = 0f;
+                    _plinkFight.Start(0f, 0.3f);
+                }
+            }
+
+            if (_arenaState == ArenaState.Fighting || _arenaState == ArenaState.MatchOver)
+            {
+                _phaseTimer += dt;
 
                 foreach (var wizard in _wizards)
                 {
@@ -350,35 +712,53 @@ namespace ProjectVagabond.Scenes
                     }
                 }
 
-                if (!_isMatchOver)
+                if (_arenaState == ArenaState.Fighting)
                 {
                     UpdateDynamicOdds();
 
                     int aliveCount = _wizards.Count(w => w.State != WizardState.Dead);
                     if (aliveCount <= 1)
                     {
-                        _isMatchOver = true;
+                        _arenaState = ArenaState.MatchOver;
                         _matchOverTimer = 4.0f;
 
                         var winner = _wizards.FirstOrDefault(w => w.State != WizardState.Dead);
-                        if (winner != null && winner.IsPlayer)
+                        if (winner != null)
                         {
-                            _matchResultText = "VICTORY!";
-                            _matchResultColor = _global.Palette_Sky;
-                            _goldWon = (int)(_gameState.CurrentEntryFee * winner.PayoutMultiplier);
+                            int winnerNumber = _wizards.IndexOf(winner) + 1;
+                            foreach (var ticket in _tickets)
+                            {
+                                if (ticket.WizardNumber == winnerNumber)
+                                {
+                                    _goldWon += (int)(ticket.BetAmount * ticket.Multiplier);
+                                }
+                            }
+
+                            if (winner.IsPlayer)
+                            {
+                                _matchResultText = "VICTORY!";
+                                _matchResultColor = _global.Palette_Sky;
+                                _goldWon += (int)(_gameState.CurrentEntryFee * winner.PayoutMultiplier);
+                            }
+                            else
+                            {
+                                _matchResultText = "DEFEAT";
+                                _matchResultColor = _global.Palette_Rust;
+                            }
+
                             _gameState.PlayerState.Gold += _goldWon;
                         }
                         else
                         {
-                            _matchResultText = "DEFEAT";
-                            _matchResultColor = _global.Palette_Rust;
+                            _matchResultText = "DRAW";
+                            _matchResultColor = _global.Palette_Gray;
                             _goldWon = 0;
                         }
 
                         _gameState.AdvanceDay();
                     }
                 }
-                else
+                else if (_arenaState == ArenaState.MatchOver)
                 {
                     _matchOverTimer -= dt;
                     if (_matchOverTimer <= 0 && !_transitionManager.IsTransitioning)
@@ -387,24 +767,31 @@ namespace ProjectVagabond.Scenes
                     }
                 }
             }
+            else
+            {
+                foreach (var w in _wizards)
+                {
+                    w.HopTimer += dt * 2f;
+                }
+            }
 
             if (_inputManager.Back)
             {
                 _sceneManager.ChangeScene(GameSceneState.MainMenu, TransitionType.FadeOff, TransitionType.FadeOff);
             }
+
+            _lastMouseState = mouseState;
         }
 
         private int GetMultiplierStep(float mult)
         {
             if (mult < 2.0f)
             {
-                // Map 1.0 -> 1.99 to steps 0 -> 3
                 float t = Math.Clamp((mult - 1.0f) / 1.0f, 0f, 1f);
                 return Math.Clamp((int)(t * 4), 0, 3);
             }
             else
             {
-                // Map 2.0 -> 12.0 to steps 4 -> 12
                 float t = Math.Clamp((mult - 2.0f) / 10.0f, 0f, 1f);
                 return 4 + Math.Clamp((int)(t * 9), 0, 8);
             }
@@ -480,6 +867,13 @@ namespace ProjectVagabond.Scenes
             }
         }
 
+        private Vector2 RotateOffset(Vector2 offset, float rot)
+        {
+            float cos = MathF.Cos(rot);
+            float sin = MathF.Sin(rot);
+            return new Vector2(offset.X * cos - offset.Y * sin, offset.X * sin + offset.Y * cos);
+        }
+
         protected override void DrawSceneContent(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Matrix transform)
         {
             var pixel = ServiceLocator.Get<Texture2D>();
@@ -532,32 +926,110 @@ namespace ProjectVagabond.Scenes
             DrawSideHUD(spriteBatch);
             DrawTopHUD(spriteBatch);
 
-            string text = "";
-            Color textColor = _global.Palette_Sun;
+            var mainFont = ServiceLocator.Get<Core>().DefaultFont;
+            var secFont = ServiceLocator.Get<Core>().SecondaryFont;
+            var tertFont = ServiceLocator.Get<Core>().TertiaryFont;
 
-            if (_stateTimer < 1f) text = "3";
-            else if (_stateTimer < 2f) text = "2";
-            else if (_stateTimer < 3f) text = "1";
-            else if (_stateTimer < 4f) text = "FIGHT!";
-            else if (_isMatchOver)
+            foreach (var ticket in _tickets)
             {
-                text = _matchResultText;
-                textColor = _matchResultColor;
+                Vector2 origin = new Vector2(15, 22);
+                spriteBatch.DrawSnapped(pixel, ticket.Position, new Rectangle(0, 0, 30, 44), _global.Palette_Pale, ticket.Rotation, origin, 1f, SpriteEffects.None, 0f);
+
+                string amtText = $"{ticket.BetAmount}G";
+                Vector2 amtSize = mainFont.MeasureString(amtText);
+                Vector2 amtOrigin = new Vector2(MathF.Round(amtSize.X / 2f), MathF.Round(amtSize.Y / 2f));
+                Vector2 amtPos = ticket.Position + RotateOffset(new Vector2(0, -14), ticket.Rotation);
+                spriteBatch.DrawStringSnapped(mainFont, amtText, amtPos, _global.Palette_Black, ticket.Rotation, amtOrigin, 1f, SpriteEffects.None, 0f);
+
+                string multText = $"{ticket.Multiplier:F1}x";
+                Vector2 multSize = tertFont.MeasureString(multText);
+                Vector2 multOrigin = new Vector2(MathF.Round(multSize.X / 2f), MathF.Round(multSize.Y / 2f));
+                Vector2 multPos = ticket.Position + RotateOffset(new Vector2(0, -2), ticket.Rotation);
+                spriteBatch.DrawStringSnapped(tertFont, multText, multPos, _global.Palette_DarkestPale, ticket.Rotation, multOrigin, 1f, SpriteEffects.None, 0f);
+
+                string numText = ticket.WizardNumber.ToString();
+                Vector2 numSize = mainFont.MeasureString(numText);
+                Vector2 numOrigin = new Vector2(MathF.Round(numSize.X / 2f), MathF.Round(numSize.Y / 2f));
+                Vector2 numPos = ticket.Position + RotateOffset(new Vector2(0, 14), ticket.Rotation);
+                spriteBatch.DrawStringSnapped(mainFont, numText, numPos, _global.Palette_Black, ticket.Rotation, numOrigin, 1f, SpriteEffects.None, 0f);
             }
 
-            if (!string.IsNullOrEmpty(text))
+            if (_arenaState == ArenaState.Betting)
             {
-                var mainFont = ServiceLocator.Get<Core>().DefaultFont;
+                string title = "PLACE YOUR BETS";
+                Vector2 titleSize = mainFont.MeasureString(title);
+                Vector2 titlePos = new Vector2(MathF.Round(_arenaCenter.X - titleSize.X / 2f), MathF.Round(_arenaCenter.Y - titleSize.Y / 2f - 15));
+                Vector2 titleOrigin = new Vector2(MathF.Round(titleSize.X / 2f), MathF.Round(titleSize.Y / 2f));
+                float titleScale = _plinkPlaceBets.IsActive ? _plinkPlaceBets.Scale : 1f;
+                float titleRot = _plinkPlaceBets.IsActive ? _plinkPlaceBets.Rotation : 0f;
+
+                spriteBatch.DrawStringSnapped(mainFont, title, titlePos + titleOrigin, _global.Palette_DarkRust, titleRot, titleOrigin, titleScale, SpriteEffects.None, 0f);
+
+                int currentSecond = (int)Math.Ceiling(_phaseTimer);
+                if (currentSecond > 0)
+                {
+                    string countText = currentSecond.ToString();
+                    Vector2 countSize = mainFont.MeasureString(countText);
+                    Vector2 countPos = new Vector2(MathF.Round(_arenaCenter.X - countSize.X / 2f), MathF.Round(_arenaCenter.Y - countSize.Y / 2f + 5));
+                    Vector2 countOrigin = new Vector2(MathF.Round(countSize.X / 2f), MathF.Round(countSize.Y / 2f));
+                    float countScale = _plinkBetCountdown.IsActive ? _plinkBetCountdown.Scale : 1f;
+                    float countRot = _plinkBetCountdown.IsActive ? _plinkBetCountdown.Rotation : 0f;
+                    Color countColor = currentSecond <= 3 ? _global.Palette_Rust : _global.Palette_Sun;
+
+                    spriteBatch.DrawStringSnapped(mainFont, countText, countPos + countOrigin, countColor, countRot, countOrigin, countScale, SpriteEffects.None, 0f);
+                }
+
+                _skipButton.Draw(spriteBatch, secFont, gameTime, transform);
+            }
+            else if (_arenaState == ArenaState.LockingIn)
+            {
+                string title = "BETS LOCKED IN";
+                Vector2 titleSize = mainFont.MeasureString(title);
+                Vector2 titlePos = new Vector2(MathF.Round(_arenaCenter.X - titleSize.X / 2f), MathF.Round(_arenaCenter.Y - titleSize.Y / 2f));
+                Vector2 titleOrigin = new Vector2(MathF.Round(titleSize.X / 2f), MathF.Round(titleSize.Y / 2f));
+                float titleScale = _plinkLockedIn.IsActive ? _plinkLockedIn.Scale : 1f;
+                float titleRot = _plinkLockedIn.IsActive ? _plinkLockedIn.Rotation : 0f;
+
+                spriteBatch.DrawStringSnapped(mainFont, title, titlePos + titleOrigin, _global.Palette_DarkRust, titleRot, titleOrigin, titleScale, SpriteEffects.None, 0f);
+            }
+            else if (_arenaState == ArenaState.Countdown)
+            {
+                int currentSecond = (int)Math.Ceiling(_phaseTimer);
+                if (currentSecond > 0)
+                {
+                    string countText = currentSecond.ToString();
+                    Vector2 countSize = mainFont.MeasureString(countText);
+                    Vector2 countPos = new Vector2(MathF.Round(_arenaCenter.X - countSize.X / 2f), MathF.Round(_arenaCenter.Y - countSize.Y / 2f));
+                    Vector2 countOrigin = new Vector2(MathF.Round(countSize.X / 2f), MathF.Round(countSize.Y / 2f));
+                    float countScale = _plinkFight.IsActive ? _plinkFight.Scale : 1f;
+                    float countRot = _plinkFight.IsActive ? _plinkFight.Rotation : 0f;
+
+                    spriteBatch.DrawStringSnapped(mainFont, countText, countPos + countOrigin, _global.Palette_Sun, countRot, countOrigin, countScale, SpriteEffects.None, 0f);
+                }
+            }
+            else if (_arenaState == ArenaState.Fighting && _phaseTimer < 1.0f)
+            {
+                string text = "FIGHT!";
                 Vector2 size = mainFont.MeasureString(text);
                 Vector2 pos = new Vector2(MathF.Round(_arenaCenter.X - size.X / 2f), MathF.Round(_arenaCenter.Y - size.Y / 2f));
+                Vector2 origin = new Vector2(MathF.Round(size.X / 2f), MathF.Round(size.Y / 2f));
+                float scale = _plinkFight.IsActive ? _plinkFight.Scale : 1f;
+                float rot = _plinkFight.IsActive ? _plinkFight.Rotation : 0f;
+                float alpha = 1.0f - _phaseTimer;
 
-                if (_isMatchOver) pos.Y -= 10;
+                spriteBatch.DrawStringSnapped(mainFont, text, pos + origin, _global.Palette_Sun * alpha, rot, origin, scale, SpriteEffects.None, 0f);
+            }
+            else if (_arenaState == ArenaState.MatchOver)
+            {
+                string text = _matchResultText;
+                Color textColor = _matchResultColor;
+                Vector2 size = mainFont.MeasureString(text);
+                Vector2 pos = new Vector2(MathF.Round(_arenaCenter.X - size.X / 2f), MathF.Round(_arenaCenter.Y - size.Y / 2f - 10));
 
                 spriteBatch.DrawStringSnapped(mainFont, text, pos, textColor);
 
-                if (_isMatchOver && _goldWon > 0)
+                if (_goldWon > 0)
                 {
-                    var secFont = ServiceLocator.Get<Core>().SecondaryFont;
                     string goldText = $"+{_goldWon}G";
                     Vector2 goldSize = secFont.MeasureString(goldText);
                     Vector2 goldPos = new Vector2(MathF.Round(_arenaCenter.X - goldSize.X / 2f), MathF.Round(pos.Y + size.Y + 4));
@@ -597,6 +1069,8 @@ namespace ProjectVagabond.Scenes
             int heartWidth = 5;
             int heartSpacing = 1;
 
+            Vector2 virtualMousePos = Core.TransformMouse(_inputManager.GetEffectiveMouseState().Position);
+
             foreach (var w in _wizards)
             {
                 float shakeX = 0f;
@@ -606,6 +1080,12 @@ namespace ProjectVagabond.Scenes
                     float shakeMag = (w.HudShakeTimer / 0.4f) * 3f;
                     shakeX = (float)(_random.NextDouble() * 2 - 1) * shakeMag;
                     shakeY = (float)(_random.NextDouble() * 2 - 1) * shakeMag;
+                }
+
+                Rectangle hudRect = new Rectangle((int)_hudBaseX - 2, (int)w.HudNamePos.Y - 2, (int)(_hudMultCenterX - _hudBaseX + 30), 20);
+                if (_arenaState == ArenaState.Betting && hudRect.Contains(virtualMousePos))
+                {
+                    spriteBatch.Draw(pixel, hudRect, _global.Palette_DarkShadow * 0.5f);
                 }
 
                 Color baseNameColor = w.IsPlayer ? _global.Palette_Sky : _global.Palette_Sun;
@@ -686,7 +1166,6 @@ namespace ProjectVagabond.Scenes
                     spriteBatch.DrawStringSnapped(multFont, numText, drawPos, multColor, pRot, numOrigin, pScale, SpriteEffects.None, 0f);
                     spriteBatch.DrawStringSnapped(tertiaryFont, xText, drawPos, multColor, pRot, xOrigin, pScale, SpriteEffects.None, 0f);
 
-                    // Draw Win Probability Percentage
                     float prob = _winProbabilities.TryGetValue(w, out var p) ? p : 0f;
                     string probText = $"{(prob * 100f):F0}%";
                     Vector2 probSize = tertiaryFont.MeasureString(probText);
