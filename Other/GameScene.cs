@@ -13,6 +13,7 @@ namespace ProjectVagabond.Scenes
         Startup,
         MainMenu,
         NewGameIntro,
+        DayPrep,
         TerminalMap,
         Settings,
         Transition,

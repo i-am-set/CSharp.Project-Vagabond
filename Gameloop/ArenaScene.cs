@@ -4,6 +4,7 @@ using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond.Animations;
 using ProjectVagabond.Battle;
 using ProjectVagabond.Particles;
+using ProjectVagabond.Transitions;
 using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
@@ -19,6 +20,7 @@ namespace ProjectVagabond.Scenes
         private readonly GameState _gameState;
         private readonly InputManager _inputManager;
         private readonly SceneManager _sceneManager;
+        private readonly TransitionManager _transitionManager;
 
         private readonly List<ArenaWizard> _wizards = new List<ArenaWizard>();
         private readonly List<ActiveAttack> _activeAttacks = new List<ActiveAttack>();
@@ -32,6 +34,25 @@ namespace ProjectVagabond.Scenes
         private Texture2D _arenaTexture;
         private Texture2D _arenaOutlineTexture;
 
+        private bool _isMatchOver = false;
+        private float _matchOverTimer = 0f;
+        private string _matchResultText = "";
+        private Color _matchResultColor = Color.White;
+        private int _goldWon = 0;
+
+        private float _hudBaseX;
+        private float _hudNameX;
+        private float _hudMultCenterX;
+
+        // Multiplier Tuning
+        private const float MULT_MIN = 2.0f;
+        private const float MULT_MAX = 12.0f;
+        private const int MULT_DEFAULT_MIN_STEP = 9; // Index 9 is Palette_Rust
+
+        private readonly Dictionary<ArenaWizard, int> _multSteps = new Dictionary<ArenaWizard, int>();
+        private readonly Dictionary<ArenaWizard, PlinkAnimator> _multPlinks = new Dictionary<ArenaWizard, PlinkAnimator>();
+        private readonly Dictionary<ArenaWizard, float> _winProbabilities = new Dictionary<ArenaWizard, float>();
+
         public IReadOnlyList<ArenaWizard> Wizards => _wizards;
 
         public ArenaScene()
@@ -41,6 +62,7 @@ namespace ProjectVagabond.Scenes
             _gameState = ServiceLocator.Get<GameState>();
             _inputManager = ServiceLocator.Get<InputManager>();
             _sceneManager = ServiceLocator.Get<SceneManager>();
+            _transitionManager = ServiceLocator.Get<TransitionManager>();
         }
 
         public override Rectangle GetAnimatedBounds()
@@ -112,7 +134,15 @@ namespace ProjectVagabond.Scenes
             base.Enter();
             _wizards.Clear();
             _activeAttacks.Clear();
+            _multSteps.Clear();
+            _multPlinks.Clear();
+            _winProbabilities.Clear();
+
             _stateTimer = 0f;
+            _isMatchOver = false;
+            _matchOverTimer = 0f;
+            _matchResultText = "";
+            _goldWon = 0;
 
             _arenaCenter = new Vector2(Global.VIRTUAL_WIDTH - 4 - ARENA_RADIUS, Global.VIRTUAL_HEIGHT / 2f);
             _arenaEdges = Math.Max(3, _arenaEdges);
@@ -157,13 +187,18 @@ namespace ProjectVagabond.Scenes
                 if (totalRating > 0 && w.Rating > 0)
                 {
                     float winProb = (float)w.Rating / totalRating;
+                    _winProbabilities[w] = winProb;
                     float rawOdds = 1.0f / winProb;
                     w.PayoutMultiplier = (float)Math.Round(rawOdds * 0.9f, 1);
                 }
                 else
                 {
+                    _winProbabilities[w] = 0f;
                     w.PayoutMultiplier = 1.0f;
                 }
+
+                _multSteps[w] = GetMultiplierStep(w.PayoutMultiplier);
+                _multPlinks[w] = new PlinkAnimator { MaxScale = 1.5f, PlinkTriggerThreshold = 0f };
             }
 
             CalculateHUDLayout();
@@ -172,6 +207,9 @@ namespace ProjectVagabond.Scenes
         private void CalculateHUDLayout()
         {
             var defaultFont = ServiceLocator.Get<Core>().DefaultFont;
+            var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
+            var tertiaryFont = ServiceLocator.Get<Core>().TertiaryFont;
+
             int totalWizards = _wizards.Count;
             if (totalWizards == 0) return;
 
@@ -181,23 +219,38 @@ namespace ProjectVagabond.Scenes
             int totalBlockHeight = (totalWizards - 1) * spacingY + itemHeight;
             int startY = (Global.VIRTUAL_HEIGHT - totalBlockHeight) / 2;
 
-            float uiCenterX = (Global.VIRTUAL_WIDTH - 4 - ARENA_RADIUS * 2) / 2f;
+            float uiAreaWidth = Global.VIRTUAL_WIDTH - 4 - ARENA_RADIUS * 2;
+
+            float maxNameWidth = 0f;
+            foreach (var w in _wizards)
+            {
+                w.HudNameSize = defaultFont.MeasureString(w.Name.ToUpper());
+                if (w.HudNameSize.X > maxNameWidth) maxNameWidth = w.HudNameSize.X;
+            }
+
+            int statBlockWidth = 19;
+            float nameXOffset = statBlockWidth + 4;
+            float multXOffset = nameXOffset + maxNameWidth + 8;
+
+            float standardMultWidth = secondaryFont.MeasureString("9.9").Width + 1f + tertiaryFont.MeasureString("x").Width;
+            float totalWidth = multXOffset + standardMultWidth + 10f;
+
+            _hudBaseX = (uiAreaWidth - totalWidth) / 2f;
+            if (_hudBaseX < 4) _hudBaseX = 4;
+
+            _hudBaseX -= 5f;
+            _hudNameX = _hudBaseX + nameXOffset;
+            _hudMultCenterX = _hudBaseX + multXOffset + 7f + (standardMultWidth / 2f);
 
             for (int i = 0; i < totalWizards; i++)
             {
                 var w = _wizards[i];
                 w.HudIsLeft = true;
-                w.HudNameSize = defaultFont.MeasureString(w.Name.ToUpper());
-
-                int maxHearts = (w.MaxHP + 2) / 3;
-                int heartWidth = 5;
-                int heartSpacing = 1;
-                int heartsWidth = maxHearts * heartWidth + (maxHearts - 1) * heartSpacing;
 
                 float currentY = startY + i * spacingY;
 
-                w.HudNamePos = new Vector2(uiCenterX - w.HudNameSize.X / 2f, currentY);
-                w.HudHeartStartPos = new Vector2(uiCenterX - heartsWidth / 2f, currentY + w.HudNameSize.Y + 2);
+                w.HudNamePos = new Vector2(_hudNameX, currentY);
+                w.HudHeartStartPos = new Vector2(_hudNameX, currentY + w.HudNameSize.Y + 2);
             }
         }
 
@@ -230,6 +283,14 @@ namespace ProjectVagabond.Scenes
             float dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
             _stateTimer += dt;
 
+            foreach (var w in _wizards)
+            {
+                if (_multPlinks.TryGetValue(w, out var plink) && plink.IsActive)
+                {
+                    plink.Update(gameTime, Vector2.Zero);
+                }
+            }
+
             if (_stateTimer >= 3.0f)
             {
                 Vector2 virtualMousePos = Core.TransformMouse(_inputManager.GetEffectiveMouseState().Position);
@@ -240,7 +301,6 @@ namespace ProjectVagabond.Scenes
                     wizard.Update(dt, this);
                 }
 
-                // --- Anti-Bunching Logic ---
                 for (int i = 0; i < _wizards.Count; i++)
                 {
                     var w1 = _wizards[i];
@@ -289,11 +349,134 @@ namespace ProjectVagabond.Scenes
                         _activeAttacks.RemoveAt(i);
                     }
                 }
+
+                if (!_isMatchOver)
+                {
+                    UpdateDynamicOdds();
+
+                    int aliveCount = _wizards.Count(w => w.State != WizardState.Dead);
+                    if (aliveCount <= 1)
+                    {
+                        _isMatchOver = true;
+                        _matchOverTimer = 4.0f;
+
+                        var winner = _wizards.FirstOrDefault(w => w.State != WizardState.Dead);
+                        if (winner != null && winner.IsPlayer)
+                        {
+                            _matchResultText = "VICTORY!";
+                            _matchResultColor = _global.Palette_Sky;
+                            _goldWon = (int)(_gameState.CurrentEntryFee * winner.PayoutMultiplier);
+                            _gameState.PlayerState.Gold += _goldWon;
+                        }
+                        else
+                        {
+                            _matchResultText = "DEFEAT";
+                            _matchResultColor = _global.Palette_Rust;
+                            _goldWon = 0;
+                        }
+
+                        _gameState.AdvanceDay();
+                    }
+                }
+                else
+                {
+                    _matchOverTimer -= dt;
+                    if (_matchOverTimer <= 0 && !_transitionManager.IsTransitioning)
+                    {
+                        _sceneManager.ChangeScene(GameSceneState.DayPrep, TransitionType.FadeOff, TransitionType.FadeOff);
+                    }
+                }
             }
 
             if (_inputManager.Back)
             {
-                _sceneManager.ChangeScene(GameSceneState.MainMenu, Transitions.TransitionType.FadeOff, Transitions.TransitionType.FadeOff);
+                _sceneManager.ChangeScene(GameSceneState.MainMenu, TransitionType.FadeOff, TransitionType.FadeOff);
+            }
+        }
+
+        private int GetMultiplierStep(float mult)
+        {
+            if (mult < 2.0f)
+            {
+                // Map 1.0 -> 1.99 to steps 0 -> 3
+                float t = Math.Clamp((mult - 1.0f) / 1.0f, 0f, 1f);
+                return Math.Clamp((int)(t * 4), 0, 3);
+            }
+            else
+            {
+                // Map 2.0 -> 12.0 to steps 4 -> 12
+                float t = Math.Clamp((mult - 2.0f) / 10.0f, 0f, 1f);
+                return 4 + Math.Clamp((int)(t * 9), 0, 8);
+            }
+        }
+
+        private void UpdateDynamicOdds()
+        {
+            float totalDynamicRating = 0f;
+
+            foreach (var w in _wizards)
+            {
+                if (w.State != WizardState.Dead && w.CurrentHP > 0)
+                {
+                    totalDynamicRating += w.Rating * ((float)w.CurrentHP / w.MaxHP);
+                }
+            }
+
+            foreach (var w in _wizards)
+            {
+                if (w.State == WizardState.Dead || w.CurrentHP <= 0)
+                {
+                    w.PayoutMultiplier = 0.0f;
+                    _winProbabilities[w] = 0f;
+                }
+                else if (totalDynamicRating > 0)
+                {
+                    float dynamicRating = w.Rating * ((float)w.CurrentHP / w.MaxHP);
+                    if (dynamicRating > 0)
+                    {
+                        float winProb = dynamicRating / totalDynamicRating;
+                        _winProbabilities[w] = winProb;
+                        float rawOdds = 1.0f / winProb;
+
+                        w.PayoutMultiplier = (float)Math.Round(Math.Max(1.1f, rawOdds * 0.65f), 1);
+                    }
+                    else
+                    {
+                        _winProbabilities[w] = 0f;
+                    }
+                }
+
+                int step = GetMultiplierStep(w.PayoutMultiplier);
+
+                if (_multSteps.TryGetValue(w, out int currentStep) && currentStep != step)
+                {
+                    if (currentStep != -1)
+                    {
+                        _multPlinks[w].Start(0f, 0.3f);
+                    }
+                    _multSteps[w] = step;
+                }
+            }
+        }
+
+        private Color GetMultiplierColor(int step)
+        {
+            switch (step)
+            {
+                case 0: return _global.Palette_Black;
+                case 1: return _global.Palette_DarkShadow;
+                case 2: return _global.Palette_DarkestPale;
+                case 3: return _global.Palette_DarkPale;
+                case 4: return _global.Palette_Pale;
+                case 5: return _global.Palette_LightPale;
+                case 6: return _global.Palette_Sun;
+                case 7: return _global.Palette_DarkSun;
+                case 8: return _global.Palette_Fruit;
+                case 9: return _global.Palette_Rust;
+                case 10: return _global.Palette_DarkRust;
+                case 11: return _global.Palette_Sea;
+                case 12: return _global.Palette_Sky;
+                default: return _global.Palette_Sun;
             }
         }
 
@@ -350,17 +533,36 @@ namespace ProjectVagabond.Scenes
             DrawTopHUD(spriteBatch);
 
             string text = "";
+            Color textColor = _global.Palette_Sun;
+
             if (_stateTimer < 1f) text = "3";
             else if (_stateTimer < 2f) text = "2";
             else if (_stateTimer < 3f) text = "1";
             else if (_stateTimer < 4f) text = "FIGHT!";
+            else if (_isMatchOver)
+            {
+                text = _matchResultText;
+                textColor = _matchResultColor;
+            }
 
             if (!string.IsNullOrEmpty(text))
             {
                 var mainFont = ServiceLocator.Get<Core>().DefaultFont;
                 Vector2 size = mainFont.MeasureString(text);
                 Vector2 pos = _arenaCenter - (size / 2f);
-                spriteBatch.DrawStringSnapped(mainFont, text, pos, _global.Palette_Sun);
+
+                if (_isMatchOver) pos.Y -= 10;
+
+                spriteBatch.DrawStringSnapped(mainFont, text, pos, textColor);
+
+                if (_isMatchOver && _goldWon > 0)
+                {
+                    var secFont = ServiceLocator.Get<Core>().SecondaryFont;
+                    string goldText = $"+{_goldWon}G";
+                    Vector2 goldSize = secFont.MeasureString(goldText);
+                    Vector2 goldPos = new Vector2(_arenaCenter.X - goldSize.X / 2f, pos.Y + size.Y + 4);
+                    spriteBatch.DrawStringSnapped(secFont, goldText, goldPos, _global.Palette_Sun);
+                }
             }
         }
 
@@ -418,16 +620,81 @@ namespace ProjectVagabond.Scenes
                 Vector2 finalNamePos = new Vector2(MathF.Round(w.HudNamePos.X + shakeX), MathF.Round(w.HudNamePos.Y + shakeY));
                 spriteBatch.DrawStringSnapped(defaultFont, w.Name.ToUpper(), finalNamePos, nameColor);
 
-                string ratingText = w.Rating.ToString();
-                Vector2 ratingSize = tertiaryFont.MeasureString(ratingText);
-                float ratingYOffset = MathF.Max(0, (defaultFont.LineHeight - tertiaryFont.LineHeight) / 2f);
-                Vector2 ratingPos = new Vector2(finalNamePos.X - ratingSize.X - 4, finalNamePos.Y + ratingYOffset);
-                spriteBatch.DrawStringSnapped(tertiaryFont, ratingText, ratingPos, _global.Palette_DarkShadow);
+                int statBlockWidth = 19; // 10 pips * 1px + 9 gaps * 1px
+                int statBlockHeight = 5; // 3 rows * 1px + 2 gaps * 1px
+                float statBlockX = MathF.Round(_hudBaseX + shakeX);
+                float statBlockY = finalNamePos.Y + MathF.Max(0, (defaultFont.LineHeight - statBlockHeight) / 2f);
 
-                string multText = $"{w.PayoutMultiplier:F1}x";
-                float multYOffset = MathF.Max(0, (defaultFont.LineHeight - secondaryFont.LineHeight) / 2f);
-                Vector2 multPos = new Vector2(finalNamePos.X + w.HudNameSize.X + 4, finalNamePos.Y + multYOffset);
-                spriteBatch.DrawStringSnapped(secondaryFont, multText, multPos, _global.Palette_DarkPale);
+                int[] stats = { w.Power, w.Tenacity, w.Agility };
+                for (int row = 0; row < 3; row++)
+                {
+                    int statVal = Math.Clamp(stats[row], 0, 10);
+                    Color filledColor = statVal >= 8 ? _global.StatColor_High : (statVal >= 4 ? _global.StatColor_Average : _global.StatColor_Low);
+
+                    float currentY = statBlockY + row * 2;
+
+                    for (int col = 0; col < 10; col++)
+                    {
+                        float currentX = statBlockX + col * 2;
+                        Color pipColor = col < statVal ? filledColor : _global.Palette_DarkShadow;
+
+                        if (w.State == WizardState.Dead)
+                        {
+                            float fadeProgress = Math.Clamp(w.TimeSinceDeath / 0.5f, 0f, 1f);
+                            pipColor = Color.Lerp(pipColor, _global.Palette_Black, fadeProgress);
+                        }
+
+                        spriteBatch.Draw(pixel, new Rectangle((int)currentX, (int)currentY, 1, 1), pipColor);
+                    }
+                }
+
+                if (w.State != WizardState.Dead)
+                {
+                    int step = _multSteps.TryGetValue(w, out var s) ? s : 0;
+                    Color multColor = GetMultiplierColor(step);
+                    BitmapFont multFont = secondaryFont;
+
+                    if (w.PayoutMultiplier < 2.0f) multFont = tertiaryFont;
+                    else if (step >= MULT_DEFAULT_MIN_STEP) multFont = defaultFont;
+
+                    string numText = $"{w.PayoutMultiplier:F1}";
+                    string xText = "x";
+
+                    var plink = _multPlinks[w];
+                    float pScale = plink.IsActive ? plink.Scale : 1f;
+                    float pRot = plink.IsActive ? plink.Rotation : 0f;
+
+                    if (plink.IsActive && plink.FlashTint.HasValue)
+                    {
+                        float flashAmount = plink.FlashTint.Value.A / 255f;
+                        multColor = Color.Lerp(multColor, Color.White, flashAmount);
+                    }
+
+                    Vector2 numSize = multFont.MeasureString(numText);
+                    Vector2 xSize = tertiaryFont.MeasureString(xText);
+
+                    float totalWidth = numSize.X + 1f + xSize.X;
+                    Vector2 pivot = new Vector2(totalWidth / 2f, numSize.Y / 2f);
+
+                    float numYAdjust = (multFont == defaultFont) ? 1f : 0f;
+                    Vector2 numOrigin = pivot - new Vector2(0, numYAdjust);
+                    Vector2 xOrigin = pivot - new Vector2(numSize.X + 1f, numSize.Y - xSize.Y);
+
+                    float multYOffset = MathF.Max(0, (defaultFont.LineHeight - numSize.Y) / 2f);
+                    Vector2 drawPos = new Vector2(MathF.Round(_hudMultCenterX + shakeX), MathF.Round(finalNamePos.Y + multYOffset + pivot.Y));
+
+                    spriteBatch.DrawStringSnapped(multFont, numText, drawPos, multColor, pRot, numOrigin, pScale, SpriteEffects.None, 0f);
+                    spriteBatch.DrawStringSnapped(tertiaryFont, xText, drawPos, multColor, pRot, xOrigin, pScale, SpriteEffects.None, 0f);
+
+                    // Draw Win Probability Percentage
+                    float prob = _winProbabilities.TryGetValue(w, out var p) ? p : 0f;
+                    string probText = $"{(prob * 100f):F0}%";
+                    Vector2 probSize = tertiaryFont.MeasureString(probText);
+                    Vector2 probOrigin = new Vector2(probSize.X / 2f, 0);
+                    Vector2 probPos = new Vector2(MathF.Round(_hudMultCenterX + shakeX), MathF.Round(w.HudHeartStartPos.Y + shakeY));
+
+                    spriteBatch.DrawStringSnapped(tertiaryFont, probText, probPos, _global.Palette_Black, 0f, probOrigin, 1f, SpriteEffects.None, 0f);
+                }
 
                 if (w.State == WizardState.Dead)
                 {

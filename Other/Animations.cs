@@ -510,6 +510,10 @@ namespace ProjectVagabond.Animations
                         emitter.Settings.EmitterSize = new Vector2(aoe.Radius * 2f, aoe.Radius * 2f);
                         emitter.Position = attack.TargetPosition + new Vector2(layer.Emitter.OffsetX, layer.Emitter.OffsetY);
                     }
+                    else if (attack.DeliveryInstance is MultiProjectileDelivery)
+                    {
+                        emitter.Position = attack.Origin + new Vector2(layer.Emitter.OffsetX, layer.Emitter.OffsetY);
+                    }
                     else
                     {
                         emitter.Position = attack.TargetPosition + new Vector2(layer.Emitter.OffsetX, layer.Emitter.OffsetY);

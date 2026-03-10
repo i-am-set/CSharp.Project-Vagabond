@@ -257,6 +257,7 @@ namespace ProjectVagabond.Battle
                     }
                     State = WizardState.Recovering;
                     _stateTimer = 0.5f;
+                    TargetPosition = Position;
                 }
             }
 
@@ -270,7 +271,7 @@ namespace ProjectVagabond.Battle
             Vector2 desiredTarget = Position + dir * distance;
 
             _knockbackTargetPos = arena.ClampToArena(desiredTarget, 12f);
-            
+
             _knockbackDuration = 0.5f + (distance / 80f);
             _knockbackTimer = _knockbackDuration;
         }
@@ -461,6 +462,7 @@ namespace ProjectVagabond.Battle
                     {
                         State = WizardState.Recovering;
                         _stateTimer = 0.25f;
+                        TargetPosition = Position; 
                     }
                     break;
 

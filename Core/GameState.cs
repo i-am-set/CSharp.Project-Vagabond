@@ -31,6 +31,9 @@ namespace ProjectVagabond
 
         public string LastRunKiller { get; set; } = "Unknown";
 
+        public int CurrentDay { get; private set; }
+        public int CurrentEntryFee { get; private set; }
+
         public GameState(Global global, SpriteManager spriteManager)
         {
             _global = global;
@@ -47,6 +50,15 @@ namespace ProjectVagabond
 
             PlayerState.Party.Add(member);
             PlayerState.Gold = _global.StartingGold;
+
+            CurrentDay = 1;
+            CurrentEntryFee = 5;
+        }
+
+        public void AdvanceDay()
+        {
+            CurrentDay++;
+            CurrentEntryFee += 5 + (CurrentDay * 2);
         }
 
         public void Reset()
