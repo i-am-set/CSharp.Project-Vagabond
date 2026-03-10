@@ -30,6 +30,7 @@ namespace ProjectVagabond
 
         public Texture2D StatChangeIconsSpriteSheet { get; private set; }
         public Texture2D StatChangeIconsSpriteSheetSilhouette { get; private set; }
+        public Texture2D BetTicketSpriteSheet { get; private set; }
 
         public Texture2D PermanentStatusIconsSpriteSheet { get; private set; }
 
@@ -884,6 +885,8 @@ namespace ProjectVagabond
 
             StatChangeIconsSpriteSheet = LoadTexWithSilhouette("Sprites/UI/BasicIcons/stat_change_icons_spritesheet", 9, 3, Color.Magenta, out var scisSil);
             StatChangeIconsSpriteSheetSilhouette = scisSil;
+
+            BetTicketSpriteSheet = LoadTex("Sprites/UI/Betting/bet_ticket_30x44_spritesheet", 57, 31, Color.White);
 
             LoadPlayerPortraits();
         }
