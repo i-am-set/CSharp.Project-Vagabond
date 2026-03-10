@@ -40,6 +40,7 @@ namespace ProjectVagabond.Scenes
             public bool IsDispensed;
             public float Rotation;
             public float RotationVelocity;
+            public float Scale = 1.0f;
         }
 
         private readonly Global _global;
@@ -455,7 +456,10 @@ namespace ProjectVagabond.Scenes
                                        Matrix.CreateRotationZ(-t.Rotation) *
                                        Matrix.CreateTranslation(t.Position.X, t.Position.Y, 0);
                     Vector2 localMouse = Vector2.Transform(virtualMousePos, transform);
-                    Rectangle localBounds = new Rectangle((int)t.Position.X - 15, (int)t.Position.Y - 22, 30, 44);
+
+                    int w = (int)(30 * t.Scale);
+                    int h = (int)(44 * t.Scale);
+                    Rectangle localBounds = new Rectangle((int)t.Position.X - w / 2, (int)t.Position.Y - h / 2, w, h);
 
                     if (localBounds.Contains(localMouse))
                     {
@@ -502,6 +506,10 @@ namespace ProjectVagabond.Scenes
             for (int i = _tickets.Count - 1; i >= 0; i--)
             {
                 var t = _tickets[i];
+
+                float targetScale = t.IsDragging ? 1.10f : 1.0f;
+                t.Scale = MathHelper.Lerp(t.Scale, targetScale, 15f * dt);
+
                 if (!t.IsDispensed)
                 {
                     UpdateTicketDispense(t, dt);
@@ -513,7 +521,7 @@ namespace ProjectVagabond.Scenes
                         t.Position += t.Velocity * dt;
                         t.Rotation += t.RotationVelocity * dt;
 
-                        float friction = 20.0f;
+                        float friction = 15.0f;
                         t.Velocity -= t.Velocity * friction * dt;
                         t.RotationVelocity -= t.RotationVelocity * friction * dt;
 
@@ -534,7 +542,11 @@ namespace ProjectVagabond.Scenes
                                            Matrix.CreateRotationZ(-t.Rotation) *
                                            Matrix.CreateTranslation(t.Position.X, t.Position.Y, 0);
                         Vector2 localMouse = Vector2.Transform(virtualMousePos, transform);
-                        Rectangle localBounds = new Rectangle((int)t.Position.X - 15, (int)t.Position.Y - 22, 30, 44);
+
+                        int w = (int)(30 * t.Scale);
+                        int h = (int)(44 * t.Scale);
+                        Rectangle localBounds = new Rectangle((int)t.Position.X - w / 2, (int)t.Position.Y - h / 2, w, h);
+
                         if (localBounds.Contains(localMouse))
                         {
                             hoveringTicket = true;
@@ -933,25 +945,25 @@ namespace ProjectVagabond.Scenes
             foreach (var ticket in _tickets)
             {
                 Vector2 origin = new Vector2(15, 22);
-                spriteBatch.DrawSnapped(pixel, ticket.Position, new Rectangle(0, 0, 30, 44), _global.Palette_Pale, ticket.Rotation, origin, 1f, SpriteEffects.None, 0f);
+                spriteBatch.DrawSnapped(pixel, ticket.Position, new Rectangle(0, 0, 30, 44), _global.Palette_Pale, ticket.Rotation, origin, ticket.Scale, SpriteEffects.None, 0f);
 
                 string amtText = $"{ticket.BetAmount}G";
                 Vector2 amtSize = mainFont.MeasureString(amtText);
                 Vector2 amtOrigin = new Vector2(MathF.Round(amtSize.X / 2f), MathF.Round(amtSize.Y / 2f));
-                Vector2 amtPos = ticket.Position + RotateOffset(new Vector2(0, -14), ticket.Rotation);
-                spriteBatch.DrawStringSnapped(mainFont, amtText, amtPos, _global.Palette_Black, ticket.Rotation, amtOrigin, 1f, SpriteEffects.None, 0f);
+                Vector2 amtPos = ticket.Position + RotateOffset(new Vector2(0, -14) * ticket.Scale, ticket.Rotation);
+                spriteBatch.DrawStringSnapped(mainFont, amtText, amtPos, _global.Palette_Black, ticket.Rotation, amtOrigin, ticket.Scale, SpriteEffects.None, 0f);
 
                 string multText = $"{ticket.Multiplier:F1}x";
                 Vector2 multSize = tertFont.MeasureString(multText);
                 Vector2 multOrigin = new Vector2(MathF.Round(multSize.X / 2f), MathF.Round(multSize.Y / 2f));
-                Vector2 multPos = ticket.Position + RotateOffset(new Vector2(0, -2), ticket.Rotation);
-                spriteBatch.DrawStringSnapped(tertFont, multText, multPos, _global.Palette_DarkestPale, ticket.Rotation, multOrigin, 1f, SpriteEffects.None, 0f);
+                Vector2 multPos = ticket.Position + RotateOffset(new Vector2(0, -2) * ticket.Scale, ticket.Rotation);
+                spriteBatch.DrawStringSnapped(tertFont, multText, multPos, _global.Palette_DarkestPale, ticket.Rotation, multOrigin, ticket.Scale, SpriteEffects.None, 0f);
 
                 string numText = ticket.WizardNumber.ToString();
                 Vector2 numSize = mainFont.MeasureString(numText);
                 Vector2 numOrigin = new Vector2(MathF.Round(numSize.X / 2f), MathF.Round(numSize.Y / 2f));
-                Vector2 numPos = ticket.Position + RotateOffset(new Vector2(0, 14), ticket.Rotation);
-                spriteBatch.DrawStringSnapped(mainFont, numText, numPos, _global.Palette_Black, ticket.Rotation, numOrigin, 1f, SpriteEffects.None, 0f);
+                Vector2 numPos = ticket.Position + RotateOffset(new Vector2(0, 14) * ticket.Scale, ticket.Rotation);
+                spriteBatch.DrawStringSnapped(mainFont, numText, numPos, _global.Palette_Black, ticket.Rotation, numOrigin, ticket.Scale, SpriteEffects.None, 0f);
             }
 
             if (_arenaState == ArenaState.Betting)
