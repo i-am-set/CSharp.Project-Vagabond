@@ -154,17 +154,17 @@ namespace ProjectVagabond.Scenes
             string dayText = $"DAY {_gameState.CurrentDay}";
             Vector2 daySize = defaultFont.MeasureString(dayText);
 
-            float startY = Global.VIRTUAL_HEIGHT / 2f - daySize.Y / 2f;
+            float startY = MathF.Round(Global.VIRTUAL_HEIGHT / 2f - daySize.Y / 2f);
             float endY = 20f;
             float currentY = startY;
 
             if (_timer > 1.0f)
             {
                 float progress = Math.Clamp((_timer - 1.0f) / 1.0f, 0f, 1f);
-                currentY = MathHelper.Lerp(startY, endY, Easing.EaseInOutCubic(progress));
+                currentY = MathF.Round(MathHelper.Lerp(startY, endY, Easing.EaseInOutCubic(progress)));
             }
 
-            Vector2 dayPos = new Vector2(Global.VIRTUAL_WIDTH / 2f - daySize.X / 2f, currentY);
+            Vector2 dayPos = new Vector2(MathF.Round(Global.VIRTUAL_WIDTH / 2f - daySize.X / 2f), currentY);
             spriteBatch.DrawStringSnapped(defaultFont, dayText, dayPos, _global.Palette_Sun);
 
             if (_plinksStarted)
@@ -174,7 +174,7 @@ namespace ProjectVagabond.Scenes
                     string feeText = $"ENTRY FEE: {_gameState.CurrentEntryFee}G";
                     Vector2 feeSize = secondaryFont.MeasureString(feeText);
                     Vector2 feePos = new Vector2(Global.VIRTUAL_WIDTH / 2f, 70);
-                    Vector2 feeOrigin = feeSize / 2f;
+                    Vector2 feeOrigin = new Vector2(MathF.Round(feeSize.X / 2f), MathF.Round(feeSize.Y / 2f));
 
                     spriteBatch.DrawStringSnapped(secondaryFont, feeText, feePos, _global.Palette_Rust, _plinkFee.Rotation, feeOrigin, _plinkFee.Scale, SpriteEffects.None, 0f);
                 }
@@ -184,7 +184,7 @@ namespace ProjectVagabond.Scenes
                     string goldText = $"CURRENT GOLD: {_gameState.PlayerState.Gold}G";
                     Vector2 goldSize = secondaryFont.MeasureString(goldText);
                     Vector2 goldPos = new Vector2(Global.VIRTUAL_WIDTH / 2f, 90);
-                    Vector2 goldOrigin = goldSize / 2f;
+                    Vector2 goldOrigin = new Vector2(MathF.Round(goldSize.X / 2f), MathF.Round(goldSize.Y / 2f));
 
                     spriteBatch.DrawStringSnapped(secondaryFont, goldText, goldPos, _global.Palette_Sky, _plinkGold.Rotation, goldOrigin, _plinkGold.Scale, SpriteEffects.None, 0f);
                 }

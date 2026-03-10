@@ -458,7 +458,7 @@ namespace ProjectVagabond.Scenes
             if (t1Scale > 0.01f)
             {
                 Vector2 size1 = secondaryFont.MeasureString(INTRO_LINE_1);
-                var pos1 = new Vector2((Global.VIRTUAL_WIDTH - size1.X) / 2, titleY - 2);
+                var pos1 = new Vector2(MathF.Round((Global.VIRTUAL_WIDTH - size1.X) / 2f), MathF.Round(titleY - 2));
                 TextAnimator.DrawTextWithEffect(spriteBatch, secondaryFont, INTRO_LINE_1, pos1, _global.Palette_DarkPale, TextEffectType.None, 0f, new Vector2(t1Scale), null, t1Rot);
 
                 if (_isPlinkingIn && _plinkTitle1.FlashTint.HasValue)
@@ -473,7 +473,7 @@ namespace ProjectVagabond.Scenes
             if (t2Scale > 0.01f)
             {
                 Vector2 size2 = font.MeasureString(INTRO_LINE_2);
-                var pos2 = new Vector2((Global.VIRTUAL_WIDTH - size2.X) / 2, titleY + secondaryFont.LineHeight + 2);
+                var pos2 = new Vector2(MathF.Round((Global.VIRTUAL_WIDTH - size2.X) / 2f), MathF.Round(titleY + secondaryFont.LineHeight + 2));
                 TextAnimator.DrawTextWithEffect(spriteBatch, font, INTRO_LINE_2, pos2, _global.Palette_White, TextEffectType.RainbowWave, _titleWaveTimer, new Vector2(t2Scale), null, t2Rot);
 
                 if (_isPlinkingIn && _plinkTitle2.FlashTint.HasValue)
@@ -620,7 +620,7 @@ namespace ProjectVagabond.Scenes
             for (int i = 0; i < labels.Length; i++)
             {
                 float labelWidth = secondaryFont.MeasureString(labels[i]).Width;
-                float labelX = statBlockX + (standardLabelWidth - labelWidth);
+                float labelX = MathF.Round(statBlockX + (standardLabelWidth - labelWidth));
 
                 spriteBatch.DrawStringSnapped(secondaryFont, labels[i], new Vector2(labelX, currentY), _global.Palette_DarkestPale);
 
@@ -735,12 +735,12 @@ namespace ProjectVagabond.Scenes
                 {
                     string name = data.Name.ToUpper();
                     Vector2 nameSize = font.MeasureString(name);
-                    Vector2 namePos = new Vector2(centerX - nameSize.X / 2, centerY + 26);
+                    Vector2 namePos = new Vector2(MathF.Round(centerX - nameSize.X / 2f), MathF.Round(centerY + 26));
                     TextAnimator.DrawTextWithEffect(spriteBatch, font, name, namePos, _global.Palette_LightPale, TextEffectType.None, 0f, new Vector2(pScale), null, pRot);
 
                     string numberText = (spriteIndex + 1).ToString();
                     Vector2 numSize = tertiaryFont.MeasureString(numberText);
-                    Vector2 numPos = new Vector2(centerX - numSize.X / 2, centerY + 20);
+                    Vector2 numPos = new Vector2(MathF.Round(centerX - numSize.X / 2f), MathF.Round(centerY + 20));
                     TextAnimator.DrawTextWithEffect(spriteBatch, tertiaryFont, numberText, numPos, _global.Palette_LightPale, TextEffectType.None, 0f, new Vector2(pScale), null, pRot);
                 }
             }

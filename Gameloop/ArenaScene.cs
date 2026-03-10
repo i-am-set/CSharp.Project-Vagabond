@@ -235,12 +235,12 @@ namespace ProjectVagabond.Scenes
             float standardMultWidth = secondaryFont.MeasureString("9.9").Width + 1f + tertiaryFont.MeasureString("x").Width;
             float totalWidth = multXOffset + standardMultWidth + 10f;
 
-            _hudBaseX = (uiAreaWidth - totalWidth) / 2f;
+            _hudBaseX = MathF.Round((uiAreaWidth - totalWidth) / 2f);
             if (_hudBaseX < 4) _hudBaseX = 4;
 
             _hudBaseX -= 5f;
-            _hudNameX = _hudBaseX + nameXOffset;
-            _hudMultCenterX = _hudBaseX + multXOffset + 7f + (standardMultWidth / 2f);
+            _hudNameX = MathF.Round(_hudBaseX + nameXOffset);
+            _hudMultCenterX = MathF.Round(_hudBaseX + multXOffset + 7f + (standardMultWidth / 2f));
 
             for (int i = 0; i < totalWizards; i++)
             {
@@ -549,7 +549,7 @@ namespace ProjectVagabond.Scenes
             {
                 var mainFont = ServiceLocator.Get<Core>().DefaultFont;
                 Vector2 size = mainFont.MeasureString(text);
-                Vector2 pos = _arenaCenter - (size / 2f);
+                Vector2 pos = new Vector2(MathF.Round(_arenaCenter.X - size.X / 2f), MathF.Round(_arenaCenter.Y - size.Y / 2f));
 
                 if (_isMatchOver) pos.Y -= 10;
 
@@ -560,7 +560,7 @@ namespace ProjectVagabond.Scenes
                     var secFont = ServiceLocator.Get<Core>().SecondaryFont;
                     string goldText = $"+{_goldWon}G";
                     Vector2 goldSize = secFont.MeasureString(goldText);
-                    Vector2 goldPos = new Vector2(_arenaCenter.X - goldSize.X / 2f, pos.Y + size.Y + 4);
+                    Vector2 goldPos = new Vector2(MathF.Round(_arenaCenter.X - goldSize.X / 2f), MathF.Round(pos.Y + size.Y + 4));
                     spriteBatch.DrawStringSnapped(secFont, goldText, goldPos, _global.Palette_Sun);
                 }
             }
@@ -578,8 +578,8 @@ namespace ProjectVagabond.Scenes
             Vector2 amountPos = new Vector2(18, 12);
             spriteBatch.DrawStringSnapped(defaultFont, amountText, amountPos, _global.Palette_Sun);
 
-            float amountWidth = defaultFont.MeasureString(amountText).Width;
-            float yOffset = MathF.Max(0, defaultFont.LineHeight - tertiaryFont.LineHeight);
+            float amountWidth = MathF.Round(defaultFont.MeasureString(amountText).Width);
+            float yOffset = MathF.Round(MathF.Max(0, defaultFont.LineHeight - tertiaryFont.LineHeight));
 
             Vector2 gPos = new Vector2(amountPos.X + amountWidth + 2, 11 + yOffset);
             spriteBatch.DrawStringSnapped(tertiaryFont, gText, gPos, _global.Palette_DarkSun);
@@ -674,13 +674,13 @@ namespace ProjectVagabond.Scenes
                     Vector2 xSize = tertiaryFont.MeasureString(xText);
 
                     float totalWidth = numSize.X + 1f + xSize.X;
-                    Vector2 pivot = new Vector2(totalWidth / 2f, numSize.Y / 2f);
+                    Vector2 pivot = new Vector2(MathF.Round(totalWidth / 2f), MathF.Round(numSize.Y / 2f));
 
                     float numYAdjust = (multFont == defaultFont) ? 1f : 0f;
-                    Vector2 numOrigin = pivot - new Vector2(0, numYAdjust);
-                    Vector2 xOrigin = pivot - new Vector2(numSize.X + 1f, numSize.Y - xSize.Y);
+                    Vector2 numOrigin = new Vector2(MathF.Round(pivot.X), MathF.Round(pivot.Y - numYAdjust));
+                    Vector2 xOrigin = new Vector2(MathF.Round(pivot.X - numSize.X - 1f), MathF.Round(pivot.Y - numSize.Y + xSize.Y));
 
-                    float multYOffset = MathF.Max(0, (defaultFont.LineHeight - numSize.Y) / 2f);
+                    float multYOffset = MathF.Round(MathF.Max(0, (defaultFont.LineHeight - numSize.Y) / 2f));
                     Vector2 drawPos = new Vector2(MathF.Round(_hudMultCenterX + shakeX), MathF.Round(finalNamePos.Y + multYOffset + pivot.Y));
 
                     spriteBatch.DrawStringSnapped(multFont, numText, drawPos, multColor, pRot, numOrigin, pScale, SpriteEffects.None, 0f);
@@ -690,7 +690,7 @@ namespace ProjectVagabond.Scenes
                     float prob = _winProbabilities.TryGetValue(w, out var p) ? p : 0f;
                     string probText = $"{(prob * 100f):F0}%";
                     Vector2 probSize = tertiaryFont.MeasureString(probText);
-                    Vector2 probOrigin = new Vector2(probSize.X / 2f, 0);
+                    Vector2 probOrigin = new Vector2(MathF.Round(probSize.X / 2f), 0);
                     Vector2 probPos = new Vector2(MathF.Round(_hudMultCenterX + shakeX), MathF.Round(w.HudHeartStartPos.Y + shakeY));
 
                     spriteBatch.DrawStringSnapped(tertiaryFont, probText, probPos, _global.Palette_Black, 0f, probOrigin, 1f, SpriteEffects.None, 0f);
