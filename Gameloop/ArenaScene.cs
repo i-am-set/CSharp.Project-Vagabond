@@ -47,9 +47,19 @@ namespace ProjectVagabond.Scenes
             public Vector2 DragOffset;
             public bool IsDispensed;
             public bool IsHanging;
-            public float Rotation;
-            public float RotationVelocity;
             public float Scale = 1.0f;
+
+            // 3D Rotation properties
+            public float RotX;
+            public float RotY;
+            public float RotZ;
+            public float VelRotX;
+            public float VelRotY;
+            public float VelRotZ;
+
+            // Flutter properties
+            public float FlutterPhase;
+            public float FlutterSpeed;
         }
 
         private readonly Global _global;
@@ -427,6 +437,14 @@ namespace ProjectVagabond.Scenes
             ticket.Position.X = ticket.TargetX;
         }
 
+        private float WrapAngle(float angle)
+        {
+            angle %= MathHelper.TwoPi;
+            if (angle <= -MathHelper.Pi) angle += MathHelper.TwoPi;
+            else if (angle > MathHelper.Pi) angle -= MathHelper.TwoPi;
+            return angle;
+        }
+
         public override void Update(GameTime gameTime)
         {
             base.Update(gameTime);
@@ -460,8 +478,12 @@ namespace ProjectVagabond.Scenes
                     if (t.IsHanging)
                     {
                         t.IsHanging = false;
-                        t.Velocity = new Vector2((float)(_random.NextDouble() * 100 - 50), 0f);
-                        t.RotationVelocity = (float)(_random.NextDouble() * 4.0 - 2.0);
+                        t.Velocity = new Vector2((float)(_random.NextDouble() * 60 - 30), 0f);
+                        t.VelRotX = (float)(_random.NextDouble() * 12.0 - 6.0);
+                        t.VelRotY = (float)(_random.NextDouble() * 12.0 - 6.0);
+                        t.VelRotZ = (float)(_random.NextDouble() * 4.0 - 2.0);
+                        t.FlutterPhase = (float)(_random.NextDouble() * MathHelper.TwoPi);
+                        t.FlutterSpeed = (float)(_random.NextDouble() * 3.0 + 2.0);
                     }
                 }
 
@@ -478,12 +500,18 @@ namespace ProjectVagabond.Scenes
                     if (!t.IsDispensed) continue;
 
                     Matrix transform = Matrix.CreateTranslation(-t.Position.X, -t.Position.Y, 0) *
-                                       Matrix.CreateRotationZ(-t.Rotation) *
+                                       Matrix.CreateRotationZ(-t.RotZ) *
                                        Matrix.CreateTranslation(t.Position.X, t.Position.Y, 0);
                     Vector2 localMouse = Vector2.Transform(virtualMousePos, transform);
 
-                    int w = (int)(19 * t.Scale);
-                    int h = (int)(31 * t.Scale);
+                    float cosX = MathF.Cos(t.RotX);
+                    float cosY = MathF.Cos(t.RotY);
+                    int w = (int)(19 * t.Scale * Math.Abs(cosY));
+                    int h = (int)(31 * t.Scale * Math.Abs(cosX));
+
+                    w = Math.Max(w, 4);
+                    h = Math.Max(h, 4);
+
                     Rectangle localBounds = new Rectangle((int)t.Position.X - w / 2, (int)t.Position.Y - h / 2, w, h);
 
                     if (localBounds.Contains(localMouse))
@@ -492,7 +520,9 @@ namespace ProjectVagabond.Scenes
                         t.IsHanging = false;
                         t.DragOffset = t.Position - virtualMousePos;
                         t.Velocity = Vector2.Zero;
-                        t.RotationVelocity = 0f;
+                        t.VelRotX = 0f;
+                        t.VelRotY = 0f;
+                        t.VelRotZ = 0f;
                         draggedTicket = t;
                         _inputManager.ConsumeMouseClick();
 
@@ -515,15 +545,26 @@ namespace ProjectVagabond.Scenes
                         draggedTicket.Velocity = (draggedTicket.Position - prevPos) / dt;
                     }
 
-                    // Smoothly rotate upright while dragging
-                    draggedTicket.Rotation = MathHelper.Lerp(draggedTicket.Rotation, 0f, 20f * dt);
-                    draggedTicket.RotationVelocity = 0f;
+                    draggedTicket.RotX = WrapAngle(draggedTicket.RotX);
+                    draggedTicket.RotY = WrapAngle(draggedTicket.RotY);
+                    draggedTicket.RotZ = WrapAngle(draggedTicket.RotZ);
+
+                    draggedTicket.RotX = MathHelper.Lerp(draggedTicket.RotX, Math.Clamp(draggedTicket.Velocity.Y * 0.005f, -0.5f, 0.5f), 15f * dt);
+                    draggedTicket.RotY = MathHelper.Lerp(draggedTicket.RotY, Math.Clamp(draggedTicket.Velocity.X * 0.005f, -0.5f, 0.5f), 15f * dt);
+                    draggedTicket.RotZ = MathHelper.Lerp(draggedTicket.RotZ, Math.Clamp(draggedTicket.Velocity.X * 0.002f, -0.5f, 0.5f), 15f * dt);
+
+                    draggedTicket.VelRotX = 0f;
+                    draggedTicket.VelRotY = 0f;
+                    draggedTicket.VelRotZ = 0f;
                 }
                 else
                 {
                     draggedTicket.IsDragging = false;
-                    // Apply rotation velocity based on horizontal movement speed
-                    draggedTicket.RotationVelocity = draggedTicket.Velocity.X * 0.015f;
+                    draggedTicket.VelRotX = draggedTicket.Velocity.Y * 0.015f + (float)(_random.NextDouble() * 4.0 - 2.0);
+                    draggedTicket.VelRotY = draggedTicket.Velocity.X * 0.015f + (float)(_random.NextDouble() * 4.0 - 2.0);
+                    draggedTicket.VelRotZ = draggedTicket.Velocity.X * 0.005f + (float)(_random.NextDouble() * 2.0 - 1.0);
+                    draggedTicket.FlutterPhase = (float)(_random.NextDouble() * MathHelper.TwoPi);
+                    draggedTicket.FlutterSpeed = (float)(_random.NextDouble() * 3.0 + 2.0);
                     draggedTicket = null;
                 }
             }
@@ -544,12 +585,18 @@ namespace ProjectVagabond.Scenes
                 {
                     if (!t.IsDragging && !t.IsHanging)
                     {
-                        t.Velocity.Y += 800f * dt; // Gravity
-                        t.Velocity.X -= t.Velocity.X * 2.0f * dt; // Air resistance
-                        t.RotationVelocity -= t.RotationVelocity * 2.0f * dt;
+                        t.Velocity.Y += 300f * dt;
+                        if (t.Velocity.Y > 150f) t.Velocity.Y = 150f;
+
+                        t.FlutterPhase += t.FlutterSpeed * dt;
+                        t.Velocity.X += MathF.Sin(t.FlutterPhase) * 400f * dt;
+                        t.Velocity.X -= t.Velocity.X * 2.0f * dt;
+
+                        t.RotX += t.VelRotX * dt;
+                        t.RotY += t.VelRotY * dt;
+                        t.RotZ += t.VelRotZ * dt;
 
                         t.Position += t.Velocity * dt;
-                        t.Rotation += t.RotationVelocity * dt;
 
                         if (t.Position.X < -100 || t.Position.X > Global.VIRTUAL_WIDTH + 100 ||
                             t.Position.Y < -100 || t.Position.Y > Global.VIRTUAL_HEIGHT + 100)
@@ -562,12 +609,18 @@ namespace ProjectVagabond.Scenes
                     if (!hoveringTicket && draggedTicket == null)
                     {
                         Matrix transform = Matrix.CreateTranslation(-t.Position.X, -t.Position.Y, 0) *
-                                           Matrix.CreateRotationZ(-t.Rotation) *
+                                           Matrix.CreateRotationZ(-t.RotZ) *
                                            Matrix.CreateTranslation(t.Position.X, t.Position.Y, 0);
                         Vector2 localMouse = Vector2.Transform(virtualMousePos, transform);
 
-                        int w = (int)(19 * t.Scale);
-                        int h = (int)(31 * t.Scale);
+                        float cosX = MathF.Cos(t.RotX);
+                        float cosY = MathF.Cos(t.RotY);
+                        int w = (int)(19 * t.Scale * Math.Abs(cosY));
+                        int h = (int)(31 * t.Scale * Math.Abs(cosX));
+
+                        w = Math.Max(w, 4);
+                        h = Math.Max(h, 4);
+
                         Rectangle localBounds = new Rectangle((int)t.Position.X - w / 2, (int)t.Position.Y - h / 2, w, h);
 
                         if (localBounds.Contains(localMouse))
@@ -974,13 +1027,31 @@ namespace ProjectVagabond.Scenes
                 Vector2 origin = new Vector2(10f, 16f);
                 Rectangle sourceRect = new Rectangle((int)ticket.Type * 19, 0, 19, 31);
 
+                float cosX = MathF.Cos(ticket.RotX);
+                float cosY = MathF.Cos(ticket.RotY);
+
+                float absScaleX = Math.Abs(cosY) * ticket.Scale;
+                float absScaleY = Math.Abs(cosX) * ticket.Scale;
+                Vector2 finalScale = new Vector2(absScaleX, absScaleY);
+
+                SpriteEffects effects = SpriteEffects.None;
+                if (cosY < 0) effects |= SpriteEffects.FlipHorizontally;
+                if (cosX < 0) effects |= SpriteEffects.FlipVertically;
+
+                float normalZ = Math.Abs(cosX * cosY);
+                float brightness = 0.4f + 0.6f * normalZ;
+
+                Color ticketColor = new Color((int)(255 * brightness), (int)(255 * brightness), (int)(255 * brightness), 255);
+                Color textColor = new Color((int)(_global.Palette_Black.R * brightness), (int)(_global.Palette_Black.G * brightness), (int)(_global.Palette_Black.B * brightness), 255);
+
                 if (ticketSheet != null)
                 {
-                    spriteBatch.DrawSnapped(ticketSheet, ticket.Position, sourceRect, Color.White, ticket.Rotation, origin, ticket.Scale, SpriteEffects.None, 0f);
+                    spriteBatch.DrawSnapped(ticketSheet, ticket.Position, sourceRect, ticketColor, ticket.RotZ, origin, finalScale, effects, 0f);
                 }
                 else
                 {
-                    spriteBatch.DrawSnapped(pixel, ticket.Position, new Rectangle(0, 0, 19, 31), _global.Palette_Pale, ticket.Rotation, origin, ticket.Scale, SpriteEffects.None, 0f);
+                    Color fallbackColor = new Color((int)(_global.Palette_Pale.R * brightness), (int)(_global.Palette_Pale.G * brightness), (int)(_global.Palette_Pale.B * brightness), 255);
+                    spriteBatch.DrawSnapped(pixel, ticket.Position, new Rectangle(0, 0, 19, 31), fallbackColor, ticket.RotZ, origin, finalScale, effects, 0f);
                 }
 
                 string numText = ticket.WizardNumber.ToString();
@@ -989,7 +1060,7 @@ namespace ProjectVagabond.Scenes
                 float yOffsetFromCenter = 0f;
                 Vector2 numOrigin = new Vector2(MathF.Round(numSize.X / 2f) + 3f, MathF.Round(numSize.Y / 2f) - yOffsetFromCenter);
 
-                spriteBatch.DrawStringSnapped(mainFont, numText, ticket.Position, _global.Palette_Black, ticket.Rotation, numOrigin, ticket.Scale, SpriteEffects.None, 0f);
+                spriteBatch.DrawStringSnapped(mainFont, numText, ticket.Position, textColor, ticket.RotZ, numOrigin, finalScale, SpriteEffects.None, 0f);
             }
 
             if (_arenaState == ArenaState.Betting)
