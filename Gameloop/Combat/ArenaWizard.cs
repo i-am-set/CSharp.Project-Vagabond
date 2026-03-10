@@ -667,7 +667,7 @@ namespace ProjectVagabond.Battle
                 {
                     Vector2 textSize = font.MeasureString(_activeMoveText);
                     Vector2 textPos = new Vector2(wizX, wizY - 16);
-                    Vector2 origin = new Vector2(textSize.X / 2f, textSize.Y / 2f);
+                    Vector2 origin = new Vector2(MathF.Round(textSize.X / 2f), MathF.Round(textSize.Y / 2f));
 
                     spriteBatch.DrawStringOutlinedSnapped(font, _activeMoveText, textPos, global.Palette_Sun * alpha, global.Palette_Off * alpha, 0f, origin, scale, SpriteEffects.None, 0f);
                 }
@@ -712,9 +712,8 @@ namespace ProjectVagabond.Battle
                     BitmapFont critFont = core.TertiaryFont;
                     Vector2 critSize = critFont.MeasureString(critText);
 
-                    // Position it centered above the damage number
                     Vector2 critCenter = textPos - new Vector2(0, MathF.Round(textSize.Y / 2f + critSize.Y / 2f + 1));
-                    Vector2 critTopLeft = critCenter - new Vector2(MathF.Round(critSize.X / 2f), MathF.Round(critSize.Y / 2f));
+                    Vector2 critTopLeft = new Vector2(MathF.Round(critCenter.X - critSize.X / 2f), MathF.Round(critCenter.Y - critSize.Y / 2f));
 
                     Color critTextColor = isFlash ? global.Palette_Sun : global.CritcalHitIndicatorColor;
                     Color finalCritTextColor = critTextColor * alphaMult;

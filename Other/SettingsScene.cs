@@ -549,7 +549,7 @@ namespace ProjectVagabond.Scenes
             Vector2 titleSize = font.MeasureString(title);
             float yOffset = (MathF.Sin(_titleBobTimer * 4f) > 0) ? -1f : 0f;
             float titleBaseY = 10f;
-            Vector2 titlePosition = new Vector2(screenWidth / 2 - titleSize.X / 2, titleBaseY + yOffset);
+            Vector2 titlePosition = new Vector2(MathF.Round(screenWidth / 2f - titleSize.X / 2f), MathF.Round(titleBaseY + yOffset));
 
             spriteBatch.DrawStringSnapped(font, title, titlePosition, _global.GameTextColor);
             int dividerY = (int)(titleBaseY + titleSize.Y + 5);
@@ -558,7 +558,7 @@ namespace ProjectVagabond.Scenes
             if (_confirmationTimer > 0)
             {
                 Vector2 msgSize = font.MeasureString(_confirmationMessage);
-                Vector2 messagePosition = new Vector2(screenWidth / 2 - msgSize.X / 2, 5);
+                Vector2 messagePosition = new Vector2(MathF.Round(screenWidth / 2f - msgSize.X / 2f), 5);
                 spriteBatch.DrawStringOutlinedSnapped(font, _confirmationMessage, messagePosition, _global.ConfirmSettingsColor, _global.Palette_Black);
             }
 

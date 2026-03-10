@@ -206,11 +206,11 @@ namespace ProjectVagabond.UI
             foreach (var line in _wrappedPromptLines)
             {
                 float lineWidth = line.Sum(t => secondaryFont.MeasureString(t.Text).Width);
-                float x = _dialogBounds.Center.X - lineWidth / 2f;
+                float x = MathF.Round(_dialogBounds.Center.X - lineWidth / 2f);
 
                 foreach (var token in line)
                 {
-                    spriteBatch.DrawString(secondaryFont, token.Text, new Vector2(x, currentY), token.Color);
+                    spriteBatch.DrawStringSnapped(secondaryFont, token.Text, new Vector2(x, currentY), token.Color);
                     x += secondaryFont.MeasureString(token.Text).Width;
                 }
                 currentY += secondaryFont.LineHeight;
@@ -228,7 +228,7 @@ namespace ProjectVagabond.UI
                     var wrappedDetail = WrapText(font, detail, _dialogBounds.Width - 60);
                     foreach (var line in wrappedDetail)
                     {
-                        spriteBatch.DrawString(font, line, new Vector2(_dialogBounds.X + 30, currentY), _global.Palette_Sun);
+                        spriteBatch.DrawStringSnapped(font, line, new Vector2(_dialogBounds.X + 30, currentY), _global.Palette_Sun);
                         currentY += font.LineHeight + Global.APPLY_OPTION_DIFFERENCE_TEXT_LINE_SPACING;
                     }
                 }

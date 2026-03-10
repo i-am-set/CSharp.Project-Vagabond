@@ -83,8 +83,8 @@ namespace ProjectVagabond.UI
                 _hoverAnimator.UpdateAndGetOffset(gameTime, isActivated, HoverLiftOffset, HoverLiftDuration);
             }
 
-            float totalX = Bounds.Center.X + (horizontalOffset ?? 0f) + shakeOffset.X;
-            float totalY = Bounds.Center.Y + (verticalOffset ?? 0f) + shakeOffset.Y + yOffset;
+            float totalX = MathF.Round(Bounds.Center.X + (horizontalOffset ?? 0f) + shakeOffset.X);
+            float totalY = MathF.Round(Bounds.Center.Y + (verticalOffset ?? 0f) + shakeOffset.Y + yOffset);
             Vector2 centerPos = new Vector2(totalX, totalY);
 
             int width = (int)(Bounds.Width * verticalScale);
@@ -144,7 +144,7 @@ namespace ProjectVagabond.UI
             if (_backgroundTexture != null)
             {
                 Rectangle source = new Rectangle(0, 0, _backgroundTexture.Width, _backgroundTexture.Height);
-                Vector2 texOrigin = new Vector2(_backgroundTexture.Width / 2f, _backgroundTexture.Height / 2f);
+                Vector2 texOrigin = new Vector2(MathF.Round(_backgroundTexture.Width / 2f), MathF.Round(_backgroundTexture.Height / 2f));
                 Vector2 texScale = new Vector2(
                     (float)width / _backgroundTexture.Width,
                     (float)height / _backgroundTexture.Height
@@ -231,13 +231,13 @@ namespace ProjectVagabond.UI
                 if (hasIcon)
                 {
                     Vector2 iconDrawPos = centerPos + RotateOffset(iconOffset);
-                    Vector2 iconOrigin = new Vector2(IconSourceRect!.Value.Width / 2f, IconSourceRect.Value.Height / 2f);
+                    Vector2 iconOrigin = new Vector2(MathF.Round(IconSourceRect!.Value.Width / 2f), MathF.Round(IconSourceRect.Value.Height / 2f));
 
                     spriteBatch.DrawSnapped(IconTexture, iconDrawPos, IconSourceRect.Value, iconColor, _currentHoverRotation, iconOrigin, verticalScale, SpriteEffects.None, 0f);
                 }
 
                 Vector2 textDrawPos = centerPos + RotateOffset(textOffset);
-                Vector2 textOrigin = textSize / 2f;
+                Vector2 textOrigin = new Vector2(MathF.Round(textSize.X / 2f), MathF.Round(textSize.Y / 2f));
 
                 if (EnableTextWave && isActivated)
                 {
@@ -270,7 +270,6 @@ namespace ProjectVagabond.UI
                         int x2 = (int)MathF.Round(p2.X);
                         int y = (int)MathF.Round(p1.Y);
                         int w = x2 - x1;
-                        // Draw 1px rectangle instead of line for perfect snapping
                         spriteBatch.Draw(ServiceLocator.Get<Texture2D>(), new Rectangle(x1, y, w, 1), _global.ButtonDisableColor);
                     }
                     else

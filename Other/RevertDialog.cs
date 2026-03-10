@@ -101,14 +101,14 @@ namespace ProjectVagabond.UI
             DrawRectangleBorder(spriteBatch, pixel, _dialogBounds, 1, _global.Palette_Shadow);
 
             Vector2 promptSize = font.MeasureString(_prompt);
-            Vector2 promptPosition = new Vector2(_dialogBounds.Center.X - promptSize.X / 2, _dialogBounds.Y + 10);
+            Vector2 promptPosition = new Vector2(MathF.Round(_dialogBounds.Center.X - promptSize.X / 2f), MathF.Round(_dialogBounds.Y + 10));
             spriteBatch.DrawStringSnapped(font, _prompt, promptPosition, _global.Palette_Sun);
 
             _stringBuilder.Clear();
             _stringBuilder.Append("Reverting in ").Append((int)Math.Ceiling(_countdownTimer)).Append(" seconds...");
             string timerString = _stringBuilder.ToString();
             Vector2 timerSize = font.MeasureString(timerString);
-            Vector2 timerPosition = new Vector2(_dialogBounds.Center.X - timerSize.X / 2, promptPosition.Y + promptSize.Y + 8);
+            Vector2 timerPosition = new Vector2(MathF.Round(_dialogBounds.Center.X - timerSize.X / 2f), MathF.Round(promptPosition.Y + promptSize.Y + 8));
             spriteBatch.DrawStringSnapped(font, timerString, timerPosition, _global.Palette_DarkSun);
 
             _confirmButton.Draw(spriteBatch, font, gameTime, transform);

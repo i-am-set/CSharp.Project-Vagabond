@@ -420,7 +420,6 @@ namespace ProjectVagabond.UI
         {
             if (string.IsNullOrEmpty(text)) return;
 
-            // Snap the base position immediately to ensure the starting point is pixel-aligned
             options.Position = new Vector2(MathF.Round(options.Position.X), MathF.Round(options.Position.Y));
 
             Vector2 layoutScale = options.Scale;
@@ -428,17 +427,14 @@ namespace ProjectVagabond.UI
             var shadowColor = Color.Lerp(_shadowBaseColor, options.Color, 0.2f);
             shadowColor.A = options.Color.A;
 
-            // Calculate center of the text block for rotation pivot
             Vector2 totalSize = font.MeasureString(text);
-            Vector2 textCenterOffset = totalSize / 2f;
+            Vector2 textCenterOffset = new Vector2(MathF.Round(totalSize.X / 2f), MathF.Round(totalSize.Y / 2f));
             Vector2 pivotPoint = options.Position + textCenterOffset;
 
-            // Centering offset for layout scaling (to keep text centered as it scales)
             Vector2 centeringOffset = Vector2.Zero;
             if (options.Effect != TextEffectType.LeftAlignedSmallWave && options.Effect != TextEffectType.RightAlignedSmallWave)
             {
                 centeringOffset = (totalSize * (Vector2.One - layoutScale)) / 2f;
-                // Snap centering offset to prevent subpixel drift during scaling animations
                 centeringOffset = new Vector2(MathF.Round(centeringOffset.X), MathF.Round(centeringOffset.Y));
             }
 
@@ -460,14 +456,10 @@ namespace ProjectVagabond.UI
                     continue;
                 }
 
-                // Calculate relative position from the start of the string
                 Vector2 relativePos = glyph.Position - options.Position;
 
-                // Apply layout scaling and centering (unrotated)
                 Vector2 unrotatedPos = options.Position + (relativePos * layoutScale) + centeringOffset;
 
-                // --- Apply Base Rotation ---
-                // Rotate the position around the text block's center
                 Vector2 vecFromCenter = unrotatedPos - pivotPoint;
                 Vector2 rotatedVec = new Vector2(
                     vecFromCenter.X * cos - vecFromCenter.Y * sin,
@@ -475,7 +467,6 @@ namespace ProjectVagabond.UI
                 );
                 Vector2 rotatedPos = pivotPoint + rotatedVec;
 
-                // Get animation transform
                 var (animOffset, effectScale, animRotation, finalColor) = GetTextEffectTransform(
                     options.Effect,
                     options.Time,
@@ -485,7 +476,6 @@ namespace ProjectVagabond.UI
                     options.EaseInDuration
                 );
 
-                // Snap animation offset to ensure movement (like waves) steps by pixels instead of sliding
                 animOffset = new Vector2(MathF.Round(animOffset.X), MathF.Round(animOffset.Y));
 
                 var character = glyph.Character;
@@ -494,12 +484,10 @@ namespace ProjectVagabond.UI
                     var region = character.TextureRegion;
                     if (region != null)
                     {
-                        // Use integer origin to prevent sub-pixel blurring on odd-width characters
-                        Vector2 origin = new Vector2((int)(region.Width / 2), (int)(region.Height / 2));
+                        Vector2 origin = new Vector2(MathF.Round(region.Width / 2f), MathF.Round(region.Height / 2f));
 
                         Vector2 finalDrawPos = rotatedPos + origin + animOffset;
 
-                        // Round final position to nearest integer for pixel-perfect rendering
                         finalDrawPos = new Vector2(MathF.Round(finalDrawPos.X), MathF.Round(finalDrawPos.Y));
 
                         Vector2 finalScale = layoutScale * effectScale;
@@ -509,20 +497,17 @@ namespace ProjectVagabond.UI
                         {
                             if (options.UseSquareOutline)
                             {
-                                // Diagonals
                                 DrawGlyph(spriteBatch, region.Texture, region.Bounds, finalDrawPos + new Vector2(-1, 1), options.OutlineColor, finalRotation, origin, finalScale);
                                 DrawGlyph(spriteBatch, region.Texture, region.Bounds, finalDrawPos + new Vector2(-1, -1), options.OutlineColor, finalRotation, origin, finalScale);
                                 DrawGlyph(spriteBatch, region.Texture, region.Bounds, finalDrawPos + new Vector2(1, 1), options.OutlineColor, finalRotation, origin, finalScale);
                                 DrawGlyph(spriteBatch, region.Texture, region.Bounds, finalDrawPos + new Vector2(1, -1), options.OutlineColor, finalRotation, origin, finalScale);
                             }
-                            // Cardinals
                             DrawGlyph(spriteBatch, region.Texture, region.Bounds, finalDrawPos + new Vector2(-1, 0), options.OutlineColor, finalRotation, origin, finalScale);
                             DrawGlyph(spriteBatch, region.Texture, region.Bounds, finalDrawPos + new Vector2(1, 0), options.OutlineColor, finalRotation, origin, finalScale);
                             DrawGlyph(spriteBatch, region.Texture, region.Bounds, finalDrawPos + new Vector2(0, 1), options.OutlineColor, finalRotation, origin, finalScale);
                             DrawGlyph(spriteBatch, region.Texture, region.Bounds, finalDrawPos + new Vector2(0, -1), options.OutlineColor, finalRotation, origin, finalScale);
                         }
 
-                        // Main Character
                         DrawGlyph(spriteBatch, region.Texture, region.Bounds, finalDrawPos, finalColor, finalRotation, origin, finalScale);
                     }
                 }
