@@ -301,7 +301,7 @@ namespace ProjectVagabond.Animations
                     foreach (var t in targets)
                     {
                         if (!attack.Move.CanEffectSelf && t == attack.Caster) continue;
-                        _targetPositions.Add(t.Position);
+                        _targetPositions.Add(t.Data.Combat.Position);
                     }
                 }
                 else if (attack.DeliveryInstance is TickingBeamDelivery beam)
@@ -310,19 +310,18 @@ namespace ProjectVagabond.Animations
                     foreach (var t in targets)
                     {
                         if (!attack.Move.CanEffectSelf && t == attack.Caster) continue;
-                        _targetPositions.Add(t.Position);
+                        _targetPositions.Add(t.Data.Combat.Position);
                     }
                 }
                 else if (attack.DeliveryInstance is SingleTargetDelivery)
                 {
                     if (attack.TargetWizard != null)
-                        _targetPositions.Add(attack.TargetWizard.Position);
+                        _targetPositions.Add(attack.TargetWizard.Data.Combat.Position);
                     else
                         _targetPositions.Add(attack.TargetPosition);
                 }
                 else if (attack.DeliveryInstance is DashMeleeDelivery)
                 {
-                    // Targets are added dynamically in Update as they are hit
                 }
                 else
                 {
@@ -345,7 +344,7 @@ namespace ProjectVagabond.Animations
                 _targetPositions.Clear();
                 foreach (var target in dash.HitTargets)
                 {
-                    _targetPositions.Add(target.Position);
+                    _targetPositions.Add(target.Data.Combat.Position);
                 }
             }
 
@@ -553,11 +552,9 @@ namespace ProjectVagabond.Animations
             if (IsFinished) return;
             _timer += dt;
 
-            // True Homing: Update target position dynamically if the target is still alive.
-            // AOE attacks target a fixed location on the ground, so they do not home.
             if (attack.TargetWizard != null && !(attack.DeliveryInstance is InstantAOEDelivery))
             {
-                _targetPos = attack.TargetWizard.Position;
+                _targetPos = attack.TargetWizard.Data.Combat.Position;
             }
 
             bool allProjectilesArrived = true;
@@ -599,14 +596,12 @@ namespace ProjectVagabond.Animations
                             lobHeight = Math.Clamp(requiredExtraLength / 2.5f, layer.MinLobHeight, maxLob);
                         }
 
-                        // Calculate the arc (0 to 1 to 0)
                         float arc = 4f * progress * (1f - progress);
                         float yOffset = -lobHeight * arc;
 
                         _projectilePos = basePos + new Vector2(0, yOffset);
                         allProjectilesArrived = false;
 
-                        // Scale particles based on the height of the lob
                         float scaleMultiplier = 1f + (arc * layer.LobScaleMultiplier);
 
                         var baseSize = _baseEmitterSizes[i];

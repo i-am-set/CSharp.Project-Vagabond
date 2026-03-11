@@ -9,33 +9,24 @@ namespace ProjectVagabond.Battle
 {
     public class WizardAIController
     {
-        // --- TUNING PARAMETERS ---
-
-        // How long it takes the AI to physically react after noticing a threat (in seconds)
         public float MinReactionTime { get; set; } = 0.2f;
         public float MaxReactionTime { get; set; } = 0.6f;
 
-        // The probability (0.0 to 1.0) that the AI will successfully react to an incoming attack.
-        // 0.65 means a 65% chance to react, and a 35% chance to completely ignore it (miscalculation).
         public float ReactionChance { get; set; } = 0.65f;
 
-        // How often the AI checks for non-threat opportunities (like using Force Cast)
         public float OpportunityCheckInterval { get; set; } = 0.5f;
 
-        // --- STATE ---
         private float _reactionTimer = 0f;
         private Action _plannedAction = null;
         private float _opportunityTimer = 0f;
 
-        // Track threats we've already evaluated so we don't roll awareness every frame
         private readonly HashSet<object> _knownThreats = new HashSet<object>();
         private static readonly Random _random = new Random();
 
         public void Update(float dt, ArenaScene arena, ArenaWizard self)
         {
-            if (self.State == WizardState.Dead || self.IsSuspended) return;
+            if (self.Data.Combat.State == WizardState.Dead || self.Data.Combat.IsSuspended) return;
 
-            // 1. Execute planned actions if reaction time has passed
             if (_plannedAction != null)
             {
                 _reactionTimer -= dt;
@@ -46,30 +37,27 @@ namespace ProjectVagabond.Battle
                 }
             }
 
-            // 2. Clean up stale threats
             _knownThreats.RemoveWhere(t =>
             {
-                if (t is ArenaWizard w) return w.State != WizardState.Telegraphing && w.State != WizardState.Casting;
+                if (t is ArenaWizard w) return w.Data.Combat.State != WizardState.Telegraphing && w.Data.Combat.State != WizardState.Casting;
                 if (t is ActiveAttack a) return a.IsFinished || a.IsCanceled;
                 return true;
             });
 
-            // 3. Scan for incoming threats (Defensive Spells)
-            if (self.EquippedActiveSpell != null && self.ActiveSpellCooldownTimer <= 0 && _plannedAction == null)
+            if (self.Data.Combat.EquippedActiveSpell != null && self.Data.Combat.ActiveSpellCooldownTimer <= 0 && _plannedAction == null)
             {
-                string spellId = self.EquippedActiveSpell.ID;
+                string spellId = self.Data.Combat.EquippedActiveSpell.ID;
                 if (spellId == "ward" || spellId == "teleport")
                 {
                     ScanForThreats(arena, self);
                 }
             }
 
-            // 4. Scan for opportunities (Offensive/Utility Spells)
             _opportunityTimer -= dt;
             if (_opportunityTimer <= 0)
             {
                 _opportunityTimer = OpportunityCheckInterval;
-                if (self.EquippedActiveSpell != null && self.ActiveSpellCooldownTimer <= 0 && _plannedAction == null)
+                if (self.Data.Combat.EquippedActiveSpell != null && self.Data.Combat.ActiveSpellCooldownTimer <= 0 && _plannedAction == null)
                 {
                     EvaluateOpportunities(arena, self);
                 }
@@ -78,26 +66,25 @@ namespace ProjectVagabond.Battle
 
         private void ScanForThreats(ArenaScene arena, ArenaWizard self)
         {
-            // Check telegraphing wizards
             foreach (var enemy in arena.Wizards)
             {
-                if (enemy == self || enemy.State != WizardState.Telegraphing || _knownThreats.Contains(enemy)) continue;
+                if (enemy == self || enemy.Data.Combat.State != WizardState.Telegraphing || _knownThreats.Contains(enemy)) continue;
 
                 bool isThreat = false;
 
-                if (enemy.QueuedMove.Delivery is InstantAOEDelivery aoe)
+                if (enemy.Data.Combat.QueuedMove.Delivery is InstantAOEDelivery aoe)
                 {
-                    if (Vector2.Distance(self.Position, enemy.QueuedTargetPos) <= aoe.Radius + 5f) isThreat = true;
+                    if (Vector2.Distance(self.Data.Combat.Position, enemy.Data.Combat.QueuedTargetPos) <= aoe.Radius + 5f) isThreat = true;
                 }
-                else if (enemy.QueuedMove.Delivery is TickingBeamDelivery beam)
+                else if (enemy.Data.Combat.QueuedMove.Delivery is TickingBeamDelivery beam)
                 {
-                    if (CollisionMath.PointInOBB(self.Position, enemy.Position, enemy.QueuedDirection, beam.Width + 10f, beam.Length)) isThreat = true;
+                    if (CollisionMath.PointInOBB(self.Data.Combat.Position, enemy.Data.Combat.Position, enemy.Data.Combat.QueuedDirection, beam.Width + 10f, beam.Length)) isThreat = true;
                 }
-                else if (enemy.QueuedMove.Delivery is DashMeleeDelivery dash)
+                else if (enemy.Data.Combat.QueuedMove.Delivery is DashMeleeDelivery dash)
                 {
-                    if (CollisionMath.PointInOBB(self.Position, enemy.Position, enemy.QueuedDirection, dash.Width + 10f, dash.DashDistance)) isThreat = true;
+                    if (CollisionMath.PointInOBB(self.Data.Combat.Position, enemy.Data.Combat.Position, enemy.Data.Combat.QueuedDirection, dash.Width + 10f, dash.DashDistance)) isThreat = true;
                 }
-                else if (enemy.QueuedTargetWizard == self)
+                else if (enemy.Data.Combat.QueuedTargetWizard == self)
                 {
                     isThreat = true;
                 }
@@ -108,19 +95,18 @@ namespace ProjectVagabond.Battle
                     if (_random.NextDouble() <= ReactionChance)
                     {
                         PlanDefensiveAction(self, arena);
-                        return; // Only react to one thing at a time
+                        return;
                     }
                 }
             }
 
-            // Check active projectiles
             foreach (var attack in arena.ActiveAttacks)
             {
                 if (attack.Caster == self || _knownThreats.Contains(attack)) continue;
 
                 bool isThreat = false;
                 if (attack.TargetWizard == self) isThreat = true;
-                else if (attack.DeliveryInstance is InstantAOEDelivery aoe && Vector2.Distance(self.Position, attack.TargetPosition) <= aoe.Radius + 5f) isThreat = true;
+                else if (attack.DeliveryInstance is InstantAOEDelivery aoe && Vector2.Distance(self.Data.Combat.Position, attack.TargetPosition) <= aoe.Radius + 5f) isThreat = true;
 
                 if (isThreat)
                 {
@@ -139,37 +125,35 @@ namespace ProjectVagabond.Battle
             _reactionTimer = MinReactionTime + (float)_random.NextDouble() * (MaxReactionTime - MinReactionTime);
             _plannedAction = () =>
             {
-                if (self.ActiveSpellCooldownTimer <= 0 && self.State != WizardState.Dead && !self.IsSuspended)
+                if (self.Data.Combat.ActiveSpellCooldownTimer <= 0 && self.Data.Combat.State != WizardState.Dead && !self.Data.Combat.IsSuspended)
                 {
-                    self.TriggerActiveSpell(arena);
+                    self.Controller.TriggerActiveSpell(arena);
                 }
             };
         }
 
         private void EvaluateOpportunities(ArenaScene arena, ArenaWizard self)
         {
-            string spellId = self.EquippedActiveSpell.ID;
+            string spellId = self.Data.Combat.EquippedActiveSpell.ID;
 
-            if (spellId == "force_cast" && self.State == WizardState.Moving)
+            if (spellId == "force_cast" && self.Data.Combat.State == WizardState.Moving)
             {
-                // If moving and enemies are alive, randomly decide to burst
-                if (arena.Wizards.Any(w => w != self && w.CurrentHP > 0))
+                if (arena.Wizards.Any(w => w != self && w.Data.Stats.CurrentHP > 0))
                 {
-                    if (_random.NextDouble() < 0.3f) // 30% chance per check interval
+                    if (_random.NextDouble() < 0.3f)
                     {
                         _reactionTimer = MinReactionTime;
-                        _plannedAction = () => self.TriggerActiveSpell(arena);
+                        _plannedAction = () => self.Controller.TriggerActiveSpell(arena);
                     }
                 }
             }
             else if (spellId == "teleport")
             {
-                // If surrounded by 3 or more enemies, teleport away
-                int closeEnemies = arena.Wizards.Count(w => w != self && w.CurrentHP > 0 && Vector2.Distance(self.Position, w.Position) < 40f);
+                int closeEnemies = arena.Wizards.Count(w => w != self && w.Data.Stats.CurrentHP > 0 && Vector2.Distance(self.Data.Combat.Position, w.Data.Combat.Position) < 40f);
                 if (closeEnemies >= 3)
                 {
                     _reactionTimer = MinReactionTime;
-                    _plannedAction = () => self.TriggerActiveSpell(arena);
+                    _plannedAction = () => self.Controller.TriggerActiveSpell(arena);
                 }
             }
         }

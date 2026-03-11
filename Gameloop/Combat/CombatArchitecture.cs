@@ -125,7 +125,6 @@ namespace ProjectVagabond.Battle
 
         public void TriggerImpact(ArenaScene arena, ActiveAttack attack)
         {
-            // The main delivery doesn't do damage itself, the child projectiles do.
         }
 
         public void Update(float dt, ArenaScene arena, ActiveAttack attack)
@@ -152,7 +151,7 @@ namespace ProjectVagabond.Battle
             var validTargets = new List<ArenaWizard>();
             foreach (var w in arena.Wizards)
             {
-                if (w != parentAttack.Caster && w.CurrentHP > 0 && !w.IsTeleporting) validTargets.Add(w);
+                if (w != parentAttack.Caster && w.Data.Stats.CurrentHP > 0 && !w.Data.Combat.IsTeleporting) validTargets.Add(w);
             }
 
             ArenaWizard target = null;
@@ -161,10 +160,10 @@ namespace ProjectVagabond.Battle
                 target = validTargets[_random.Next(validTargets.Count)];
             }
 
-            Vector2 targetPos = target != null ? target.Position : parentAttack.Caster.Position + new Vector2(_random.Next(-50, 50), _random.Next(-50, 50));
+            Vector2 targetPos = target != null ? target.Data.Combat.Position : parentAttack.Caster.Data.Combat.Position + new Vector2(_random.Next(-50, 50), _random.Next(-50, 50));
             targetPos = arena.ClampToArena(targetPos, 4f);
 
-            Vector2 dir = targetPos - parentAttack.Caster.Position;
+            Vector2 dir = targetPos - parentAttack.Caster.Data.Combat.Position;
             if (dir.LengthSquared() > 0) dir.Normalize();
             else dir = new Vector2(1, 0);
 
@@ -172,13 +171,13 @@ namespace ProjectVagabond.Battle
             {
                 Name = parentAttack.Move.Name + " (Missile)",
                 BasePower = parentAttack.Move.BasePower,
-                ChargeTime = ProjectileTravelTime > 0 ? ProjectileTravelTime : 0.4f, // Travel time
+                ChargeTime = ProjectileTravelTime > 0 ? ProjectileTravelTime : 0.4f,
                 Weight = 0,
                 Knockback = parentAttack.Move.Knockback,
                 TargetSelf = false,
                 CanEffectSelf = parentAttack.Move.CanEffectSelf,
-                ExecuteOnChargeStart = true, // Skip telegraphing, execute immediately
-                RequiresFocus = false, // Once fired, it doesn't care if the caster is hit
+                ExecuteOnChargeStart = true,
+                RequiresFocus = false,
                 ShowProjectileIndicator = false,
                 Delivery = new SingleTargetDelivery(),
                 Effects = parentAttack.Move.Effects.ToList()
@@ -189,7 +188,7 @@ namespace ProjectVagabond.Battle
                 Caster = parentAttack.Caster,
                 TargetWizard = target,
                 Move = childMove,
-                Origin = parentAttack.Caster.Position,
+                Origin = parentAttack.Caster.Data.Combat.Position,
                 Direction = dir,
                 TargetPosition = targetPos,
                 DeliveryInstance = childMove.Delivery.Clone(),
@@ -236,12 +235,11 @@ namespace ProjectVagabond.Battle
         {
             _timer = 0f;
             _projectilesSpawned = 0;
-            _fixedCenter = attack.TargetWizard != null ? attack.TargetWizard.Position : attack.TargetPosition;
+            _fixedCenter = attack.TargetWizard != null ? attack.TargetWizard.Data.Combat.Position : attack.TargetPosition;
         }
 
         public void TriggerImpact(ArenaScene arena, ActiveAttack attack)
         {
-            // The main delivery doesn't do damage itself, the child meteors do.
         }
 
         public void Update(float dt, ArenaScene arena, ActiveAttack attack)
@@ -260,29 +258,26 @@ namespace ProjectVagabond.Battle
 
         private void SpawnMeteor(ArenaScene arena, ActiveAttack parentAttack)
         {
-            // Pick a random point within the main AOE radius
             float angle = (float)(_random.NextDouble() * MathHelper.TwoPi);
             float r = Radius * (float)Math.Sqrt(_random.NextDouble());
             Vector2 targetPos = _fixedCenter + new Vector2(MathF.Cos(angle) * r, MathF.Sin(angle) * r);
 
-            // Clamp to arena so meteors don't fall outside
             targetPos = arena.ClampToArena(targetPos, 4f);
 
-            // Spawn the meteor high up and slightly to the right so it falls diagonally
             Vector2 origin = targetPos + new Vector2(60, -250);
 
             var childMove = new MoveDefinition
             {
                 Name = parentAttack.Move.Name + " (Meteor)",
                 BasePower = parentAttack.Move.BasePower,
-                ChargeTime = FallTime, // ParticleAnimationInstance uses ChargeTime for travel duration
+                ChargeTime = FallTime,
                 Weight = 0,
                 Knockback = parentAttack.Move.Knockback,
                 TargetSelf = false,
                 CanEffectSelf = parentAttack.Move.CanEffectSelf,
-                ExecuteOnChargeStart = true, // Skip telegraphing, execute immediately
+                ExecuteOnChargeStart = true,
                 RequiresFocus = false,
-                ShowProjectileIndicator = true, // Show the small impact circle
+                ShowProjectileIndicator = true,
                 Delivery = new InstantAOEDelivery { Radius = ProjectileRadius },
                 Effects = parentAttack.Move.Effects.ToList()
             };
@@ -371,7 +366,7 @@ namespace ProjectVagabond.Battle
 
         public void TriggerImpact(ArenaScene arena, ActiveAttack attack)
         {
-            if (attack.TargetWizard != null && attack.TargetWizard.CurrentHP > 0)
+            if (attack.TargetWizard != null && attack.TargetWizard.Data.Stats.CurrentHP > 0)
             {
                 foreach (var effect in attack.Move.Effects)
                 {
@@ -387,13 +382,13 @@ namespace ProjectVagabond.Battle
             if (_state == State.Seeking)
             {
                 _timer += dt;
-                var targets = arena.GetWizardsInCircle(attack.Caster.Position, SeekRadius);
+                var targets = arena.GetWizardsInCircle(attack.Caster.Data.Combat.Position, SeekRadius);
                 ArenaWizard selectedTarget = null;
 
                 var validTargets = new List<ArenaWizard>();
                 foreach (var t in targets)
                 {
-                    if (t != attack.Caster && t.CurrentHP > 0 && !t.IsTeleporting) validTargets.Add(t);
+                    if (t != attack.Caster && t.Data.Stats.CurrentHP > 0 && !t.Data.Combat.IsTeleporting) validTargets.Add(t);
                 }
 
                 if (validTargets.Count > 0)
@@ -404,7 +399,7 @@ namespace ProjectVagabond.Battle
                 if (selectedTarget != null)
                 {
                     attack.TargetWizard = selectedTarget;
-                    StartDash(attack, selectedTarget.Position);
+                    StartDash(attack, selectedTarget.Data.Combat.Position);
                 }
                 else if (_timer >= SeekDuration)
                 {
@@ -420,8 +415,8 @@ namespace ProjectVagabond.Battle
 
                 if (attack.TargetWizard != null)
                 {
-                    _dashTargetPos = attack.TargetWizard.Position;
-                    attack.TargetPosition = _dashTargetPos; // Keep animation target synced if they move
+                    _dashTargetPos = attack.TargetWizard.Data.Combat.Position;
+                    attack.TargetPosition = _dashTargetPos;
                     Vector2 dir = _dashTargetPos - _dashStartPos;
                     if (dir.LengthSquared() > 0)
                     {
@@ -430,13 +425,13 @@ namespace ProjectVagabond.Battle
                     }
                 }
 
-                attack.Caster.Position = Vector2.Lerp(_dashStartPos, _dashTargetPos, eased);
-                attack.Caster.Position = arena.ClampToArena(attack.Caster.Position, 12f);
+                attack.Caster.Data.Combat.Position = Vector2.Lerp(_dashStartPos, _dashTargetPos, eased);
+                attack.Caster.Data.Combat.Position = arena.ClampToArena(attack.Caster.Data.Combat.Position, 12f);
 
                 if (progress >= 1f)
                 {
                     _state = State.Biting;
-                    attack.Origin = attack.Caster.Position;
+                    attack.Origin = attack.Caster.Data.Combat.Position;
                 }
             }
             else if (_state == State.Biting)
@@ -452,7 +447,7 @@ namespace ProjectVagabond.Battle
         {
             _state = State.Dashing;
             _timer = 0f;
-            _dashStartPos = attack.Caster.Position;
+            _dashStartPos = attack.Caster.Data.Combat.Position;
 
             Vector2 dir = targetPos - _dashStartPos;
             if (dir.LengthSquared() > 0)
@@ -466,7 +461,7 @@ namespace ProjectVagabond.Battle
             }
 
             _dashTargetPos = attack.TargetWizard != null ? targetPos : _dashStartPos + attack.Direction * 2f;
-            attack.TargetPosition = _dashTargetPos; // Set immediately so animation spawns here
+            attack.TargetPosition = _dashTargetPos;
         }
 
         public void Draw(SpriteBatch spriteBatch, ActiveAttack attack)
@@ -477,7 +472,7 @@ namespace ProjectVagabond.Battle
             {
                 float scale = (SeekRadius * 2f) / circle.Width;
                 Vector2 origin = new Vector2(circle.Width / 2f, circle.Height / 2f);
-                spriteBatch.Draw(circle, attack.Caster.Position, null, Color.Yellow * 0.3f, 0f, origin, scale, SpriteEffects.None, 0f);
+                spriteBatch.Draw(circle, attack.Caster.Data.Combat.Position, null, Color.Yellow * 0.3f, 0f, origin, scale, SpriteEffects.None, 0f);
             }
         }
 
@@ -518,7 +513,7 @@ namespace ProjectVagabond.Battle
         {
             _timer = 0f;
             _hitTargets.Clear();
-            _startPos = attack.Caster.Position;
+            _startPos = attack.Caster.Data.Combat.Position;
             _targetPos = _startPos + attack.Direction * DashDistance;
         }
 
@@ -535,10 +530,10 @@ namespace ProjectVagabond.Battle
             float progress = Lifetime > 0 ? Math.Clamp(_timer / Lifetime, 0f, 1f) : 1f;
             float easedProgress = Easing.EaseOutCubic(progress);
 
-            attack.Caster.Position = Vector2.Lerp(_startPos, _targetPos, easedProgress);
-            attack.Caster.Position = arena.ClampToArena(attack.Caster.Position, 12f);
+            attack.Caster.Data.Combat.Position = Vector2.Lerp(_startPos, _targetPos, easedProgress);
+            attack.Caster.Data.Combat.Position = arena.ClampToArena(attack.Caster.Data.Combat.Position, 12f);
 
-            foreach (var target in arena.GetWizardsInOBB(attack.Caster.Position, attack.Direction, Width, Length))
+            foreach (var target in arena.GetWizardsInOBB(attack.Caster.Data.Combat.Position, attack.Direction, Width, Length))
             {
                 if (target == attack.Caster && !attack.Move.CanEffectSelf) continue;
 
@@ -557,7 +552,7 @@ namespace ProjectVagabond.Battle
             if (!ServiceLocator.Get<Global>().ShowDebugOverlays) return;
             var pixel = ServiceLocator.Get<Texture2D>();
             float angle = (float)Math.Atan2(attack.Direction.Y, attack.Direction.X);
-            spriteBatch.Draw(pixel, attack.Caster.Position, null, Color.Red * 0.3f, angle, new Vector2(0, 0.5f), new Vector2(Length, Width), SpriteEffects.None, 0f);
+            spriteBatch.Draw(pixel, attack.Caster.Data.Combat.Position, null, Color.Red * 0.3f, angle, new Vector2(0, 0.5f), new Vector2(Length, Width), SpriteEffects.None, 0f);
         }
 
         public void DrawTelegraph(SpriteBatch spriteBatch, Vector2 origin, Vector2 direction, Vector2 targetPos)
@@ -593,23 +588,23 @@ namespace ProjectVagabond.Battle
         {
             bool isCrit = _random.Next(24) == 0;
 
-            int targetTenacity = target.Tenacity;
+            int targetTenacity = target.Data.Stats.Tenacity;
             if (isCrit)
             {
                 targetTenacity = Math.Max(1, targetTenacity / 2);
             }
 
-            int damage = Math.Max(1, (int)Math.Floor(attack.Move.BasePower * (attack.Caster.Power + 10) / ((targetTenacity + 10) * 13.33f)));
+            int damage = Math.Max(1, (int)Math.Floor(attack.Move.BasePower * (attack.Caster.Data.Stats.Power + 10) / ((targetTenacity + 10) * 13.33f)));
 
-            bool tookDamage = target.TakeDamage(damage, isCrit);
+            bool tookDamage = target.Controller.TakeDamage(damage, isCrit);
 
             if (tookDamage && attack.Move.Knockback > 0)
             {
-                Vector2 sourcePos = attack.Caster.Position;
+                Vector2 sourcePos = attack.Caster.Data.Combat.Position;
                 if (attack.DeliveryInstance is InstantAOEDelivery) sourcePos = attack.TargetPosition;
                 else if (attack.DeliveryInstance is TickingBeamDelivery) sourcePos = attack.Origin;
 
-                target.ApplyKnockback(sourcePos, attack.Move.Knockback, arena);
+                target.Controller.ApplyKnockback(sourcePos, attack.Move.Knockback, arena);
             }
         }
     }
@@ -621,7 +616,7 @@ namespace ProjectVagabond.Battle
         public void Apply(ActiveAttack attack, ArenaWizard target, ArenaScene arena)
         {
             int heal = Math.Max(1, (int)(attack.Move.BasePower * HealPercentage));
-            target.Heal(heal);
+            target.Controller.Heal(heal);
         }
     }
 
@@ -811,7 +806,7 @@ namespace ProjectVagabond.Battle
 
         public void TriggerImpact(ArenaScene arena, ActiveAttack attack)
         {
-            if (attack.TargetWizard != null && attack.TargetWizard.CurrentHP > 0)
+            if (attack.TargetWizard != null && attack.TargetWizard.Data.Stats.CurrentHP > 0)
             {
                 foreach (var effect in attack.Move.Effects)
                 {
@@ -834,7 +829,7 @@ namespace ProjectVagabond.Battle
             var circle = ServiceLocator.Get<SpriteManager>().CircleTextureSprite;
             if (circle != null)
             {
-                Vector2 targetPos = attack.TargetWizard != null ? attack.TargetWizard.Position : attack.TargetPosition;
+                Vector2 targetPos = attack.TargetWizard != null ? attack.TargetWizard.Data.Combat.Position : attack.TargetPosition;
                 float scale = 16f / circle.Width;
                 Vector2 origin = new Vector2(circle.Width / 2f, circle.Height / 2f);
 

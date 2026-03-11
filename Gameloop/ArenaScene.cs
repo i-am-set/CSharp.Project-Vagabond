@@ -2,7 +2,6 @@
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
-using ProjectVagabond.Animations;
 using ProjectVagabond.Battle;
 using ProjectVagabond.Particles;
 using ProjectVagabond.Transitions;
@@ -23,35 +22,6 @@ namespace ProjectVagabond.Scenes
             MatchOver
         }
 
-        private class MatchTicket
-        {
-            public int Placement;
-            public int WizardNumber;
-            public float AnimTimer;
-            public float TargetX;
-
-            public Vector2 Position;
-            public Vector2 Velocity;
-            public bool IsDragging;
-            public Vector2 DragOffset;
-            public bool IsDispensed;
-            public bool IsHanging;
-            public float Scale = 1.0f;
-            public bool IsBlank;
-
-            // 3D Rotation properties
-            public float RotX;
-            public float RotY;
-            public float RotZ;
-            public float VelRotX;
-            public float VelRotY;
-            public float VelRotZ;
-
-            // Flutter properties
-            public float FlutterPhase;
-            public float FlutterSpeed;
-        }
-
         private readonly Global _global;
         private readonly SpriteManager _spriteManager;
         private readonly GameState _gameState;
@@ -63,9 +33,10 @@ namespace ProjectVagabond.Scenes
         private List<ArenaWizard> _wizardsByHudOrder = new List<ArenaWizard>();
         private readonly List<ActiveAttack> _activeAttacks = new List<ActiveAttack>();
         private readonly List<ArenaWizard> _queryResults = new List<ArenaWizard>();
-        private readonly List<MatchTicket> _tickets = new List<MatchTicket>();
-        private readonly Queue<MatchTicket> _pendingTickets = new Queue<MatchTicket>();
         private readonly Random _random = new Random();
+
+        private readonly TicketManager _ticketManager = new TicketManager();
+        private readonly WizardRenderer _wizardRenderer = new WizardRenderer();
 
         private ArenaState _arenaState;
         private float _phaseTimer = 0f;
@@ -149,7 +120,7 @@ namespace ProjectVagabond.Scenes
             _queryResults.Clear();
             foreach (var w in _wizards)
             {
-                if (w.State != WizardState.Dead && CollisionMath.RectangleIntersectsCircle(w.GetHitbox(_spriteManager), center, radius))
+                if (w.Data.Combat.State != WizardState.Dead && CollisionMath.RectangleIntersectsCircle(w.Controller.GetHitbox(_spriteManager), center, radius))
                 {
                     _queryResults.Add(w);
                 }
@@ -162,12 +133,17 @@ namespace ProjectVagabond.Scenes
             _queryResults.Clear();
             foreach (var w in _wizards)
             {
-                if (w.State != WizardState.Dead && CollisionMath.AABBIntersectsOBB(w.GetHitbox(_spriteManager), origin, direction, width, length))
+                if (w.Data.Combat.State != WizardState.Dead && CollisionMath.AABBIntersectsOBB(w.Controller.GetHitbox(_spriteManager), origin, direction, width, length))
                 {
                     _queryResults.Add(w);
                 }
             }
             return _queryResults;
+        }
+
+        public void DebugPrintTicket()
+        {
+            _ticketManager.DebugPrintTicket();
         }
 
         public void SpawnAttack(ActiveAttack attack)
@@ -182,8 +158,7 @@ namespace ProjectVagabond.Scenes
             _wizards.Clear();
             _wizardsByHudOrder.Clear();
             _activeAttacks.Clear();
-            _tickets.Clear();
-            _pendingTickets.Clear();
+            _ticketManager.Clear();
             _probSteps.Clear();
             _probPlinks.Clear();
             _winProbabilities.Clear();
@@ -234,16 +209,16 @@ namespace ProjectVagabond.Scenes
                 Vector2 spawnPos = _arenaCenter + new Vector2(MathF.Cos(angle) * spawnRadius, MathF.Sin(angle) * spawnRadius);
 
                 var wizard = new ArenaWizard();
-                wizard.Initialize(data, spawnPos, i == 0);
+                wizard.Controller.Initialize(data, spawnPos, i == 0);
                 _wizards.Add(wizard);
             }
 
-            int totalRating = _wizards.Sum(w => w.Rating);
+            int totalRating = _wizards.Sum(w => w.Data.Stats.Rating);
             foreach (var w in _wizards)
             {
-                if (totalRating > 0 && w.Rating > 0)
+                if (totalRating > 0 && w.Data.Stats.Rating > 0)
                 {
-                    _winProbabilities[w] = (float)w.Rating / totalRating;
+                    _winProbabilities[w] = (float)w.Data.Stats.Rating / totalRating;
                 }
                 else
                 {
@@ -256,7 +231,7 @@ namespace ProjectVagabond.Scenes
 
             CalculateHUDLayout();
 
-            _wizardsByHudOrder = _wizards.OrderBy(w => w.HudNamePos.Y).ToList();
+            _wizardsByHudOrder = _wizards.OrderBy(w => w.Data.UI.HudNamePos.Y).ToList();
         }
 
         private void CalculateHUDLayout()
@@ -279,8 +254,8 @@ namespace ProjectVagabond.Scenes
             float maxNameWidth = 0f;
             foreach (var w in _wizards)
             {
-                w.HudNameSize = defaultFont.MeasureString(w.Name.ToUpper());
-                if (w.HudNameSize.X > maxNameWidth) maxNameWidth = w.HudNameSize.X;
+                w.Data.UI.HudNameSize = defaultFont.MeasureString(w.Data.Stats.Name.ToUpper());
+                if (w.Data.UI.HudNameSize.X > maxNameWidth) maxNameWidth = w.Data.UI.HudNameSize.X;
             }
 
             int statBlockWidth = 19;
@@ -300,12 +275,12 @@ namespace ProjectVagabond.Scenes
             for (int i = 0; i < totalWizards; i++)
             {
                 var w = _wizards[i];
-                w.HudIsLeft = true;
+                w.Data.UI.HudIsLeft = true;
 
                 float currentY = startY + i * spacingY;
 
-                w.HudNamePos = new Vector2(_hudNameX, currentY);
-                w.HudHeartStartPos = new Vector2(_hudNameX, currentY + w.HudNameSize.Y + 2);
+                w.Data.UI.HudNamePos = new Vector2(_hudNameX, currentY);
+                w.Data.UI.HudHeartStartPos = new Vector2(_hudNameX, currentY + w.Data.UI.HudNameSize.Y + 2);
             }
         }
 
@@ -332,92 +307,6 @@ namespace ProjectVagabond.Scenes
             return point;
         }
 
-        private void UpdateTicketDispense(MatchTicket ticket, float dt)
-        {
-            ticket.AnimTimer += dt;
-            float startY = -16f;
-            float dispenseY = 14.5f;
-
-            float t1 = 0.25f; // Jerk 1 duration
-            float t2 = t1 + 0.5f; // Wait 1
-            float t3 = t2 + 0.25f; // Jerk 2 duration
-            float t4 = t3 + 0.5f; // Wait 2
-            float t5 = t4 + 1.0f; // Long Dispense duration
-
-            float progress = 0f;
-
-            if (ticket.AnimTimer < t1)
-            {
-                float p = ticket.AnimTimer / t1;
-                progress = MathHelper.Lerp(0f, 0.2f, p);
-            }
-            else if (ticket.AnimTimer < t2)
-            {
-                progress = 0.2f;
-            }
-            else if (ticket.AnimTimer < t3)
-            {
-                float p = (ticket.AnimTimer - t2) / (t3 - t2);
-                progress = MathHelper.Lerp(0.2f, 0.4f, p);
-            }
-            else if (ticket.AnimTimer < t4)
-            {
-                progress = 0.4f;
-            }
-            else if (ticket.AnimTimer < t5)
-            {
-                float p = (ticket.AnimTimer - t4) / (t5 - t4);
-                progress = MathHelper.Lerp(0.4f, 1.0f, p);
-            }
-            else
-            {
-                progress = 1.0f;
-                if (!ticket.IsDispensed)
-                {
-                    ticket.IsDispensed = true;
-                    ticket.IsHanging = true;
-                }
-            }
-
-            ticket.Position.Y = MathHelper.Lerp(startY, dispenseY, progress);
-            ticket.Position.X = ticket.TargetX;
-        }
-
-        private float WrapAngle(float angle)
-        {
-            angle %= MathHelper.TwoPi;
-            if (angle <= -MathHelper.Pi) angle += MathHelper.TwoPi;
-            else if (angle > MathHelper.Pi) angle -= MathHelper.TwoPi;
-            return angle;
-        }
-
-        private void PrintTicket(ArenaWizard wizard, int placement)
-        {
-            _pendingTickets.Enqueue(new MatchTicket
-            {
-                Placement = placement,
-                WizardNumber = _wizards.IndexOf(wizard) + 1,
-                AnimTimer = 0f,
-                TargetX = 44,
-                Position = new Vector2(44, -16f),
-                Scale = 1.0f
-            });
-        }
-
-        public void DebugPrintTicket()
-        {
-            _pendingTickets.Enqueue(new MatchTicket
-            {
-                Placement = 0,
-                WizardNumber = 0,
-                AnimTimer = 0f,
-                TargetX = 44,
-                Position = new Vector2(44, -16f),
-                Scale = 1.0f,
-                IsBlank = true
-            });
-        }
-
         public override void Update(GameTime gameTime)
         {
             base.Update(gameTime);
@@ -439,7 +328,7 @@ namespace ProjectVagabond.Scenes
             bool isClicking = mouseState.LeftButton == ButtonState.Pressed;
             bool justClicked = isClicking && _lastMouseState.LeftButton == ButtonState.Released;
 
-            int aliveCount = _wizards.Count(w => w.State != WizardState.Dead);
+            int aliveCount = _wizards.Count(w => w.Data.Combat.State != WizardState.Dead);
 
             _hoveredHudWizard = null;
             bool canHover = _arenaState == ArenaState.Countdown || (_arenaState == ArenaState.Fighting && aliveCount > 1);
@@ -449,9 +338,9 @@ namespace ProjectVagabond.Scenes
                 for (int i = 0; i < _wizardsByHudOrder.Count; i++)
                 {
                     var w = _wizardsByHudOrder[i];
-                    if (w.State == WizardState.Dead) continue;
+                    if (w.Data.Combat.State == WizardState.Dead) continue;
 
-                    Rectangle hudRect = new Rectangle((int)_hudBaseX - 2, (int)w.HudNamePos.Y - 2, (int)(_hudMultCenterX - _hudBaseX + 30), 20);
+                    Rectangle hudRect = new Rectangle((int)_hudBaseX - 2, (int)w.Data.UI.HudNamePos.Y - 2, (int)(_hudMultCenterX - _hudBaseX + 30), 20);
 
                     if (hudRect.Contains(virtualMousePos))
                     {
@@ -460,199 +349,11 @@ namespace ProjectVagabond.Scenes
                 }
             }
 
-            // Process Ticket Queue
-            bool isPrinting = _tickets.Any(t => !t.IsDispensed);
-            if (!isPrinting && _pendingTickets.Count > 0)
+            _ticketManager.Update(dt, virtualMousePos, justClicked, isClicking, _inputManager);
+
+            if (_ticketManager.IsHoveringTicket || _ticketManager.IsDraggingTicket)
             {
-                foreach (var t in _tickets)
-                {
-                    if (t.IsHanging)
-                    {
-                        t.IsHanging = false;
-                        t.Velocity = new Vector2((float)(_random.NextDouble() * 60 - 30), 0f);
-                        t.VelRotX = (float)(_random.NextDouble() * 4.0 - 2.0);
-                        t.VelRotY = (float)(_random.NextDouble() * 4.0 - 2.0);
-                        t.VelRotZ = (float)(_random.NextDouble() * 2.0 - 1.0);
-                        t.FlutterPhase = (float)(_random.NextDouble() * MathHelper.TwoPi);
-                        t.FlutterSpeed = (float)(_random.NextDouble() * 2.0 + 1.5);
-                    }
-                }
-
-                _tickets.Add(_pendingTickets.Dequeue());
-            }
-
-            MatchTicket draggedTicket = _tickets.FirstOrDefault(t => t.IsDragging);
-
-            if (justClicked && draggedTicket == null && _inputManager.IsMouseClickAvailable())
-            {
-                for (int i = _tickets.Count - 1; i >= 0; i--)
-                {
-                    var t = _tickets[i];
-                    if (!t.IsDispensed) continue;
-
-                    Matrix transform = Matrix.CreateTranslation(-t.Position.X, -t.Position.Y, 0) *
-                                       Matrix.CreateRotationZ(-t.RotZ) *
-                                       Matrix.CreateTranslation(t.Position.X, t.Position.Y, 0);
-                    Vector2 localMouse = Vector2.Transform(virtualMousePos, transform);
-
-                    float cosX = MathF.Cos(t.RotX);
-                    float cosY = MathF.Cos(t.RotY);
-                    int w = (int)(19 * t.Scale * Math.Abs(cosY));
-                    int h = (int)(31 * t.Scale * Math.Abs(cosX));
-
-                    w = Math.Max(w, 4);
-                    h = Math.Max(h, 4);
-
-                    Rectangle localBounds = new Rectangle((int)t.Position.X - w / 2, (int)t.Position.Y - h / 2, w, h);
-
-                    if (localBounds.Contains(localMouse))
-                    {
-                        t.IsDragging = true;
-                        t.IsHanging = false;
-                        t.DragOffset = t.Position - virtualMousePos;
-                        t.Velocity = Vector2.Zero;
-                        t.VelRotX = 0f;
-                        t.VelRotY = 0f;
-                        t.VelRotZ = 0f;
-                        draggedTicket = t;
-                        _inputManager.ConsumeMouseClick();
-
-                        _tickets.RemoveAt(i);
-                        _tickets.Add(t);
-                        break;
-                    }
-                }
-            }
-
-            if (draggedTicket != null)
-            {
-                if (isClicking)
-                {
-                    Vector2 prevPos = draggedTicket.Position;
-                    draggedTicket.Position = virtualMousePos + draggedTicket.DragOffset;
-
-                    if (dt > 0)
-                    {
-                        draggedTicket.Velocity = (draggedTicket.Position - prevPos) / dt;
-                    }
-
-                    draggedTicket.RotX = WrapAngle(draggedTicket.RotX);
-                    draggedTicket.RotY = WrapAngle(draggedTicket.RotY);
-                    draggedTicket.RotZ = WrapAngle(draggedTicket.RotZ);
-
-                    draggedTicket.RotX = MathHelper.Lerp(draggedTicket.RotX, Math.Clamp(draggedTicket.Velocity.Y * 0.002f, -0.3f, 0.3f), 15f * dt);
-                    draggedTicket.RotY = MathHelper.Lerp(draggedTicket.RotY, Math.Clamp(draggedTicket.Velocity.X * 0.002f, -0.3f, 0.3f), 15f * dt);
-                    draggedTicket.RotZ = MathHelper.Lerp(draggedTicket.RotZ, Math.Clamp(draggedTicket.Velocity.X * 0.001f, -0.2f, 0.2f), 15f * dt);
-
-                    draggedTicket.VelRotX = 0f;
-                    draggedTicket.VelRotY = 0f;
-                    draggedTicket.VelRotZ = 0f;
-                }
-                else
-                {
-                    draggedTicket.IsDragging = false;
-
-                    draggedTicket.Velocity.X = Math.Clamp(draggedTicket.Velocity.X, -600f, 600f);
-                    draggedTicket.Velocity.Y = Math.Clamp(draggedTicket.Velocity.Y, -600f, 600f);
-
-                    draggedTicket.VelRotX = Math.Clamp(draggedTicket.Velocity.Y * 0.015f, -8f, 8f) + (float)(_random.NextDouble() * 4.0 - 2.0);
-                    draggedTicket.VelRotY = Math.Clamp(draggedTicket.Velocity.X * 0.015f, -8f, 8f) + (float)(_random.NextDouble() * 4.0 - 2.0);
-                    draggedTicket.VelRotZ = Math.Clamp(draggedTicket.Velocity.X * 0.005f, -3f, 3f) + (float)(_random.NextDouble() * 2.0 - 1.0);
-
-                    draggedTicket.FlutterPhase = (float)(_random.NextDouble() * MathHelper.TwoPi);
-                    draggedTicket.FlutterSpeed = (float)(_random.NextDouble() * 2.0 + 1.5);
-                    draggedTicket = null;
-                }
-            }
-
-            bool hoveringTicket = false;
-            for (int i = _tickets.Count - 1; i >= 0; i--)
-            {
-                var t = _tickets[i];
-
-                t.Scale = 1.0f;
-
-                if (!t.IsDispensed)
-                {
-                    UpdateTicketDispense(t, dt);
-                }
-                else
-                {
-                    if (!t.IsDragging && !t.IsHanging)
-                    {
-                        // Calculate how "flat" the ticket is relative to the Y axis (falling direction)
-                        // Using the Y-component of the 3D normal vector
-                        float ny = MathF.Sin(t.RotX) * MathF.Cos(t.RotZ) - MathF.Cos(t.RotX) * MathF.Sin(t.RotY) * MathF.Sin(t.RotZ);
-                        float flatProfile = Math.Abs(ny);
-
-                        // Interpolate drag and terminal velocity based on orientation
-                        // Edge-on (flatProfile = 0): Low drag, high terminal velocity
-                        // Flat-on (flatProfile = 1): High drag, low terminal velocity
-                        float dragY = MathHelper.Lerp(0.5f, 8.0f, flatProfile);
-                        float terminalVelocityY = MathHelper.Lerp(300f, 35f, flatProfile);
-
-                        t.Velocity.X *= MathF.Max(0f, 1f - 2.0f * dt);
-                        t.Velocity.Y *= MathF.Max(0f, 1f - dragY * dt);
-
-                        t.Velocity.Y += 500f * dt; // Gravity
-
-                        if (t.Velocity.Y > terminalVelocityY) t.Velocity.Y = terminalVelocityY;
-
-                        // Flutter adds X velocity, more pronounced when flat
-                        t.FlutterPhase += t.FlutterSpeed * dt;
-                        float flutterMagnitude = MathHelper.Lerp(30f, 200f, flatProfile);
-                        t.Velocity.X += MathF.Sin(t.FlutterPhase) * flutterMagnitude * dt;
-
-                        t.VelRotX *= MathF.Max(0f, 1f - 1.5f * dt);
-                        t.VelRotY *= MathF.Max(0f, 1f - 1.5f * dt);
-                        t.VelRotZ *= MathF.Max(0f, 1f - 1.5f * dt);
-
-                        t.VelRotX += MathF.Sin(t.FlutterPhase * 1.3f) * 6f * dt;
-                        t.VelRotY += MathF.Cos(t.FlutterPhase * 1.1f) * 6f * dt;
-                        t.VelRotZ += MathF.Sin(t.FlutterPhase * 0.8f) * 2.5f * dt;
-
-                        t.RotX += t.VelRotX * dt;
-                        t.RotY += t.VelRotY * dt;
-                        t.RotZ += t.VelRotZ * dt;
-
-                        t.Position += t.Velocity * dt;
-
-                        if (t.Position.X < -100 || t.Position.X > Global.VIRTUAL_WIDTH + 100 ||
-                            t.Position.Y < -100 || t.Position.Y > Global.VIRTUAL_HEIGHT + 100)
-                        {
-                            _tickets.RemoveAt(i);
-                            continue;
-                        }
-                    }
-
-                    if (!hoveringTicket && draggedTicket == null)
-                    {
-                        Matrix transform = Matrix.CreateTranslation(-t.Position.X, -t.Position.Y, 0) *
-                                           Matrix.CreateRotationZ(-t.RotZ) *
-                                           Matrix.CreateTranslation(t.Position.X, t.Position.Y, 0);
-                        Vector2 localMouse = Vector2.Transform(virtualMousePos, transform);
-
-                        float cosX = MathF.Cos(t.RotX);
-                        float cosY = MathF.Cos(t.RotY);
-                        int w = (int)(19 * t.Scale * Math.Abs(cosY));
-                        int h = (int)(31 * t.Scale * Math.Abs(cosX));
-
-                        w = Math.Max(w, 4);
-                        h = Math.Max(h, 4);
-
-                        Rectangle localBounds = new Rectangle((int)t.Position.X - w / 2, (int)t.Position.Y - h / 2, w, h);
-
-                        if (localBounds.Contains(localMouse))
-                        {
-                            hoveringTicket = true;
-                        }
-                    }
-                }
-            }
-
-            if (hoveringTicket || draggedTicket != null)
-            {
-                ServiceLocator.Get<CursorManager>().SetState(draggedTicket != null ? CursorState.Dragging : CursorState.HoverDraggable);
+                ServiceLocator.Get<CursorManager>().SetState(_ticketManager.IsDraggingTicket ? CursorState.Dragging : CursorState.HoverDraggable);
             }
 
             if (_arenaState == ArenaState.Countdown)
@@ -679,28 +380,28 @@ namespace ProjectVagabond.Scenes
 
                 if (_inputManager.ActiveSpellTriggered && _arenaState == ArenaState.Fighting)
                 {
-                    var player = _wizards.FirstOrDefault(w => w.IsPlayer);
-                    if (player != null) player.TriggerActiveSpell(this);
+                    var player = _wizards.FirstOrDefault(w => w.Data.Stats.IsPlayer);
+                    if (player != null) player.Controller.TriggerActiveSpell(this);
                 }
 
                 foreach (var wizard in _wizards)
                 {
-                    wizard.IsHovered = wizard.State != WizardState.Dead && wizard.GetHitbox(_spriteManager).Contains(virtualMousePos);
-                    wizard.Update(dt, this);
+                    wizard.Data.UI.IsHovered = wizard.Data.Combat.State != WizardState.Dead && wizard.Controller.GetHitbox(_spriteManager).Contains(virtualMousePos);
+                    wizard.Controller.Update(dt, this);
                 }
 
                 for (int i = 0; i < _wizards.Count; i++)
                 {
                     var w1 = _wizards[i];
-                    if (w1.State == WizardState.Dead) continue;
+                    if (w1.Data.Combat.State == WizardState.Dead) continue;
 
                     for (int j = i + 1; j < _wizards.Count; j++)
                     {
                         var w2 = _wizards[j];
-                        if (w2.State == WizardState.Dead) continue;
+                        if (w2.Data.Combat.State == WizardState.Dead) continue;
 
-                        var box1 = w1.GetHitbox(_spriteManager);
-                        var box2 = w2.GetHitbox(_spriteManager);
+                        var box1 = w1.Controller.GetHitbox(_spriteManager);
+                        var box2 = w2.Controller.GetHitbox(_spriteManager);
 
                         if (box1.Intersects(box2))
                         {
@@ -715,13 +416,13 @@ namespace ProjectVagabond.Scenes
                             }
                             pushDir.Normalize();
 
-                            if (w1.State == WizardState.Moving)
+                            if (w1.Data.Combat.State == WizardState.Moving)
                             {
-                                w1.TargetPosition = ClampToArena(w1.Position + pushDir * 50f, 12f);
+                                w1.Data.Combat.TargetPosition = ClampToArena(w1.Data.Combat.Position + pushDir * 50f, 12f);
                             }
-                            if (w2.State == WizardState.Moving)
+                            if (w2.Data.Combat.State == WizardState.Moving)
                             {
-                                w2.TargetPosition = ClampToArena(w2.Position - pushDir * 50f, 12f);
+                                w2.Data.Combat.TargetPosition = ClampToArena(w2.Data.Combat.Position - pushDir * 50f, 12f);
                             }
                         }
                     }
@@ -731,8 +432,7 @@ namespace ProjectVagabond.Scenes
                 {
                     var attack = _activeAttacks[i];
 
-                    // Fizzle logic: If the target blinks away, lose homing
-                    if (attack.TargetWizard != null && attack.TargetWizard.IsSuspended)
+                    if (attack.TargetWizard != null && attack.TargetWizard.Data.Combat.IsSuspended)
                     {
                         attack.TargetWizard = null;
                     }
@@ -749,13 +449,13 @@ namespace ProjectVagabond.Scenes
                 {
                     UpdateDynamicOdds();
 
-                    int currentAliveCount = _wizards.Count(w => w.State != WizardState.Dead);
+                    int currentAliveCount = _wizards.Count(w => w.Data.Combat.State != WizardState.Dead);
 
-                    var playerWizard = _wizards.FirstOrDefault(w => w.IsPlayer);
-                    if (playerWizard != null && !_playerTicketPrinted && playerWizard.State == WizardState.Dead)
+                    var playerWizard = _wizards.FirstOrDefault(w => w.Data.Stats.IsPlayer);
+                    if (playerWizard != null && !_playerTicketPrinted && playerWizard.Data.Combat.State == WizardState.Dead)
                     {
                         _playerTicketPrinted = true;
-                        PrintTicket(playerWizard, currentAliveCount + 1);
+                        _ticketManager.PrintTicket(_wizards.IndexOf(playerWizard) + 1, currentAliveCount + 1);
                     }
 
                     if (currentAliveCount <= 1)
@@ -763,14 +463,14 @@ namespace ProjectVagabond.Scenes
                         _arenaState = ArenaState.MatchOver;
                         _matchOverTimer = 4.0f;
 
-                        var winner = _wizards.FirstOrDefault(w => w.State != WizardState.Dead);
+                        var winner = _wizards.FirstOrDefault(w => w.Data.Combat.State != WizardState.Dead);
                         if (winner != null)
                         {
-                            _matchResultText = $"{winner.Name.ToUpper()} WINS!";
-                            if (winner.IsPlayer && !_playerTicketPrinted)
+                            _matchResultText = $"{winner.Data.Stats.Name.ToUpper()} WINS!";
+                            if (winner.Data.Stats.IsPlayer && !_playerTicketPrinted)
                             {
                                 _playerTicketPrinted = true;
-                                PrintTicket(winner, 1);
+                                _ticketManager.PrintTicket(_wizards.IndexOf(winner) + 1, 1);
                             }
                         }
                         else
@@ -780,7 +480,7 @@ namespace ProjectVagabond.Scenes
                             if (playerWizard != null && !_playerTicketPrinted)
                             {
                                 _playerTicketPrinted = true;
-                                PrintTicket(playerWizard, 2);
+                                _ticketManager.PrintTicket(_wizards.IndexOf(playerWizard) + 1, 2);
                             }
                         }
 
@@ -816,21 +516,21 @@ namespace ProjectVagabond.Scenes
 
             foreach (var w in _wizards)
             {
-                if (w.State != WizardState.Dead && w.CurrentHP > 0)
+                if (w.Data.Combat.State != WizardState.Dead && w.Data.Stats.CurrentHP > 0)
                 {
-                    totalDynamicRating += w.Rating * ((float)w.CurrentHP / w.MaxHP);
+                    totalDynamicRating += w.Data.Stats.Rating * ((float)w.Data.Stats.CurrentHP / w.Data.Stats.MaxHP);
                 }
             }
 
             foreach (var w in _wizards)
             {
-                if (w.State == WizardState.Dead || w.CurrentHP <= 0)
+                if (w.Data.Combat.State == WizardState.Dead || w.Data.Stats.CurrentHP <= 0)
                 {
                     _winProbabilities[w] = 0f;
                 }
                 else if (totalDynamicRating > 0)
                 {
-                    float dynamicRating = w.Rating * ((float)w.CurrentHP / w.MaxHP);
+                    float dynamicRating = w.Data.Stats.Rating * ((float)w.Data.Stats.CurrentHP / w.Data.Stats.MaxHP);
                     _winProbabilities[w] = dynamicRating / totalDynamicRating;
                 }
 
@@ -868,26 +568,6 @@ namespace ProjectVagabond.Scenes
             }
         }
 
-        private Vector2 RotateOffset(Vector2 offset, float rot)
-        {
-            float cos = MathF.Cos(rot);
-            float sin = MathF.Sin(rot);
-            return new Vector2(offset.X * cos - offset.Y * sin, offset.X * sin + offset.Y * cos);
-        }
-
-        private string GetOrdinalSuffix(int number)
-        {
-            int mod100 = number % 100;
-            if (mod100 >= 11 && mod100 <= 13) return "TH";
-            switch (number % 10)
-            {
-                case 1: return "ST";
-                case 2: return "ND";
-                case 3: return "RD";
-                default: return "TH";
-            }
-        }
-
         protected override void DrawSceneContent(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Matrix transform)
         {
             var pixel = ServiceLocator.Get<Texture2D>();
@@ -910,16 +590,16 @@ namespace ProjectVagabond.Scenes
                 attack.DeliveryInstance.Draw(spriteBatch, attack);
             }
 
-            _wizards.Sort((a, b) => a.Position.Y.CompareTo(b.Position.Y));
+            _wizards.Sort((a, b) => a.Data.Combat.Position.Y.CompareTo(b.Data.Combat.Position.Y));
 
             foreach (var wizard in _wizards)
             {
-                if (wizard.State == WizardState.Dead) DrawWizard(spriteBatch, wizard);
+                if (wizard.Data.Combat.State == WizardState.Dead) _wizardRenderer.DrawWizard(wizard, spriteBatch, _spriteManager, _global);
             }
 
             foreach (var wizard in _wizards)
             {
-                if (wizard.State != WizardState.Dead) DrawWizard(spriteBatch, wizard);
+                if (wizard.Data.Combat.State != WizardState.Dead) _wizardRenderer.DrawWizard(wizard, spriteBatch, _spriteManager, _global);
             }
 
             foreach (var attack in _activeAttacks)
@@ -931,10 +611,10 @@ namespace ProjectVagabond.Scenes
             ServiceLocator.Get<ParticleSystemManager>().Draw(spriteBatch, transform);
             spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp, null, null, null, transform);
 
-            if (_hoveredHudWizard != null && _hoveredHudWizard.State != WizardState.Dead)
+            if (_hoveredHudWizard != null && _hoveredHudWizard.Data.Combat.State != WizardState.Dead)
             {
                 Vector2 mousePos = Core.TransformMouse(_inputManager.GetEffectiveMouseState().Position);
-                var points = SpriteBatchExtensions.GetBresenhamLinePoints(mousePos, _hoveredHudWizard.Position);
+                var points = SpriteBatchExtensions.GetBresenhamLinePoints(mousePos, _hoveredHudWizard.Data.Combat.Position);
                 int offset = (int)(gameTime.TotalGameTime.TotalSeconds * 30) % 6;
                 for (int i = offset; i < points.Count; i += 6)
                 {
@@ -944,88 +624,17 @@ namespace ProjectVagabond.Scenes
 
             foreach (var wizard in _wizards)
             {
-                wizard.DrawUI(spriteBatch, _spriteManager, gameTime);
-                wizard.DrawDebug(spriteBatch, _spriteManager);
+                _wizardRenderer.DrawUI(wizard, spriteBatch, _spriteManager, gameTime);
+                _wizardRenderer.DrawDebug(wizard, spriteBatch, _spriteManager);
             }
 
             DrawSideHUD(spriteBatch);
             DrawTopHUD(spriteBatch);
 
             var mainFont = ServiceLocator.Get<Core>().DefaultFont;
-            var secFont = ServiceLocator.Get<Core>().SecondaryFont;
             var tertFont = ServiceLocator.Get<Core>().TertiaryFont;
-            var ticketSheet = _spriteManager.BetTicketSpriteSheet;
 
-            foreach (var ticket in _tickets)
-            {
-                Vector2 origin = new Vector2(10f, 16f);
-
-                float cosX = MathF.Cos(ticket.RotX);
-                float cosY = MathF.Cos(ticket.RotY);
-
-                bool isBackside = (cosX * cosY) < 0;
-
-                Rectangle sourceRect = isBackside
-                    ? new Rectangle(1 * 19, 0, 19, 31)
-                    : new Rectangle(0 * 19, 0, 19, 31);
-
-                float maxCos = Math.Max(Math.Abs(cosX), Math.Abs(cosY));
-
-                float targetMaxScale = MathHelper.Lerp(1.2f, 1.0f, maxCos);
-
-                float scaleBoost = targetMaxScale / Math.Max(0.01f, maxCos);
-
-                float absScaleX = Math.Max(0.15f, Math.Abs(cosY) * scaleBoost) * ticket.Scale;
-                float absScaleY = Math.Max(0.15f, Math.Abs(cosX) * scaleBoost) * ticket.Scale;
-                Vector2 finalScale = new Vector2(absScaleX, absScaleY);
-
-                SpriteEffects effects = SpriteEffects.None;
-                if (cosY < 0) effects |= SpriteEffects.FlipHorizontally;
-                if (cosX < 0) effects |= SpriteEffects.FlipVertically;
-
-                float normalZ = Math.Abs(cosX * cosY);
-
-                float brightness = 0.8f + 0.2f * normalZ;
-
-                Color ticketColor = new Color((int)(255 * brightness), (int)(255 * brightness), (int)(255 * brightness), 255);
-                Color textColor = new Color((int)(_global.Palette_Black.R * brightness), (int)(_global.Palette_Black.G * brightness), (int)(_global.Palette_DarkestPale.B * brightness), 255);
-
-                if (ticketSheet != null)
-                {
-                    spriteBatch.DrawSnapped(ticketSheet, ticket.Position, sourceRect, ticketColor, ticket.RotZ, origin, finalScale, effects, 0f);
-                }
-                else
-                {
-                    Color fallbackColor = new Color((int)(_global.Palette_Pale.R * brightness), (int)(_global.Palette_Pale.G * brightness), (int)(_global.Palette_Pale.B * brightness), 255);
-                    spriteBatch.DrawSnapped(pixel, ticket.Position, new Rectangle(0, 0, 19, 31), fallbackColor, ticket.RotZ, origin, finalScale, effects, 0f);
-                }
-
-                if (!isBackside && !ticket.IsBlank)
-                {
-                    string numText = ticket.Placement.ToString();
-                    string sufText = GetOrdinalSuffix(ticket.Placement);
-
-                    Vector2 numSize = mainFont.MeasureString(numText);
-                    Vector2 sufSize = tertFont.MeasureString(sufText);
-
-                    float totalWidth = numSize.X + sufSize.X;
-
-                    Vector2 pivot = new Vector2(MathF.Round(totalWidth / 2f) + 1f, MathF.Round(numSize.Y / 2f));
-
-                    Vector2 numOrigin = new Vector2(MathF.Round(pivot.X), MathF.Round(pivot.Y));
-                    Vector2 sufOrigin = new Vector2(MathF.Round(pivot.X - numSize.X), MathF.Round(pivot.Y));
-
-                    spriteBatch.DrawStringSnapped(mainFont, numText, ticket.Position, textColor, ticket.RotZ, numOrigin, finalScale, SpriteEffects.None, 0f);
-                    spriteBatch.DrawStringSnapped(tertFont, sufText, ticket.Position, textColor, ticket.RotZ, sufOrigin, finalScale, SpriteEffects.None, 0f);
-                }
-
-                if (ticketSheet != null && !isBackside && !ticket.IsBlank && ticket.Placement >= 1 && ticket.Placement <= 3)
-                {
-                    int overlayFrameIndex = ticket.Placement + 1;
-                    Rectangle overlayRect = new Rectangle(overlayFrameIndex * 19, 0, 19, 31);
-                    spriteBatch.DrawSnapped(ticketSheet, ticket.Position, overlayRect, ticketColor, ticket.RotZ, origin, finalScale, effects, 0f);
-                }
-            }
+            _ticketManager.Draw(spriteBatch, _spriteManager, _global, mainFont, tertFont);
 
             if (_arenaState == ArenaState.Countdown)
             {
@@ -1091,12 +700,12 @@ namespace ProjectVagabond.Scenes
             Vector2 gPos = new Vector2(amountPos.X + amountWidth + 2, 11 + yOffset);
             spriteBatch.DrawStringSnapped(tertiaryFont, gText, gPos, _global.Palette_DarkSun);
 
-            var player = _wizards.FirstOrDefault(w => w.IsPlayer);
-            if (player != null && player.EquippedActiveSpell != null)
+            var player = _wizards.FirstOrDefault(w => w.Data.Stats.IsPlayer);
+            if (player != null && player.Data.Combat.EquippedActiveSpell != null)
             {
-                string spellName = player.EquippedActiveSpell.Name.ToUpper();
-                string status = player.ActiveSpellCooldownTimer > 0 ? $"{player.ActiveSpellCooldownTimer:F1}S" : "READY";
-                Color statusColor = player.ActiveSpellCooldownTimer > 0 ? _global.Palette_DarkShadow : _global.Palette_Sky;
+                string spellName = player.Data.Combat.EquippedActiveSpell.Name.ToUpper();
+                string status = player.Data.Combat.ActiveSpellCooldownTimer > 0 ? $"{player.Data.Combat.ActiveSpellCooldownTimer:F1}S" : "READY";
+                Color statusColor = player.Data.Combat.ActiveSpellCooldownTimer > 0 ? _global.Palette_DarkShadow : _global.Palette_Sky;
 
                 string text = $"{spellName}: {status}";
                 Vector2 size = tertiaryFont.MeasureString(text);
@@ -1116,44 +725,44 @@ namespace ProjectVagabond.Scenes
             int heartWidth = 5;
             int heartSpacing = 1;
 
-            int aliveCount = _wizards.Count(wiz => wiz.State != WizardState.Dead);
+            int aliveCount = _wizards.Count(wiz => wiz.Data.Combat.State != WizardState.Dead);
             bool showProbabilities = _arenaState == ArenaState.Countdown || (_arenaState == ArenaState.Fighting && aliveCount > 1);
 
             foreach (var w in _wizards)
             {
                 float shakeX = 0f;
                 float shakeY = 0f;
-                if (w.HudShakeTimer > 0)
+                if (w.Data.UI.HudShakeTimer > 0)
                 {
-                    float shakeMag = (w.HudShakeTimer / 0.4f) * 3f;
+                    float shakeMag = (w.Data.UI.HudShakeTimer / 0.4f) * 3f;
                     shakeX = (float)(_random.NextDouble() * 2 - 1) * shakeMag;
                     shakeY = (float)(_random.NextDouble() * 2 - 1) * shakeMag;
                 }
 
-                Rectangle hudRect = new Rectangle((int)_hudBaseX - 2, (int)w.HudNamePos.Y - 2, (int)(_hudMultCenterX - _hudBaseX + 30), 20);
+                Rectangle hudRect = new Rectangle((int)_hudBaseX - 2, (int)w.Data.UI.HudNamePos.Y - 2, (int)(_hudMultCenterX - _hudBaseX + 30), 20);
                 if (_hoveredHudWizard == w)
                 {
                     spriteBatch.Draw(pixel, hudRect, _global.Palette_DarkShadow * 0.5f);
                 }
 
-                Color baseNameColor = w.IsPlayer ? _global.Palette_DarkPale : _global.Palette_DarkestPale;
+                Color baseNameColor = w.Data.Stats.IsPlayer ? _global.Palette_DarkPale : _global.Palette_DarkestPale;
                 Color nameColor = baseNameColor;
 
-                if (w.State == WizardState.Dead)
+                if (w.Data.Combat.State == WizardState.Dead)
                 {
-                    float fadeProgress = Math.Clamp(w.TimeSinceDeath / 0.5f, 0f, 1f);
+                    float fadeProgress = Math.Clamp(w.Data.Combat.TimeSinceDeath / 0.5f, 0f, 1f);
                     nameColor = Color.Lerp(baseNameColor, _global.Palette_Black, fadeProgress);
                 }
 
-                Vector2 finalNamePos = new Vector2(MathF.Round(w.HudNamePos.X + shakeX), MathF.Round(w.HudNamePos.Y + shakeY));
-                spriteBatch.DrawStringSnapped(defaultFont, w.Name.ToUpper(), finalNamePos, nameColor);
+                Vector2 finalNamePos = new Vector2(MathF.Round(w.Data.UI.HudNamePos.X + shakeX), MathF.Round(w.Data.UI.HudNamePos.Y + shakeY));
+                spriteBatch.DrawStringSnapped(defaultFont, w.Data.Stats.Name.ToUpper(), finalNamePos, nameColor);
 
                 int statBlockWidth = 19; // 10 pips * 1px + 9 gaps * 1px
                 int statBlockHeight = 5; // 3 rows * 1px + 2 gaps * 1px
                 float statBlockX = MathF.Round(_hudBaseX + shakeX);
                 float statBlockY = finalNamePos.Y + MathF.Max(0, (defaultFont.LineHeight - statBlockHeight) / 2f);
 
-                int[] stats = { w.Power, w.Tenacity, w.Agility };
+                int[] stats = { w.Data.Stats.Power, w.Data.Stats.Tenacity, w.Data.Stats.Agility };
                 for (int row = 0; row < 3; row++)
                 {
                     int statVal = Math.Clamp(stats[row], 0, 10);
@@ -1166,9 +775,9 @@ namespace ProjectVagabond.Scenes
                         float currentX = statBlockX + col * 2;
                         Color pipColor = col < statVal ? filledColor : _global.Palette_DarkShadow;
 
-                        if (w.State == WizardState.Dead)
+                        if (w.Data.Combat.State == WizardState.Dead)
                         {
-                            float fadeProgress = Math.Clamp(w.TimeSinceDeath / 0.5f, 0f, 1f);
+                            float fadeProgress = Math.Clamp(w.Data.Combat.TimeSinceDeath / 0.5f, 0f, 1f);
                             pipColor = Color.Lerp(pipColor, _global.Palette_Black, fadeProgress);
                         }
 
@@ -1176,7 +785,7 @@ namespace ProjectVagabond.Scenes
                     }
                 }
 
-                if (w.State != WizardState.Dead && showProbabilities)
+                if (w.Data.Combat.State != WizardState.Dead && showProbabilities)
                 {
                     int step = _probSteps.TryGetValue(w, out var s) ? s : 0;
                     Color probColor = GetMultiplierColor(step);
@@ -1208,148 +817,44 @@ namespace ProjectVagabond.Scenes
                     spriteBatch.DrawStringSnapped(probFont, probText, drawPos, probColor, pRot, probOrigin, pScale, SpriteEffects.None, 0f);
                 }
 
-                if (w.State == WizardState.Dead)
+                if (w.Data.Combat.State == WizardState.Dead)
                 {
-                    float fadeProgress = Math.Clamp(w.TimeSinceDeath / 0.5f, 0f, 1f);
-                    int currentLineWidth = (int)(w.HudNameSize.X * fadeProgress);
+                    float fadeProgress = Math.Clamp(w.Data.Combat.TimeSinceDeath / 0.5f, 0f, 1f);
+                    int currentLineWidth = (int)(w.Data.UI.HudNameSize.X * fadeProgress);
                     if (currentLineWidth > 0)
                     {
-                        int lineY = (int)MathF.Round(finalNamePos.Y + w.HudNameSize.Y / 2f);
+                        int lineY = (int)MathF.Round(finalNamePos.Y + w.Data.UI.HudNameSize.Y / 2f);
                         spriteBatch.Draw(pixel, new Rectangle((int)finalNamePos.X, lineY, currentLineWidth, 1), _global.Palette_Black);
                     }
                 }
 
-                int maxHearts = (w.MaxHP + 2) / 3;
+                int maxHearts = (w.Data.Stats.MaxHP + 2) / 3;
                 for (int h = 0; h < maxHearts; h++)
                 {
-                    int heartVal = Math.Clamp(w.CurrentHP - h * 3, 0, 3);
+                    int heartVal = Math.Clamp(w.Data.Stats.CurrentHP - h * 3, 0, 3);
                     int frameIndex = 3; // 0/3
                     if (heartVal == 3) frameIndex = 0; // 3/3
                     else if (heartVal == 2) frameIndex = 1; // 2/3
                     else if (heartVal == 1) frameIndex = 2; // 1/3
 
-                    int flashFrame = w.GetHeartFlashFrame(h);
+                    int flashFrame = w.Controller.GetHeartFlashFrame(h);
                     if (flashFrame != -1) frameIndex = flashFrame;
 
                     var sourceRect = new Rectangle(frameIndex * heartWidth, 0, heartWidth, 5);
-                    Color heartColor = w.State == WizardState.Dead ? Color.Gray : Color.White;
+                    Color heartColor = w.Data.Combat.State == WizardState.Dead ? Color.Gray : Color.White;
 
                     int yOffset = 0;
-                    if (w.CurrentHP > 0)
+                    if (w.Data.Stats.CurrentHP > 0)
                     {
-                        float localWaveTime = w.HudHeartWaveTimer - w.HudHeartWaveInterval - (h * 0.08f);
+                        float localWaveTime = w.Data.UI.HudHeartWaveTimer - w.Data.UI.HudHeartWaveInterval - (h * 0.08f);
                         if (localWaveTime > 0 && localWaveTime < 0.15f)
                         {
                             yOffset = -1;
                         }
                     }
 
-                    Vector2 finalHeartPos = new Vector2(MathF.Round(w.HudHeartStartPos.X + h * (heartWidth + heartSpacing) + shakeX), MathF.Round(w.HudHeartStartPos.Y + shakeY) + yOffset);
+                    Vector2 finalHeartPos = new Vector2(MathF.Round(w.Data.UI.HudHeartStartPos.X + h * (heartWidth + heartSpacing) + shakeX), MathF.Round(w.Data.UI.HudHeartStartPos.Y + shakeY) + yOffset);
                     spriteBatch.DrawSnapped(sheet, finalHeartPos, sourceRect, heartColor);
-                }
-            }
-        }
-
-        private void DrawWizard(SpriteBatch spriteBatch, ArenaWizard wizard)
-        {
-            if (wizard.IsTeleporting) return;
-
-            var sheet = _spriteManager.PlayerMasterSpriteSheet;
-            if (sheet == null) return;
-
-            Vector2 origin = new Vector2(16, 16);
-            var sourceRect = _spriteManager.GetPlayerSourceRect(wizard.PortraitIndex, PlayerSpriteType.Portrait5x5);
-
-            bool isDead = wizard.State == WizardState.Dead;
-            float hopOffset = isDead ? 0f : -MathF.Abs(MathF.Sin(wizard.HopTimer)) * 4f;
-            Vector2 drawPos = new Vector2(MathF.Round(wizard.Position.X), MathF.Round(wizard.Position.Y + hopOffset));
-            float rotation = isDead ? MathHelper.PiOver2 : 0f;
-
-            float alpha = wizard.GetDeathAlpha();
-            Color color = isDead ? (Color.Gray * alpha) : Color.White;
-
-            bool drawSilhouette = false;
-            bool skipDraw = false;
-
-            if (wizard.InvincibilityTimer > 0 && !isDead)
-            {
-                float timeActive = wizard.InvincibilityDuration - wizard.InvincibilityTimer;
-                int state = (int)(timeActive / 0.05f) % 3;
-
-                if (state == 0) drawSilhouette = true;
-                else if (state == 1) skipDraw = true;
-            }
-
-            SpriteEffects spriteEffects = wizard.IsFacingRight ? SpriteEffects.FlipHorizontally : SpriteEffects.None;
-
-            if (!skipDraw)
-            {
-                if (wizard.IsPlayer && !isDead)
-                {
-                    var silhouette = _spriteManager.PlayerMasterSpriteSheetSilhouette;
-                    if (silhouette != null)
-                    {
-                        spriteBatch.DrawSnapped(silhouette, drawPos + new Vector2(-1, 0), sourceRect, _global.Palette_Sun, rotation, origin, 1f, spriteEffects, 0f);
-                        spriteBatch.DrawSnapped(silhouette, drawPos + new Vector2(1, 0), sourceRect, _global.Palette_Sun, rotation, origin, 1f, spriteEffects, 0f);
-                        spriteBatch.DrawSnapped(silhouette, drawPos + new Vector2(0, -1), sourceRect, _global.Palette_Sun, rotation, origin, 1f, spriteEffects, 0f);
-                        spriteBatch.DrawSnapped(silhouette, drawPos + new Vector2(0, 1), sourceRect, _global.Palette_Sun, rotation, origin, 1f, spriteEffects, 0f);
-                    }
-                }
-
-                if (drawSilhouette)
-                {
-                    var silhouette = _spriteManager.PlayerMasterSpriteSheetSilhouette;
-                    spriteBatch.DrawSnapped(silhouette ?? sheet, drawPos, sourceRect, _global.Palette_Sun, rotation, origin, 1f, spriteEffects, 0f);
-                }
-                else
-                {
-                    spriteBatch.DrawSnapped(sheet, drawPos, sourceRect, color, rotation, origin, 1f, spriteEffects, 0f);
-                }
-            }
-
-            if (wizard.WardTimer > 0 && !isDead)
-            {
-                var circle = _spriteManager.CircleTextureSprite;
-                var ring = _spriteManager.RingTextureSprite;
-                if (circle != null)
-                {
-                    float duration = wizard.EquippedActiveSpell?.Duration ?? 4.0f;
-                    float timeActive = duration - wizard.WardTimer;
-
-                    float bubbleProgress = Math.Clamp(timeActive / 0.3f, 0f, 1f);
-                    float popProgress = Math.Clamp(wizard.WardTimer / 0.15f, 0f, 1f);
-
-                    float scaleAnim = Easing.EaseOutBackSlight(bubbleProgress) * Easing.EaseInQuad(popProgress);
-
-                    float wobbleX = MathF.Sin(timeActive * 5f) * 0.05f;
-                    float wobbleY = MathF.Cos(timeActive * 7f) * 0.05f;
-
-                    float hitProgress = Math.Clamp(wizard.WardHitTimer / 0.4f, 0f, 1f);
-                    float hitSquishX = MathF.Sin(hitProgress * MathHelper.Pi * 3f) * hitProgress * 0.4f;
-                    float hitSquishY = -MathF.Sin(hitProgress * MathHelper.Pi * 3f) * hitProgress * 0.4f;
-
-                    float targetRadius = 8f;
-                    float currentRadiusX = Math.Max(0.1f, targetRadius * (scaleAnim + wobbleX + hitSquishX));
-                    float currentRadiusY = Math.Max(0.1f, targetRadius * (scaleAnim + wobbleY + hitSquishY));
-
-                    Vector2 currentCenter = drawPos;
-
-                    Vector2 circleOrigin = new Vector2(circle.Width / 2f, circle.Height / 2f);
-                    Vector2 scaleVec = new Vector2(currentRadiusX * 2f / circle.Width, currentRadiusY * 2f / circle.Height);
-
-                    Color baseColor = Color.Lerp(_global.Palette_Sky * 0.3f, Color.White * 0.7f, hitProgress);
-                    spriteBatch.DrawSnapped(circle, currentCenter, null, baseColor, 0f, circleOrigin, scaleVec, SpriteEffects.None, 0f);
-
-                    if (ring != null)
-                    {
-                        Vector2 ringOrigin = new Vector2(ring.Width / 2f, ring.Height / 2f);
-                        Vector2 ringScaleVec = new Vector2(currentRadiusX * 2f / ring.Width, currentRadiusY * 2f / ring.Height);
-                        Color ringColor = Color.Lerp(Color.White * 0.3f, Color.White, hitProgress);
-                        spriteBatch.DrawSnapped(ring, currentCenter, null, ringColor, 0f, ringOrigin, ringScaleVec, SpriteEffects.None, 0f);
-
-                        Vector2 highlightPos = currentCenter + new Vector2(-currentRadiusX * 0.4f, -currentRadiusY * 0.4f);
-                        spriteBatch.DrawSnapped(circle, highlightPos, null, Color.White * 0.6f * scaleAnim, 0f, circleOrigin, scaleVec * 0.25f, SpriteEffects.None, 0f);
-                    }
                 }
             }
         }
