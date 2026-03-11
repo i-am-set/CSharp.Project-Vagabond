@@ -12,7 +12,7 @@
     "Move2": "scratch",
     "Move3": "fireball",
     "Move4": "meteor_strike",
-    "ActiveSpell": "teleport"
+    "ActiveSpell": "ward"
   },
   {
     "MemberID": "1",

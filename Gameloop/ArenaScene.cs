@@ -1309,11 +1309,46 @@ namespace ProjectVagabond.Scenes
             if (wizard.WardTimer > 0 && !isDead)
             {
                 var circle = _spriteManager.CircleTextureSprite;
+                var ring = _spriteManager.RingTextureSprite;
                 if (circle != null)
                 {
-                    float scale = 24f / circle.Width;
+                    float duration = wizard.EquippedActiveSpell?.Duration ?? 4.0f;
+                    float timeActive = duration - wizard.WardTimer;
+
+                    float bubbleProgress = Math.Clamp(timeActive / 0.3f, 0f, 1f);
+                    float popProgress = Math.Clamp(wizard.WardTimer / 0.15f, 0f, 1f);
+
+                    float scaleAnim = Easing.EaseOutBackSlight(bubbleProgress) * Easing.EaseInQuad(popProgress);
+
+                    float wobbleX = MathF.Sin(timeActive * 5f) * 0.05f;
+                    float wobbleY = MathF.Cos(timeActive * 7f) * 0.05f;
+
+                    float hitProgress = Math.Clamp(wizard.WardHitTimer / 0.4f, 0f, 1f);
+                    float hitSquishX = MathF.Sin(hitProgress * MathHelper.Pi * 3f) * hitProgress * 0.4f;
+                    float hitSquishY = -MathF.Sin(hitProgress * MathHelper.Pi * 3f) * hitProgress * 0.4f;
+
+                    float targetRadius = 8f;
+                    float currentRadiusX = Math.Max(0.1f, targetRadius * (scaleAnim + wobbleX + hitSquishX));
+                    float currentRadiusY = Math.Max(0.1f, targetRadius * (scaleAnim + wobbleY + hitSquishY));
+
+                    Vector2 currentCenter = drawPos;
+
                     Vector2 circleOrigin = new Vector2(circle.Width / 2f, circle.Height / 2f);
-                    spriteBatch.DrawSnapped(circle, drawPos, null, _global.Palette_Sky * 0.4f, 0f, circleOrigin, scale, SpriteEffects.None, 0f);
+                    Vector2 scaleVec = new Vector2(currentRadiusX * 2f / circle.Width, currentRadiusY * 2f / circle.Height);
+
+                    Color baseColor = Color.Lerp(_global.Palette_Sky * 0.3f, Color.White * 0.7f, hitProgress);
+                    spriteBatch.DrawSnapped(circle, currentCenter, null, baseColor, 0f, circleOrigin, scaleVec, SpriteEffects.None, 0f);
+
+                    if (ring != null)
+                    {
+                        Vector2 ringOrigin = new Vector2(ring.Width / 2f, ring.Height / 2f);
+                        Vector2 ringScaleVec = new Vector2(currentRadiusX * 2f / ring.Width, currentRadiusY * 2f / ring.Height);
+                        Color ringColor = Color.Lerp(Color.White * 0.3f, Color.White, hitProgress);
+                        spriteBatch.DrawSnapped(ring, currentCenter, null, ringColor, 0f, ringOrigin, ringScaleVec, SpriteEffects.None, 0f);
+
+                        Vector2 highlightPos = currentCenter + new Vector2(-currentRadiusX * 0.4f, -currentRadiusY * 0.4f);
+                        spriteBatch.DrawSnapped(circle, highlightPos, null, Color.White * 0.6f * scaleAnim, 0f, circleOrigin, scaleVec * 0.25f, SpriteEffects.None, 0f);
+                    }
                 }
             }
         }

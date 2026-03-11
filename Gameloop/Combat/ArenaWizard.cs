@@ -55,6 +55,7 @@ namespace ProjectVagabond.Battle
         public ActiveSpellData EquippedActiveSpell;
         public float ActiveSpellCooldownTimer { get; private set; }
         public float WardTimer { get; private set; }
+        public float WardHitTimer { get; private set; }
         public float TeleportTimer { get; private set; }
         public bool IsTeleporting { get; private set; }
         public Vector2 TeleportTargetPos { get; private set; }
@@ -199,7 +200,13 @@ namespace ProjectVagabond.Battle
 
         public bool TakeDamage(int amount, bool isCrit = false)
         {
-            if (InvincibilityTimer > 0 || State == WizardState.Dead || CurrentHP <= 0 || WardTimer > 0) return false;
+            if (WardTimer > 0)
+            {
+                WardHitTimer = 0.4f;
+                return false;
+            }
+
+            if (InvincibilityTimer > 0 || State == WizardState.Dead || CurrentHP <= 0) return false;
 
             if (IsSuspended)
             {
@@ -417,6 +424,7 @@ namespace ProjectVagabond.Battle
         {
             if (ActiveSpellCooldownTimer > 0) ActiveSpellCooldownTimer -= dt;
             if (WardTimer > 0) WardTimer -= dt;
+            if (WardHitTimer > 0) WardHitTimer -= dt;
 
             if (IsTeleporting)
             {
