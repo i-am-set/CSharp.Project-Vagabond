@@ -37,6 +37,7 @@ namespace ProjectVagabond.Scenes
             public bool IsDispensed;
             public bool IsHanging;
             public float Scale = 1.0f;
+            public bool IsBlank;
 
             // 3D Rotation properties
             public float RotX;
@@ -402,6 +403,20 @@ namespace ProjectVagabond.Scenes
             });
         }
 
+        public void DebugPrintTicket()
+        {
+            _pendingTickets.Enqueue(new MatchTicket
+            {
+                Placement = 0,
+                WizardNumber = 0,
+                AnimTimer = 0f,
+                TargetX = 44,
+                Position = new Vector2(44, -16f),
+                Scale = 1.0f,
+                IsBlank = true
+            });
+        }
+
         public override void Update(GameTime gameTime)
         {
             base.Update(gameTime);
@@ -565,23 +580,36 @@ namespace ProjectVagabond.Scenes
                 {
                     if (!t.IsDragging && !t.IsHanging)
                     {
-                        t.Velocity.X *= MathF.Max(0f, 1f - 3f * dt);
-                        t.Velocity.Y *= MathF.Max(0f, 1f - 3f * dt);
+                        // Calculate how "flat" the ticket is relative to the Y axis (falling direction)
+                        // Using the Y-component of the 3D normal vector
+                        float ny = MathF.Sin(t.RotX) * MathF.Cos(t.RotZ) - MathF.Cos(t.RotX) * MathF.Sin(t.RotY) * MathF.Sin(t.RotZ);
+                        float flatProfile = Math.Abs(ny);
 
-                        t.Velocity.Y += 400f * dt;
+                        // Interpolate drag and terminal velocity based on orientation
+                        // Edge-on (flatProfile = 0): Low drag, high terminal velocity
+                        // Flat-on (flatProfile = 1): High drag, low terminal velocity
+                        float dragY = MathHelper.Lerp(0.5f, 8.0f, flatProfile);
+                        float terminalVelocityY = MathHelper.Lerp(300f, 35f, flatProfile);
 
-                        if (t.Velocity.Y > 100f) t.Velocity.Y = 100f;
+                        t.Velocity.X *= MathF.Max(0f, 1f - 2.0f * dt);
+                        t.Velocity.Y *= MathF.Max(0f, 1f - dragY * dt);
 
+                        t.Velocity.Y += 500f * dt; // Gravity
+
+                        if (t.Velocity.Y > terminalVelocityY) t.Velocity.Y = terminalVelocityY;
+
+                        // Flutter adds X velocity, more pronounced when flat
                         t.FlutterPhase += t.FlutterSpeed * dt;
-                        t.Velocity.X += MathF.Sin(t.FlutterPhase) * 120f * dt;
+                        float flutterMagnitude = MathHelper.Lerp(30f, 200f, flatProfile);
+                        t.Velocity.X += MathF.Sin(t.FlutterPhase) * flutterMagnitude * dt;
 
                         t.VelRotX *= MathF.Max(0f, 1f - 1.5f * dt);
                         t.VelRotY *= MathF.Max(0f, 1f - 1.5f * dt);
                         t.VelRotZ *= MathF.Max(0f, 1f - 1.5f * dt);
 
-                        t.VelRotX += MathF.Sin(t.FlutterPhase * 1.3f) * 4f * dt;
-                        t.VelRotY += MathF.Cos(t.FlutterPhase * 1.1f) * 4f * dt;
-                        t.VelRotZ += MathF.Sin(t.FlutterPhase * 0.8f) * 1.5f * dt;
+                        t.VelRotX += MathF.Sin(t.FlutterPhase * 1.3f) * 6f * dt;
+                        t.VelRotY += MathF.Cos(t.FlutterPhase * 1.1f) * 6f * dt;
+                        t.VelRotZ += MathF.Sin(t.FlutterPhase * 0.8f) * 2.5f * dt;
 
                         t.RotX += t.VelRotX * dt;
                         t.RotY += t.VelRotY * dt;
@@ -937,22 +965,18 @@ namespace ProjectVagabond.Scenes
 
                 bool isBackside = (cosX * cosY) < 0;
 
-                // Frame 0 is front background, Frame 1 is back background
                 Rectangle sourceRect = isBackside
                     ? new Rectangle(1 * 19, 0, 19, 31)
                     : new Rectangle(0 * 19, 0, 19, 31);
 
-                // Reduce the "falling away" depth illusion by 80% while preserving the flipping effect
                 float maxCos = Math.Max(Math.Abs(cosX), Math.Abs(cosY));
-                float depthCorrection = 1.0f;
-                if (maxCos > 0.001f)
-                {
-                    depthCorrection = MathHelper.Lerp(1.0f, 1.0f / maxCos, 0.8f);
-                }
 
-                // Clamp the minimum scale so it looks like a thin edge instead of shrinking to a tiny dot
-                float absScaleX = Math.Max(0.15f, Math.Abs(cosY)) * ticket.Scale * depthCorrection;
-                float absScaleY = Math.Max(0.15f, Math.Abs(cosX)) * ticket.Scale * depthCorrection;
+                float targetMaxScale = MathHelper.Lerp(1.2f, 1.0f, maxCos);
+
+                float scaleBoost = targetMaxScale / Math.Max(0.01f, maxCos);
+
+                float absScaleX = Math.Max(0.15f, Math.Abs(cosY) * scaleBoost) * ticket.Scale;
+                float absScaleY = Math.Max(0.15f, Math.Abs(cosX) * scaleBoost) * ticket.Scale;
                 Vector2 finalScale = new Vector2(absScaleX, absScaleY);
 
                 SpriteEffects effects = SpriteEffects.None;
@@ -961,7 +985,6 @@ namespace ProjectVagabond.Scenes
 
                 float normalZ = Math.Abs(cosX * cosY);
 
-                // Reduce the darkening intensity to ~20% of what it was
                 float brightness = 0.8f + 0.2f * normalZ;
 
                 Color ticketColor = new Color((int)(255 * brightness), (int)(255 * brightness), (int)(255 * brightness), 255);
@@ -969,7 +992,6 @@ namespace ProjectVagabond.Scenes
 
                 if (ticketSheet != null)
                 {
-                    // 1. Draw base ticket
                     spriteBatch.DrawSnapped(ticketSheet, ticket.Position, sourceRect, ticketColor, ticket.RotZ, origin, finalScale, effects, 0f);
                 }
                 else
@@ -978,8 +1000,7 @@ namespace ProjectVagabond.Scenes
                     spriteBatch.DrawSnapped(pixel, ticket.Position, new Rectangle(0, 0, 19, 31), fallbackColor, ticket.RotZ, origin, finalScale, effects, 0f);
                 }
 
-                // 2. Draw text (under the sticker)
-                if (!isBackside)
+                if (!isBackside && !ticket.IsBlank)
                 {
                     string numText = ticket.Placement.ToString();
                     string sufText = GetOrdinalSuffix(ticket.Placement);
@@ -989,7 +1010,6 @@ namespace ProjectVagabond.Scenes
 
                     float totalWidth = numSize.X + sufSize.X;
 
-                    // Shift pivot X by +1 to move the text 1 pixel to the left (was +2)
                     Vector2 pivot = new Vector2(MathF.Round(totalWidth / 2f) + 1f, MathF.Round(numSize.Y / 2f));
 
                     Vector2 numOrigin = new Vector2(MathF.Round(pivot.X), MathF.Round(pivot.Y));
@@ -999,10 +1019,9 @@ namespace ProjectVagabond.Scenes
                     spriteBatch.DrawStringSnapped(tertFont, sufText, ticket.Position, textColor, ticket.RotZ, sufOrigin, finalScale, SpriteEffects.None, 0f);
                 }
 
-                // 3. Draw overlay sticker (over the text)
-                if (ticketSheet != null && !isBackside && ticket.Placement >= 1 && ticket.Placement <= 3)
+                if (ticketSheet != null && !isBackside && !ticket.IsBlank && ticket.Placement >= 1 && ticket.Placement <= 3)
                 {
-                    int overlayFrameIndex = ticket.Placement + 1; // 1st -> Frame 2, 2nd -> Frame 3, 3rd -> Frame 4
+                    int overlayFrameIndex = ticket.Placement + 1;
                     Rectangle overlayRect = new Rectangle(overlayFrameIndex * 19, 0, 19, 31);
                     spriteBatch.DrawSnapped(ticketSheet, ticket.Position, overlayRect, ticketColor, ticket.RotZ, origin, finalScale, effects, 0f);
                 }
