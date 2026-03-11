@@ -569,8 +569,7 @@ namespace ProjectVagabond.Scenes
             {
                 var t = _tickets[i];
 
-                float targetScale = t.IsDragging ? 1.10f : 1.0f;
-                t.Scale = MathHelper.Lerp(t.Scale, targetScale, 15f * dt);
+                t.Scale = 1.0f;
 
                 if (!t.IsDispensed)
                 {
