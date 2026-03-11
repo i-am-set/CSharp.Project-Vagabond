@@ -945,9 +945,17 @@ namespace ProjectVagabond.Scenes
                     ? new Rectangle(1 * 19, 0, 19, 31)
                     : new Rectangle(0 * 19, 0, 19, 31);
 
+                // Reduce the "falling away" depth illusion by 80% while preserving the flipping effect
+                float maxCos = Math.Max(Math.Abs(cosX), Math.Abs(cosY));
+                float depthCorrection = 1.0f;
+                if (maxCos > 0.001f)
+                {
+                    depthCorrection = MathHelper.Lerp(1.0f, 1.0f / maxCos, 0.8f);
+                }
+
                 // Clamp the minimum scale so it looks like a thin edge instead of shrinking to a tiny dot
-                float absScaleX = Math.Max(0.15f, Math.Abs(cosY)) * ticket.Scale;
-                float absScaleY = Math.Max(0.15f, Math.Abs(cosX)) * ticket.Scale;
+                float absScaleX = Math.Max(0.15f, Math.Abs(cosY)) * ticket.Scale * depthCorrection;
+                float absScaleY = Math.Max(0.15f, Math.Abs(cosX)) * ticket.Scale * depthCorrection;
                 Vector2 finalScale = new Vector2(absScaleX, absScaleY);
 
                 SpriteEffects effects = SpriteEffects.None;
@@ -955,23 +963,17 @@ namespace ProjectVagabond.Scenes
                 if (cosX < 0) effects |= SpriteEffects.FlipVertically;
 
                 float normalZ = Math.Abs(cosX * cosY);
-                float brightness = 0.4f + 0.6f * normalZ;
+
+                // Reduce the darkening intensity to ~20% of what it was
+                float brightness = 0.8f + 0.2f * normalZ;
 
                 Color ticketColor = new Color((int)(255 * brightness), (int)(255 * brightness), (int)(255 * brightness), 255);
                 Color textColor = new Color((int)(_global.Palette_Black.R * brightness), (int)(_global.Palette_Black.G * brightness), (int)(_global.Palette_Black.B * brightness), 255);
 
                 if (ticketSheet != null)
                 {
-                    // Draw base ticket
+                    // 1. Draw base ticket
                     spriteBatch.DrawSnapped(ticketSheet, ticket.Position, sourceRect, ticketColor, ticket.RotZ, origin, finalScale, effects, 0f);
-
-                    // Draw overlay sticker if applicable
-                    if (!isBackside && ticket.Placement >= 1 && ticket.Placement <= 3)
-                    {
-                        int overlayFrameIndex = ticket.Placement + 1; // 1st -> Frame 2, 2nd -> Frame 3, 3rd -> Frame 4
-                        Rectangle overlayRect = new Rectangle(overlayFrameIndex * 19, 0, 19, 31);
-                        spriteBatch.DrawSnapped(ticketSheet, ticket.Position, overlayRect, ticketColor, ticket.RotZ, origin, finalScale, effects, 0f);
-                    }
                 }
                 else
                 {
@@ -979,6 +981,7 @@ namespace ProjectVagabond.Scenes
                     spriteBatch.DrawSnapped(pixel, ticket.Position, new Rectangle(0, 0, 19, 31), fallbackColor, ticket.RotZ, origin, finalScale, effects, 0f);
                 }
 
+                // 2. Draw text (under the sticker)
                 if (!isBackside)
                 {
                     string numText = ticket.Placement.ToString();
@@ -989,14 +992,22 @@ namespace ProjectVagabond.Scenes
 
                     float totalWidth = numSize.X + sufSize.X;
 
-                    // Shift pivot X by +2 to move the text 2 pixels to the left
-                    Vector2 pivot = new Vector2(MathF.Round(totalWidth / 2f) + 2f, MathF.Round(numSize.Y / 2f));
+                    // Shift pivot X by +1 to move the text 1 pixel to the left (was +2)
+                    Vector2 pivot = new Vector2(MathF.Round(totalWidth / 2f) + 1f, MathF.Round(numSize.Y / 2f));
 
                     Vector2 numOrigin = new Vector2(MathF.Round(pivot.X), MathF.Round(pivot.Y));
                     Vector2 sufOrigin = new Vector2(MathF.Round(pivot.X - numSize.X), MathF.Round(pivot.Y));
 
                     spriteBatch.DrawStringSnapped(mainFont, numText, ticket.Position, textColor, ticket.RotZ, numOrigin, finalScale, SpriteEffects.None, 0f);
                     spriteBatch.DrawStringSnapped(tertFont, sufText, ticket.Position, textColor, ticket.RotZ, sufOrigin, finalScale, SpriteEffects.None, 0f);
+                }
+
+                // 3. Draw overlay sticker (over the text)
+                if (ticketSheet != null && !isBackside && ticket.Placement >= 1 && ticket.Placement <= 3)
+                {
+                    int overlayFrameIndex = ticket.Placement + 1; // 1st -> Frame 2, 2nd -> Frame 3, 3rd -> Frame 4
+                    Rectangle overlayRect = new Rectangle(overlayFrameIndex * 19, 0, 19, 31);
+                    spriteBatch.DrawSnapped(ticketSheet, ticket.Position, overlayRect, ticketColor, ticket.RotZ, origin, finalScale, effects, 0f);
                 }
             }
 
