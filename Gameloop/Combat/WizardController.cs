@@ -21,7 +21,6 @@ namespace ProjectVagabond.Battle
         private readonly ArenaWizard _wizard;
         private static readonly Random _random = new Random();
 
-        // Cached Dependencies
         private readonly Global _global;
         private readonly SpriteManager _spriteManager;
         private readonly Core _core;
@@ -239,11 +238,11 @@ namespace ProjectVagabond.Battle
             {
                 if (combat.QueuedMove.RequiresFocus)
                 {
-                    if (combat.CurrentActiveAttack != null && !combat.CurrentActiveAttack.IsPooled)
+                    if (combat.CurrentActiveAttack != null)
                     {
                         combat.CurrentActiveAttack.IsCanceled = true;
+                        combat.CurrentActiveAttack = null;
                     }
-                    combat.CurrentActiveAttack = null;
                     combat.State = WizardState.Recovering;
                     combat.StateTimer = 0.5f;
                     combat.TargetPosition = combat.Position;
@@ -531,25 +530,6 @@ namespace ProjectVagabond.Battle
                     break;
 
                 case WizardState.Casting:
-                    if (combat.CurrentActiveAttack == null || combat.CurrentActiveAttack.IsPooled)
-                    {
-                        combat.CurrentActiveAttack = null;
-                        combat.State = WizardState.Recovering;
-                        combat.StateTimer = 0.25f;
-                        combat.TargetPosition = combat.Position;
-                        break;
-                    }
-
-                    bool animFinished = combat.CurrentActiveAttack.Animation == null || combat.CurrentActiveAttack.Animation.IsFinished;
-                    bool deliveryFinished = combat.CurrentActiveAttack.DeliveryInstance == null || combat.CurrentActiveAttack.DeliveryInstance.IsFinished;
-
-                    if ((deliveryFinished && animFinished) || combat.CurrentActiveAttack.IsCanceled)
-                    {
-                        combat.CurrentActiveAttack = null;
-                        combat.State = WizardState.Recovering;
-                        combat.StateTimer = 0.25f;
-                        combat.TargetPosition = combat.Position;
-                    }
                     break;
 
                 case WizardState.Recovering:
@@ -722,6 +702,21 @@ namespace ProjectVagabond.Battle
             context.Arena.SpawnAttack(attack);
 
             combat.State = WizardState.Casting;
+        }
+
+        public void NotifyAttackFinished(ActiveAttack attack)
+        {
+            var combat = _wizard.Data.Combat;
+            if (combat.CurrentActiveAttack == attack)
+            {
+                combat.CurrentActiveAttack = null;
+                if (combat.State == WizardState.Casting)
+                {
+                    combat.State = WizardState.Recovering;
+                    combat.StateTimer = 0.25f;
+                    combat.TargetPosition = combat.Position;
+                }
+            }
         }
 
         private float GetRandomActionTime()

@@ -5,6 +5,7 @@ using ProjectVagabond.Deliveries;
 using ProjectVagabond.Particles;
 using ProjectVagabond.Scenes;
 using ProjectVagabond.Utils;
+using System;
 
 namespace ProjectVagabond.Battle
 {
@@ -37,6 +38,8 @@ namespace ProjectVagabond.Battle
 
         public BattleContext Context { get; set; }
 
+        private bool _hasNotifiedCaster;
+
         public void Reset()
         {
             Caster = null;
@@ -57,6 +60,8 @@ namespace ProjectVagabond.Battle
             HasStartedAnimation = false;
             ActiveTime = 0f;
             Context = default;
+
+            _hasNotifiedCaster = false;
         }
 
         public void Update(float dt, BattleContext context)
@@ -66,39 +71,44 @@ namespace ProjectVagabond.Battle
             if (IsCanceled)
             {
                 Animation?.Cancel();
-                return;
             }
-
-            DeliveryInstance?.Update(dt, context, this);
-
-            if (IsCanceled)
+            else
             {
-                Animation?.Cancel();
-                return;
-            }
+                DeliveryInstance?.Update(dt, context, this);
 
-            if (DeliveryInstance != null && !DeliveryInstance.IsAnimationPaused)
-            {
-                if (!HasStartedAnimation && Animation != null)
+                if (IsCanceled)
                 {
-                    Animation.Start(this, context);
-                    HasStartedAnimation = true;
+                    Animation?.Cancel();
                 }
-
-                if (Animation != null)
+                else if (DeliveryInstance != null && !DeliveryInstance.IsAnimationPaused)
                 {
-                    Animation.Update(dt, context, this);
-                    if (Animation.HasTriggeredImpact && !HasTriggeredImpact)
+                    if (!HasStartedAnimation && Animation != null)
+                    {
+                        Animation.Start(this, context);
+                        HasStartedAnimation = true;
+                    }
+
+                    if (Animation != null)
+                    {
+                        Animation.Update(dt, context, this);
+                        if (Animation.HasTriggeredImpact && !HasTriggeredImpact)
+                        {
+                            HasTriggeredImpact = true;
+                            DeliveryInstance.TriggerImpact(context, this);
+                        }
+                    }
+                    else if (!HasTriggeredImpact)
                     {
                         HasTriggeredImpact = true;
                         DeliveryInstance.TriggerImpact(context, this);
                     }
                 }
-                else if (!HasTriggeredImpact)
-                {
-                    HasTriggeredImpact = true;
-                    DeliveryInstance.TriggerImpact(context, this);
-                }
+            }
+
+            if (IsFinished && !_hasNotifiedCaster)
+            {
+                _hasNotifiedCaster = true;
+                Caster?.Controller?.NotifyAttackFinished(this);
             }
         }
 
