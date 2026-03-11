@@ -43,9 +43,14 @@ namespace ProjectVagabond.Deliveries
 
         public IDelivery GetInstanceFromPool()
         {
-            var inst = Pools.MultiProjectileDeliveries.Get();
+            var inst = Pool<MultiProjectileDelivery>.Get();
             inst.Setup(this);
             return inst;
+        }
+
+        public void ReturnToPool()
+        {
+            Pool<MultiProjectileDelivery>.Return(this);
         }
 
         public void Start(ActiveAttack attack)
@@ -117,7 +122,7 @@ namespace ProjectVagabond.Deliveries
             if (dir.LengthSquared() > 0) dir.Normalize();
             else dir = new Vector2(1, 0);
 
-            var childAttack = Pools.ActiveAttack.Get();
+            var childAttack = Pool<ActiveAttack>.Get();
             childAttack.Reset();
             childAttack.Context = context;
             childAttack.Caster = parentAttack.Caster;

@@ -35,6 +35,11 @@ namespace ProjectVagabond.Battle
             Duration = 0f;
             LocalOffset = Vector2.Zero;
         }
+
+        public void ReturnToPool()
+        {
+            Pool<FloatingText>.Return(this);
+        }
     }
 
     #region Base Stats

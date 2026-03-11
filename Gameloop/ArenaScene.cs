@@ -465,7 +465,7 @@ namespace ProjectVagabond.Scenes
                     if (attack.IsFinished)
                     {
                         _activeAttacks.RemoveAt(i);
-                        Pools.ActiveAttack.Return(attack);
+                        attack.ReturnToPool();
                     }
                 }
 

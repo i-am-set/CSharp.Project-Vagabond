@@ -117,7 +117,7 @@ namespace ProjectVagabond.Animations
                     GameLogger.Log(LogSeverity.Error, $"[AnimationSystem] Animation '{animationId}' is Type 'Sprite' but is missing the nested 'Sprite' object in JSON.");
                     return null;
                 }
-                var anim = Pools.SpriteAnimations.Get();
+                var anim = Pool<SpriteAnimationInstance>.Get();
                 anim.Setup(data.Sprite);
                 return anim;
             }
@@ -128,7 +128,7 @@ namespace ProjectVagabond.Animations
                     GameLogger.Log(LogSeverity.Error, $"[AnimationSystem] Animation '{animationId}' is Type 'Particle' but is missing the nested 'Particles' array in JSON.");
                     return null;
                 }
-                var anim = Pools.ParticleAnimations.Get();
+                var anim = Pool<ParticleAnimationInstance>.Get();
                 anim.Setup(data.Particles);
                 return anim;
             }
@@ -268,6 +268,11 @@ namespace ProjectVagabond.Animations
             IsFinished = false;
             HasTriggeredImpact = false;
             _data = null;
+        }
+
+        public void ReturnToPool()
+        {
+            Pool<SpriteAnimationInstance>.Return(this);
         }
 
         public void Cancel()
@@ -489,6 +494,11 @@ namespace ProjectVagabond.Animations
             _trailEmitters.Clear();
             _baseEmitterSizes.Clear();
             _baseTrailSizes.Clear();
+        }
+
+        public void ReturnToPool()
+        {
+            Pool<ParticleAnimationInstance>.Return(this);
         }
 
         public void Cancel()

@@ -45,9 +45,14 @@ namespace ProjectVagabond.Deliveries
 
         public IDelivery GetInstanceFromPool()
         {
-            var inst = Pools.DashMeleeDeliveries.Get();
+            var inst = Pool<DashMeleeDelivery>.Get();
             inst.Setup(this);
             return inst;
+        }
+
+        public void ReturnToPool()
+        {
+            Pool<DashMeleeDelivery>.Return(this);
         }
 
         public void Start(ActiveAttack attack)

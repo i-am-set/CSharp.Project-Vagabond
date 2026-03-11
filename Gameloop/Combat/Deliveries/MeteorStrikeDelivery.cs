@@ -49,9 +49,14 @@ namespace ProjectVagabond.Deliveries
 
         public IDelivery GetInstanceFromPool()
         {
-            var inst = Pools.MeteorStrikeDeliveries.Get();
+            var inst = Pool<MeteorStrikeDelivery>.Get();
             inst.Setup(this);
             return inst;
+        }
+
+        public void ReturnToPool()
+        {
+            Pool<MeteorStrikeDelivery>.Return(this);
         }
 
         public void Start(ActiveAttack attack)
@@ -108,7 +113,7 @@ namespace ProjectVagabond.Deliveries
 
             Vector2 origin = targetPos + new Vector2(60, -250);
 
-            var childAttack = Pools.ActiveAttack.Get();
+            var childAttack = Pool<ActiveAttack>.Get();
             childAttack.Reset();
             childAttack.Context = context;
             childAttack.Caster = parentAttack.Caster;

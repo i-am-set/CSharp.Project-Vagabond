@@ -29,9 +29,14 @@ namespace ProjectVagabond.Deliveries
 
         public IDelivery GetInstanceFromPool()
         {
-            var inst = Pools.InstantAOEDeliveries.Get();
+            var inst = Pool<InstantAOEDelivery>.Get();
             inst.Setup(this);
             return inst;
+        }
+
+        public void ReturnToPool()
+        {
+            Pool<InstantAOEDelivery>.Return(this);
         }
 
         public void Start(ActiveAttack attack)

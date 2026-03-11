@@ -39,6 +39,37 @@ namespace ProjectVagabond.Battle
 
     public class TicketManager
     {
+        public float DispenseTargetX { get; set; } = 108f;
+        public float DispenseStartY { get; set; } = -16f;
+        public float DispenseEndY { get; set; } = 14.5f;
+
+        private const float GRAVITY_ACCELERATION = 500f;
+        private const float DRAG_X_MULTIPLIER = 2.0f;
+        private const float DRAG_Y_MIN = 0.5f;
+        private const float DRAG_Y_MAX = 8.0f;
+        private const float TERMINAL_VELOCITY_MIN = 35f;
+        private const float TERMINAL_VELOCITY_MAX = 300f;
+        private const float FLUTTER_MAGNITUDE_MIN = 30f;
+        private const float FLUTTER_MAGNITUDE_MAX = 200f;
+        private const float ROTATION_DRAG = 1.5f;
+        private const int TICKET_WIDTH = 19;
+        private const int TICKET_HEIGHT = 31;
+        private const float OUT_OF_BOUNDS_MARGIN = 100f;
+        private const float DRAG_LERP_SPEED = 15f;
+        private const float MAX_DRAG_VELOCITY = 600f;
+        private const float ROT_X_VELOCITY_MULTIPLIER = 0.002f;
+        private const float ROT_Y_VELOCITY_MULTIPLIER = 0.002f;
+        private const float ROT_Z_VELOCITY_MULTIPLIER = 0.001f;
+        private const float ROT_X_CLAMP = 0.3f;
+        private const float ROT_Y_CLAMP = 0.3f;
+        private const float ROT_Z_CLAMP = 0.2f;
+        private const float RELEASE_VEL_ROT_X_MULT = 0.015f;
+        private const float RELEASE_VEL_ROT_Y_MULT = 0.015f;
+        private const float RELEASE_VEL_ROT_Z_MULT = 0.005f;
+        private const float RELEASE_VEL_ROT_X_CLAMP = 8f;
+        private const float RELEASE_VEL_ROT_Y_CLAMP = 8f;
+        private const float RELEASE_VEL_ROT_Z_CLAMP = 3f;
+
         private readonly List<MatchTicket> _tickets = new List<MatchTicket>();
         private readonly Queue<MatchTicket> _pendingTickets = new Queue<MatchTicket>();
         private static readonly Random _random = new Random();
@@ -64,8 +95,8 @@ namespace ProjectVagabond.Battle
                 Placement = placement,
                 WizardNumber = wizardNumber,
                 AnimTimer = 0f,
-                TargetX = 44,
-                Position = new Vector2(44, -16f),
+                TargetX = DispenseTargetX,
+                Position = new Vector2(DispenseTargetX, DispenseStartY),
                 Scale = 1.0f
             });
         }
@@ -77,8 +108,8 @@ namespace ProjectVagabond.Battle
                 Placement = 0,
                 WizardNumber = 0,
                 AnimTimer = 0f,
-                TargetX = 44,
-                Position = new Vector2(44, -16f),
+                TargetX = DispenseTargetX,
+                Position = new Vector2(DispenseTargetX, DispenseStartY),
                 Scale = 1.0f,
                 IsBlank = true
             });
@@ -95,8 +126,6 @@ namespace ProjectVagabond.Battle
         private void UpdateTicketDispense(MatchTicket ticket, float dt)
         {
             ticket.AnimTimer += dt;
-            float startY = -16f;
-            float dispenseY = 14.5f;
 
             float t1 = 0.25f;
             float t2 = t1 + 0.5f;
@@ -139,7 +168,7 @@ namespace ProjectVagabond.Battle
                 }
             }
 
-            ticket.Position.Y = MathHelper.Lerp(startY, dispenseY, progress);
+            ticket.Position.Y = MathHelper.Lerp(DispenseStartY, DispenseEndY, progress);
             ticket.Position.X = ticket.TargetX;
         }
 
@@ -180,8 +209,8 @@ namespace ProjectVagabond.Battle
 
                     float cosX = MathF.Cos(t.RotX);
                     float cosY = MathF.Cos(t.RotY);
-                    int w = (int)(19 * t.Scale * Math.Abs(cosY));
-                    int h = (int)(31 * t.Scale * Math.Abs(cosX));
+                    int w = (int)(TICKET_WIDTH * t.Scale * Math.Abs(cosY));
+                    int h = (int)(TICKET_HEIGHT * t.Scale * Math.Abs(cosX));
 
                     w = Math.Max(w, 4);
                     h = Math.Max(h, 4);
@@ -223,9 +252,9 @@ namespace ProjectVagabond.Battle
                     _draggedTicket.RotY = WrapAngle(_draggedTicket.RotY);
                     _draggedTicket.RotZ = WrapAngle(_draggedTicket.RotZ);
 
-                    _draggedTicket.RotX = MathHelper.Lerp(_draggedTicket.RotX, Math.Clamp(_draggedTicket.Velocity.Y * 0.002f, -0.3f, 0.3f), 15f * dt);
-                    _draggedTicket.RotY = MathHelper.Lerp(_draggedTicket.RotY, Math.Clamp(_draggedTicket.Velocity.X * 0.002f, -0.3f, 0.3f), 15f * dt);
-                    _draggedTicket.RotZ = MathHelper.Lerp(_draggedTicket.RotZ, Math.Clamp(_draggedTicket.Velocity.X * 0.001f, -0.2f, 0.2f), 15f * dt);
+                    _draggedTicket.RotX = MathHelper.Lerp(_draggedTicket.RotX, Math.Clamp(_draggedTicket.Velocity.Y * ROT_X_VELOCITY_MULTIPLIER, -ROT_X_CLAMP, ROT_X_CLAMP), DRAG_LERP_SPEED * dt);
+                    _draggedTicket.RotY = MathHelper.Lerp(_draggedTicket.RotY, Math.Clamp(_draggedTicket.Velocity.X * ROT_Y_VELOCITY_MULTIPLIER, -ROT_Y_CLAMP, ROT_Y_CLAMP), DRAG_LERP_SPEED * dt);
+                    _draggedTicket.RotZ = MathHelper.Lerp(_draggedTicket.RotZ, Math.Clamp(_draggedTicket.Velocity.X * ROT_Z_VELOCITY_MULTIPLIER, -ROT_Z_CLAMP, ROT_Z_CLAMP), DRAG_LERP_SPEED * dt);
 
                     _draggedTicket.VelRotX = 0f;
                     _draggedTicket.VelRotY = 0f;
@@ -235,12 +264,12 @@ namespace ProjectVagabond.Battle
                 {
                     _draggedTicket.IsDragging = false;
 
-                    _draggedTicket.Velocity.X = Math.Clamp(_draggedTicket.Velocity.X, -600f, 600f);
-                    _draggedTicket.Velocity.Y = Math.Clamp(_draggedTicket.Velocity.Y, -600f, 600f);
+                    _draggedTicket.Velocity.X = Math.Clamp(_draggedTicket.Velocity.X, -MAX_DRAG_VELOCITY, MAX_DRAG_VELOCITY);
+                    _draggedTicket.Velocity.Y = Math.Clamp(_draggedTicket.Velocity.Y, -MAX_DRAG_VELOCITY, MAX_DRAG_VELOCITY);
 
-                    _draggedTicket.VelRotX = Math.Clamp(_draggedTicket.Velocity.Y * 0.015f, -8f, 8f) + (float)(_random.NextDouble() * 4.0 - 2.0);
-                    _draggedTicket.VelRotY = Math.Clamp(_draggedTicket.Velocity.X * 0.015f, -8f, 8f) + (float)(_random.NextDouble() * 4.0 - 2.0);
-                    _draggedTicket.VelRotZ = Math.Clamp(_draggedTicket.Velocity.X * 0.005f, -3f, 3f) + (float)(_random.NextDouble() * 2.0 - 1.0);
+                    _draggedTicket.VelRotX = Math.Clamp(_draggedTicket.Velocity.Y * RELEASE_VEL_ROT_X_MULT, -RELEASE_VEL_ROT_X_CLAMP, RELEASE_VEL_ROT_X_CLAMP) + (float)(_random.NextDouble() * 4.0 - 2.0);
+                    _draggedTicket.VelRotY = Math.Clamp(_draggedTicket.Velocity.X * RELEASE_VEL_ROT_Y_MULT, -RELEASE_VEL_ROT_Y_CLAMP, RELEASE_VEL_ROT_Y_CLAMP) + (float)(_random.NextDouble() * 4.0 - 2.0);
+                    _draggedTicket.VelRotZ = Math.Clamp(_draggedTicket.Velocity.X * RELEASE_VEL_ROT_Z_MULT, -RELEASE_VEL_ROT_Z_CLAMP, RELEASE_VEL_ROT_Z_CLAMP) + (float)(_random.NextDouble() * 2.0 - 1.0);
 
                     _draggedTicket.FlutterPhase = (float)(_random.NextDouble() * MathHelper.TwoPi);
                     _draggedTicket.FlutterSpeed = (float)(_random.NextDouble() * 2.0 + 1.5);
@@ -264,23 +293,23 @@ namespace ProjectVagabond.Battle
                         float ny = MathF.Sin(t.RotX) * MathF.Cos(t.RotZ) - MathF.Cos(t.RotX) * MathF.Sin(t.RotY) * MathF.Sin(t.RotZ);
                         float flatProfile = Math.Abs(ny);
 
-                        float dragY = MathHelper.Lerp(0.5f, 8.0f, flatProfile);
-                        float terminalVelocityY = MathHelper.Lerp(300f, 35f, flatProfile);
+                        float dragY = MathHelper.Lerp(DRAG_Y_MIN, DRAG_Y_MAX, flatProfile);
+                        float terminalVelocityY = MathHelper.Lerp(TERMINAL_VELOCITY_MAX, TERMINAL_VELOCITY_MIN, flatProfile);
 
-                        t.Velocity.X *= MathF.Max(0f, 1f - 2.0f * dt);
+                        t.Velocity.X *= MathF.Max(0f, 1f - DRAG_X_MULTIPLIER * dt);
                         t.Velocity.Y *= MathF.Max(0f, 1f - dragY * dt);
 
-                        t.Velocity.Y += 500f * dt;
+                        t.Velocity.Y += GRAVITY_ACCELERATION * dt;
 
                         if (t.Velocity.Y > terminalVelocityY) t.Velocity.Y = terminalVelocityY;
 
                         t.FlutterPhase += t.FlutterSpeed * dt;
-                        float flutterMagnitude = MathHelper.Lerp(30f, 200f, flatProfile);
+                        float flutterMagnitude = MathHelper.Lerp(FLUTTER_MAGNITUDE_MIN, FLUTTER_MAGNITUDE_MAX, flatProfile);
                         t.Velocity.X += MathF.Sin(t.FlutterPhase) * flutterMagnitude * dt;
 
-                        t.VelRotX *= MathF.Max(0f, 1f - 1.5f * dt);
-                        t.VelRotY *= MathF.Max(0f, 1f - 1.5f * dt);
-                        t.VelRotZ *= MathF.Max(0f, 1f - 1.5f * dt);
+                        t.VelRotX *= MathF.Max(0f, 1f - ROTATION_DRAG * dt);
+                        t.VelRotY *= MathF.Max(0f, 1f - ROTATION_DRAG * dt);
+                        t.VelRotZ *= MathF.Max(0f, 1f - ROTATION_DRAG * dt);
 
                         t.VelRotX += MathF.Sin(t.FlutterPhase * 1.3f) * 6f * dt;
                         t.VelRotY += MathF.Cos(t.FlutterPhase * 1.1f) * 6f * dt;
@@ -292,8 +321,8 @@ namespace ProjectVagabond.Battle
 
                         t.Position += t.Velocity * dt;
 
-                        if (t.Position.X < -100 || t.Position.X > Global.VIRTUAL_WIDTH + 100 ||
-                            t.Position.Y < -100 || t.Position.Y > Global.VIRTUAL_HEIGHT + 100)
+                        if (t.Position.X < -OUT_OF_BOUNDS_MARGIN || t.Position.X > Global.VIRTUAL_WIDTH + OUT_OF_BOUNDS_MARGIN ||
+                            t.Position.Y < -OUT_OF_BOUNDS_MARGIN || t.Position.Y > Global.VIRTUAL_HEIGHT + OUT_OF_BOUNDS_MARGIN)
                         {
                             _tickets.RemoveAt(i);
                             continue;
@@ -309,8 +338,8 @@ namespace ProjectVagabond.Battle
 
                         float cosX = MathF.Cos(t.RotX);
                         float cosY = MathF.Cos(t.RotY);
-                        int w = (int)(19 * t.Scale * Math.Abs(cosY));
-                        int h = (int)(31 * t.Scale * Math.Abs(cosX));
+                        int w = (int)(TICKET_WIDTH * t.Scale * Math.Abs(cosY));
+                        int h = (int)(TICKET_HEIGHT * t.Scale * Math.Abs(cosX));
 
                         w = Math.Max(w, 4);
                         h = Math.Max(h, 4);
@@ -354,8 +383,8 @@ namespace ProjectVagabond.Battle
                 bool isBackside = (cosX * cosY) < 0;
 
                 Rectangle sourceRect = isBackside
-                    ? new Rectangle(1 * 19, 0, 19, 31)
-                    : new Rectangle(0 * 19, 0, 19, 31);
+                    ? new Rectangle(1 * TICKET_WIDTH, 0, TICKET_WIDTH, TICKET_HEIGHT)
+                    : new Rectangle(0 * TICKET_WIDTH, 0, TICKET_WIDTH, TICKET_HEIGHT);
 
                 float maxCos = Math.Max(Math.Abs(cosX), Math.Abs(cosY));
                 float targetMaxScale = MathHelper.Lerp(1.2f, 1.0f, maxCos);
@@ -382,7 +411,7 @@ namespace ProjectVagabond.Battle
                 else
                 {
                     Color fallbackColor = new Color((int)(global.Palette_Pale.R * brightness), (int)(global.Palette_Pale.G * brightness), (int)(global.Palette_Pale.B * brightness), 255);
-                    spriteBatch.DrawSnapped(pixel, ticket.Position, new Rectangle(0, 0, 19, 31), fallbackColor, ticket.RotZ, origin, finalScale, effects, 0f);
+                    spriteBatch.DrawSnapped(pixel, ticket.Position, new Rectangle(0, 0, TICKET_WIDTH, TICKET_HEIGHT), fallbackColor, ticket.RotZ, origin, finalScale, effects, 0f);
                 }
 
                 if (!isBackside && !ticket.IsBlank)
@@ -406,7 +435,7 @@ namespace ProjectVagabond.Battle
                 if (ticketSheet != null && !isBackside && !ticket.IsBlank && ticket.Placement >= 1 && ticket.Placement <= 3)
                 {
                     int overlayFrameIndex = ticket.Placement + 1;
-                    Rectangle overlayRect = new Rectangle(overlayFrameIndex * 19, 0, 19, 31);
+                    Rectangle overlayRect = new Rectangle(overlayFrameIndex * TICKET_WIDTH, 0, TICKET_WIDTH, TICKET_HEIGHT);
                     spriteBatch.DrawSnapped(ticketSheet, ticket.Position, overlayRect, ticketColor, ticket.RotZ, origin, finalScale, effects, 0f);
                 }
             }

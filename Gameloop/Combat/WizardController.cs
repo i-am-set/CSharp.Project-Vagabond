@@ -18,6 +18,37 @@ namespace ProjectVagabond.Battle
 {
     public class WizardController
     {
+        private const float ARENA_CLAMP_MARGIN = 12f;
+        private const float HOP_AMPLITUDE = 4f;
+        private const float WARD_HIT_DURATION = 0.4f;
+        private const float HUD_SHAKE_DURATION = 0.4f;
+        private const float FLOATING_TEXT_FLOAT_SPEED = 8f;
+        private const float FLOATING_TEXT_DURATION = 1.0f;
+        private const float KNOCKBACK_DURATION_BASE = 0.5f;
+        private const float KNOCKBACK_DISTANCE_DIVISOR = 80f;
+        private const float MIN_ACTION_TIME = 2.0f;
+        private const float ACTION_TIME_VARIANCE = 6.0f;
+        private const float MIN_SPEED_MULTIPLIER = 0.1f;
+        private const float MAX_SPEED_MULTIPLIER = 3.0f;
+        private const float RECOVERING_DURATION = 0.25f;
+        private const float TARGET_REACHED_DISTANCE = 1f;
+        private const float HOP_SPEED_MULTIPLIER = 0.5f;
+        private const float MIN_MOVE_TEXT_DURATION = 0.8f;
+        private const float MOVE_TEXT_CHARGE_PADDING = 0.2f;
+        private const float HEART_FLASH_DURATION = 0.75f;
+        private const float HEART_FLASH_BLINK_INTERVAL = 0.15f;
+        private const float HEART_FLASH_BLINK_HALF = 0.075f;
+        private const float DEAD_BODY_FADE_DURATION = 0.5f;
+        private const float HEALTH_BAR_FADE_SPEED = 4f;
+        private const int TELEPORT_PARTICLE_BURST_COUNT = 20;
+        private const int TELEPORT_MAX_ATTEMPTS = 50;
+        private const float BASE_SPEED_MULTIPLIER = 2.0f;
+        private const float BASE_SPEED_OFFSET = 2.5f;
+        private const float HEART_WAVE_BASE_INTERVAL = 1f;
+        private const float HEART_WAVE_VARIANCE = 4f;
+        private const float HEART_WAVE_DURATION_PER_HEART = 0.08f;
+        private const float HEART_WAVE_BASE_DURATION = 0.15f;
+
         private readonly ArenaWizard _wizard;
         private static readonly Random _random = new Random();
 
@@ -54,9 +85,9 @@ namespace ProjectVagabond.Battle
             ui.HopTimer = (float)(_random.NextDouble() * MathHelper.TwoPi);
             combat.IsFacingRight = false;
 
-            ui.FloatingHeartWaveInterval = 1f + (float)_random.NextDouble() * 4f;
+            ui.FloatingHeartWaveInterval = HEART_WAVE_BASE_INTERVAL + (float)_random.NextDouble() * HEART_WAVE_VARIANCE;
             ui.FloatingHeartWaveTimer = 0f;
-            ui.HudHeartWaveInterval = 1f + (float)_random.NextDouble() * 4f;
+            ui.HudHeartWaveInterval = HEART_WAVE_BASE_INTERVAL + (float)_random.NextDouble() * HEART_WAVE_VARIANCE;
             ui.HudHeartWaveTimer = 0f;
 
             stats.HP = data.HP;
@@ -72,7 +103,7 @@ namespace ProjectVagabond.Battle
             ui.HeartFlashFrame = new int[maxHearts];
 
             stats.CurrentHP = stats.MaxHP;
-            stats.Speed = stats.Agility * 2.0f + 2.5f;
+            stats.Speed = stats.Agility * BASE_SPEED_MULTIPLIER + BASE_SPEED_OFFSET;
 
             ui.HealthBarAlpha = 0f;
             combat.ActionTimer = GetRandomActionTime();
@@ -114,7 +145,7 @@ namespace ProjectVagabond.Battle
             if (combat.IsSuspended) return Rectangle.Empty;
 
             var bounds = spriteManager.GetPlayerSpriteBounds(stats.PortraitIndex, PlayerSpriteType.Portrait5x5);
-            float hopOffset = combat.State == WizardState.Dead ? 0f : -MathF.Abs(MathF.Sin(ui.HopTimer)) * 4f;
+            float hopOffset = combat.State == WizardState.Dead ? 0f : -MathF.Abs(MathF.Sin(ui.HopTimer)) * HOP_AMPLITUDE;
 
             if (combat.IsFacingRight)
             {
@@ -144,7 +175,7 @@ namespace ProjectVagabond.Battle
 
             if (combat.WardTimer > 0)
             {
-                combat.WardHitTimer = 0.4f;
+                combat.WardHitTimer = WARD_HIT_DURATION;
                 return false;
             }
 
@@ -164,7 +195,7 @@ namespace ProjectVagabond.Battle
             {
                 TriggerHeartFlash(oldHP, stats.CurrentHP);
                 combat.InvincibilityTimer = combat.InvincibilityDuration;
-                ui.HudShakeTimer = 0.4f;
+                ui.HudShakeTimer = HUD_SHAKE_DURATION;
 
                 ui.HealthBarVisibilityTimer = ui.HealthBarLingerDuration;
                 ui.HealthBarAlpha = 1.0f;
@@ -172,13 +203,13 @@ namespace ProjectVagabond.Battle
                 var hitbox = GetHitbox(_spriteManager);
                 Vector2 centerOffset = new Vector2(hitbox.Center.X - combat.Position.X, hitbox.Center.Y - combat.Position.Y);
 
-                var ft = Pools.FloatingText.Get();
+                var ft = Pool<FloatingText>.Get();
                 ft.Reset();
                 ft.Number = actualDamage;
                 ft.IsHealing = false;
                 ft.IsCrit = isCrit;
-                ft.Duration = 1.0f;
-                ft.Timer = 1.0f;
+                ft.Duration = FLOATING_TEXT_DURATION;
+                ft.Timer = FLOATING_TEXT_DURATION;
                 ft.LocalOffset = centerOffset + new Vector2(_random.Next(-8, 9), 0);
                 ui.FloatingTexts.Add(ft);
 
@@ -210,13 +241,13 @@ namespace ProjectVagabond.Battle
                 var hitbox = GetHitbox(_spriteManager);
                 Vector2 centerOffset = new Vector2(hitbox.Center.X - combat.Position.X, hitbox.Center.Y - combat.Position.Y);
 
-                var ft = Pools.FloatingText.Get();
+                var ft = Pool<FloatingText>.Get();
                 ft.Reset();
                 ft.Number = actualHeal;
                 ft.IsHealing = true;
                 ft.IsCrit = false;
-                ft.Duration = 1.0f;
-                ft.Timer = 1.0f;
+                ft.Duration = FLOATING_TEXT_DURATION;
+                ft.Timer = FLOATING_TEXT_DURATION;
                 ft.LocalOffset = centerOffset + new Vector2(_random.Next(-8, 9), 0);
                 ui.FloatingTexts.Add(ft);
             }
@@ -244,7 +275,7 @@ namespace ProjectVagabond.Battle
                         combat.CurrentActiveAttack = null;
                     }
                     combat.State = WizardState.Recovering;
-                    combat.StateTimer = 0.5f;
+                    combat.StateTimer = RECOVERING_DURATION * 2f;
                     combat.TargetPosition = combat.Position;
                 }
             }
@@ -258,9 +289,9 @@ namespace ProjectVagabond.Battle
             combat.KnockbackStartPos = combat.Position;
             Vector2 desiredTarget = combat.Position + dir * distance;
 
-            combat.KnockbackTargetPos = arena.ClampToArena(desiredTarget, 12f);
+            combat.KnockbackTargetPos = arena.ClampToArena(desiredTarget, ARENA_CLAMP_MARGIN);
 
-            combat.KnockbackDuration = 0.5f + (distance / 80f);
+            combat.KnockbackDuration = KNOCKBACK_DURATION_BASE + (distance / KNOCKBACK_DISTANCE_DIVISOR);
             combat.KnockbackTimer = combat.KnockbackDuration;
         }
 
@@ -291,7 +322,7 @@ namespace ProjectVagabond.Battle
 
                 var emitter = _particleSystemManager.CreateEmitter(ParticleEffects.CreateTeleportParticles());
                 emitter.Position = combat.Position;
-                emitter.EmitBurst(20);
+                emitter.EmitBurst(TELEPORT_PARTICLE_BURST_COUNT);
 
                 Vector2 target;
                 int attempts = 0;
@@ -299,7 +330,7 @@ namespace ProjectVagabond.Battle
                 {
                     target = context.Arena.GetRandomArenaPoint();
                     attempts++;
-                } while (Vector2.Distance(combat.Position, target) < combat.EquippedActiveSpell.MinDistance && attempts < 50);
+                } while (Vector2.Distance(combat.Position, target) < combat.EquippedActiveSpell.MinDistance && attempts < TELEPORT_MAX_ATTEMPTS);
 
                 combat.TeleportTargetPos = target;
             }
@@ -318,7 +349,7 @@ namespace ProjectVagabond.Battle
                 int newHeartVal = Math.Clamp(newHP - i * 3, 0, 3);
                 if (oldHeartVal > newHeartVal)
                 {
-                    ui.HeartFlashTimers[i] = 0.75f;
+                    ui.HeartFlashTimers[i] = HEART_FLASH_DURATION;
                     if (oldHeartVal == 3 && newHeartVal == 2) ui.HeartFlashFrame[i] = 5;
                     else if (oldHeartVal == 2 && newHeartVal == 1) ui.HeartFlashFrame[i] = 6;
                     else if (oldHeartVal == 1 && newHeartVal == 0) ui.HeartFlashFrame[i] = 7;
@@ -333,7 +364,7 @@ namespace ProjectVagabond.Battle
             var ui = _wizard.Data.UI;
             if (ui.HeartFlashTimers != null && index < ui.HeartFlashTimers.Length && ui.HeartFlashTimers[index] > 0)
             {
-                bool isFlashFrame = (ui.HeartFlashTimers[index] % 0.15f) > 0.075f;
+                bool isFlashFrame = (ui.HeartFlashTimers[index] % HEART_FLASH_BLINK_INTERVAL) > HEART_FLASH_BLINK_HALF;
                 if (isFlashFrame) return ui.HeartFlashFrame[index];
             }
             return -1;
@@ -344,7 +375,7 @@ namespace ProjectVagabond.Battle
             var combat = _wizard.Data.Combat;
             var ui = _wizard.Data.UI;
             if (combat.State != WizardState.Dead) return 1.0f;
-            float progress = Math.Clamp(combat.TimeSinceDeath / ui.DeadBodyFadeDuration, 0f, 1f);
+            float progress = Math.Clamp(combat.TimeSinceDeath / DEAD_BODY_FADE_DURATION, 0f, 1f);
             return MathHelper.Lerp(1.0f, ui.DeadBodyMinAlpha, progress);
         }
 
@@ -368,7 +399,7 @@ namespace ProjectVagabond.Battle
                     combat.TargetPosition = combat.Position;
                     var emitter = _particleSystemManager.CreateEmitter(ParticleEffects.CreateTeleportParticles());
                     emitter.Position = combat.Position;
-                    emitter.EmitBurst(20);
+                    emitter.EmitBurst(TELEPORT_PARTICLE_BURST_COUNT);
 
                     while (combat.SuspendedActions.Count > 0)
                     {
@@ -384,29 +415,29 @@ namespace ProjectVagabond.Battle
             {
                 var ft = ui.FloatingTexts[i];
                 ft.Timer -= dt;
-                ft.LocalOffset.Y -= 8f * dt;
+                ft.LocalOffset.Y -= FLOATING_TEXT_FLOAT_SPEED * dt;
                 if (ft.Timer <= 0)
                 {
                     ui.FloatingTexts.RemoveAt(i);
-                    Pools.FloatingText.Return(ft);
+                    ft.ReturnToPool();
                 }
             }
 
             int maxHearts = (stats.MaxHP + 2) / 3;
-            float waveDuration = maxHearts * 0.08f + 0.15f;
+            float waveDuration = maxHearts * HEART_WAVE_DURATION_PER_HEART + HEART_WAVE_BASE_DURATION;
 
             ui.FloatingHeartWaveTimer += dt;
             if (ui.FloatingHeartWaveTimer > ui.FloatingHeartWaveInterval + waveDuration)
             {
                 ui.FloatingHeartWaveTimer = 0f;
-                ui.FloatingHeartWaveInterval = 2f + (float)_random.NextDouble() * 4f;
+                ui.FloatingHeartWaveInterval = HEART_WAVE_BASE_INTERVAL + (float)_random.NextDouble() * HEART_WAVE_VARIANCE;
             }
 
             ui.HudHeartWaveTimer += dt;
             if (ui.HudHeartWaveTimer > ui.HudHeartWaveInterval + waveDuration)
             {
                 ui.HudHeartWaveTimer = 0f;
-                ui.HudHeartWaveInterval = 2f + (float)_random.NextDouble() * 4f;
+                ui.HudHeartWaveInterval = HEART_WAVE_BASE_INTERVAL + (float)_random.NextDouble() * HEART_WAVE_VARIANCE;
             }
 
             if (combat.InvincibilityTimer > 0)
@@ -422,7 +453,7 @@ namespace ProjectVagabond.Battle
                 float eased = Easing.EaseOutQuad(progress);
 
                 combat.Position = Vector2.Lerp(combat.KnockbackStartPos, combat.KnockbackTargetPos, eased);
-                combat.Position = context.Arena.ClampToArena(combat.Position, 12f);
+                combat.Position = context.Arena.ClampToArena(combat.Position, ARENA_CLAMP_MARGIN);
             }
             else
             {
@@ -468,7 +499,7 @@ namespace ProjectVagabond.Battle
             }
             else if (ui.HealthBarAlpha > 0f)
             {
-                ui.HealthBarAlpha = Math.Max(0f, ui.HealthBarAlpha - dt * 4f);
+                ui.HealthBarAlpha = Math.Max(0f, ui.HealthBarAlpha - dt * HEALTH_BAR_FADE_SPEED);
             }
 
             if (combat.State == WizardState.Dead)
@@ -502,7 +533,7 @@ namespace ProjectVagabond.Battle
                     if (combat.QueuedTargetWizard != null && combat.QueuedTargetWizard.Data.Combat.IsSuspended)
                     {
                         combat.State = WizardState.Recovering;
-                        combat.StateTimer = 0.25f;
+                        combat.StateTimer = RECOVERING_DURATION;
                         combat.QueuedTargetWizard = null;
                         break;
                     }
@@ -550,7 +581,7 @@ namespace ProjectVagabond.Battle
             var ui = _wizard.Data.UI;
 
             float dist = Vector2.Distance(combat.Position, combat.TargetPosition);
-            if (dist < 1f)
+            if (dist < TARGET_REACHED_DISTANCE)
             {
                 combat.TargetPosition = arena.GetRandomArenaPoint();
             }
@@ -560,8 +591,8 @@ namespace ProjectVagabond.Battle
             {
                 dir.Normalize();
                 combat.Position += dir * stats.Speed * dt;
-                combat.Position = arena.ClampToArena(combat.Position, 12f);
-                ui.HopTimer += dt * stats.Speed * 0.5f;
+                combat.Position = arena.ClampToArena(combat.Position, ARENA_CLAMP_MARGIN);
+                ui.HopTimer += dt * stats.Speed * HOP_SPEED_MULTIPLIER;
             }
         }
 
@@ -667,7 +698,7 @@ namespace ProjectVagabond.Battle
             }
 
             ui.ActiveMoveText = combat.QueuedMove.Name;
-            ui.MoveTextDuration = Math.Max(0.8f, combat.QueuedMove.ChargeTime + 0.2f);
+            ui.MoveTextDuration = Math.Max(MIN_MOVE_TEXT_DURATION, combat.QueuedMove.ChargeTime + MOVE_TEXT_CHARGE_PADDING);
             ui.MoveTextTimer = ui.MoveTextDuration;
 
             if (combat.QueuedMove.ExecuteOnChargeStart)
@@ -685,7 +716,7 @@ namespace ProjectVagabond.Battle
         {
             var combat = _wizard.Data.Combat;
 
-            var attack = Pools.ActiveAttack.Get();
+            var attack = Pool<ActiveAttack>.Get();
             attack.Reset();
             attack.Context = context;
             attack.Caster = _wizard;
@@ -713,7 +744,7 @@ namespace ProjectVagabond.Battle
                 if (combat.State == WizardState.Casting)
                 {
                     combat.State = WizardState.Recovering;
-                    combat.StateTimer = 0.25f;
+                    combat.StateTimer = RECOVERING_DURATION;
                     combat.TargetPosition = combat.Position;
                 }
             }
@@ -722,9 +753,9 @@ namespace ProjectVagabond.Battle
         private float GetRandomActionTime()
         {
             var stats = _wizard.Data.Stats;
-            float baseTime = 2.0f + (float)_random.NextDouble() * 6.0f;
+            float baseTime = MIN_ACTION_TIME + (float)_random.NextDouble() * ACTION_TIME_VARIANCE;
             float speedMultiplier = 1.0f + (stats.Agility - 5) * 0.1f;
-            speedMultiplier = Math.Clamp(speedMultiplier, 0.1f, 3.0f);
+            speedMultiplier = Math.Clamp(speedMultiplier, MIN_SPEED_MULTIPLIER, MAX_SPEED_MULTIPLIER);
             return baseTime / speedMultiplier;
         }
     }

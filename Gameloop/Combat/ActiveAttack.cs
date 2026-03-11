@@ -49,10 +49,10 @@ namespace ProjectVagabond.Battle
             Direction = Vector2.Zero;
             TargetPosition = Vector2.Zero;
 
-            if (DeliveryInstance != null) Pools.ReturnDelivery(DeliveryInstance);
+            if (DeliveryInstance != null) DeliveryInstance.ReturnToPool();
             DeliveryInstance = null;
 
-            if (Animation != null) Pools.ReturnAnimation(Animation);
+            if (Animation != null) Animation.ReturnToPool();
             Animation = null;
 
             HasTriggeredImpact = false;
@@ -62,6 +62,11 @@ namespace ProjectVagabond.Battle
             Context = default;
 
             _hasNotifiedCaster = false;
+        }
+
+        public void ReturnToPool()
+        {
+            Pool<ActiveAttack>.Return(this);
         }
 
         public void Update(float dt, BattleContext context)

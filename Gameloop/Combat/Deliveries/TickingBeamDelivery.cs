@@ -38,9 +38,14 @@ namespace ProjectVagabond.Deliveries
 
         public IDelivery GetInstanceFromPool()
         {
-            var inst = Pools.TickingBeamDeliveries.Get();
+            var inst = Pool<TickingBeamDelivery>.Get();
             inst.Setup(this);
             return inst;
+        }
+
+        public void ReturnToPool()
+        {
+            Pool<TickingBeamDelivery>.Return(this);
         }
 
         public void Start(ActiveAttack attack)

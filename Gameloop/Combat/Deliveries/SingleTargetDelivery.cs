@@ -26,9 +26,14 @@ namespace ProjectVagabond.Deliveries
 
         public IDelivery GetInstanceFromPool()
         {
-            var inst = Pools.SingleTargetDeliveries.Get();
+            var inst = Pool<SingleTargetDelivery>.Get();
             inst.Setup(this);
             return inst;
+        }
+
+        public void ReturnToPool()
+        {
+            Pool<SingleTargetDelivery>.Return(this);
         }
 
         public void Start(ActiveAttack attack)
