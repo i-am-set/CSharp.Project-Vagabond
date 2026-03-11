@@ -55,7 +55,7 @@ namespace ProjectVagabond
         {
             Keys.W, Keys.A, Keys.S, Keys.D,
             Keys.Up, Keys.Down, Keys.Left, Keys.Right,
-            Keys.Space, Keys.Enter, Keys.Escape, Keys.Back
+            Keys.Enter, Keys.Escape, Keys.Back
         };
 
         public void Update()
@@ -97,6 +97,8 @@ namespace ProjectVagabond
             }
             return _currentMouseState;
         }
+
+        public bool ActiveSpellTriggered { get; private set; }
 
         private void DetectInputDevice(float mouseDistance)
         {
@@ -193,6 +195,8 @@ namespace ProjectVagabond
 
             Confirm = IsKeyPressed(Keys.Space) || IsKeyPressed(Keys.Enter) || IsButtonJustPressed(Buttons.A);
             Back = IsKeyPressed(Keys.Escape) || IsButtonJustPressed(Buttons.B);
+
+            ActiveSpellTriggered = IsKeyPressed(Keys.Space) || (_currentMouseState.RightButton == ButtonState.Pressed && _previousMouseState.RightButton == ButtonState.Released);
 
             // Continuous input check for fast-forwarding/speeding up time
             IsSpeedUpHeld = _currentKeyboardState.IsKeyDown(Keys.Space) ||

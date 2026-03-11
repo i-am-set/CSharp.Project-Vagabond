@@ -742,5 +742,35 @@ namespace ProjectVagabond.Particles
 
             return settings;
         }
+
+        public static ParticleEmitterSettings CreateTeleportParticles()
+        {
+            var settings = ParticleEmitterSettings.CreateDefault();
+            var global = ServiceLocator.Get<Global>();
+            settings.Shape = EmitterShape.Circle;
+            settings.EmitFrom = EmissionSource.Volume;
+            settings.EmitterSize = new Vector2(12f, 12f);
+            settings.EmissionRate = 0;
+            settings.BurstCount = 20;
+            settings.MaxParticles = 20;
+            settings.Duration = 2.0f;
+            settings.VelocityPattern = EmissionPattern.Radial;
+            settings.Lifetime = new FloatRange(0.5f, 1.2f);
+            settings.InitialVelocityX = new FloatRange(5f, 15f);
+            settings.InitialVelocityY = new FloatRange(0f);
+            settings.InitialSize = new FloatRange(1f, 2f);
+            settings.EndSize = new FloatRange(0f);
+            settings.InterpolateSize = true;
+            settings.Gravity = new Vector2(0, -15f);
+            settings.Drag = 1.0f;
+            settings.StartColor = global.Palette_Sea;
+            settings.EndColor = global.Palette_DarkRust;
+            settings.StartAlpha = 1.0f;
+            settings.EndAlpha = 0.0f;
+            settings.Texture = ServiceLocator.Get<Texture2D>();
+            settings.BlendMode = BlendState.AlphaBlend;
+            settings.LayerDepth = 0.9f;
+            return settings;
+        }
     }
 }

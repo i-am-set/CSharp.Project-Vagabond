@@ -152,7 +152,7 @@ namespace ProjectVagabond.Battle
             var validTargets = new List<ArenaWizard>();
             foreach (var w in arena.Wizards)
             {
-                if (w != parentAttack.Caster && w.CurrentHP > 0) validTargets.Add(w);
+                if (w != parentAttack.Caster && w.CurrentHP > 0 && !w.IsTeleporting) validTargets.Add(w);
             }
 
             ArenaWizard target = null;
@@ -393,7 +393,7 @@ namespace ProjectVagabond.Battle
                 var validTargets = new List<ArenaWizard>();
                 foreach (var t in targets)
                 {
-                    if (t != attack.Caster && t.CurrentHP > 0) validTargets.Add(t);
+                    if (t != attack.Caster && t.CurrentHP > 0 && !t.IsTeleporting) validTargets.Add(t);
                 }
 
                 if (validTargets.Count > 0)

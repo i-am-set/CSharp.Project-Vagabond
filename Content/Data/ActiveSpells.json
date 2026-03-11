@@ -1,0 +1,26 @@
+[
+  {
+    "ID": "ward",
+    "Name": "Ward",
+    "Type": "Ward",
+    "Cooldown": 10.0,
+    "Duration": 3.0,
+    "MinDistance": 0.0
+  },
+  {
+    "ID": "force_cast",
+    "Name": "Force Cast",
+    "Type": "ForceCast",
+    "Cooldown": 8.0,
+    "Duration": 0.0,
+    "MinDistance": 0.0
+  },
+  {
+    "ID": "teleport",
+    "Name": "Teleport",
+    "Type": "Teleport",
+    "Cooldown": 12.0,
+    "Duration": 0.5,
+    "MinDistance": 80.0
+  }
+]

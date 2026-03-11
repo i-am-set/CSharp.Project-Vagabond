@@ -11,7 +11,8 @@
     "Move1": "magic_missile",
     "Move2": "scratch",
     "Move3": "fireball",
-    "Move4": "meteor_strike"
+    "Move4": "meteor_strike",
+    "ActiveSpell": "teleport"
   },
   {
     "MemberID": "1",

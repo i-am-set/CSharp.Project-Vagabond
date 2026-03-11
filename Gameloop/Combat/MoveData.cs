@@ -39,4 +39,13 @@
         public bool RequiresFocus { get; set; }
         public bool ShowProjectileIndicator { get; set; }
     }
+
+    public class ActiveSpellData
+    {
+        public string ID { get; set; }
+        public string Name { get; set; }
+        public float Cooldown { get; set; }
+        public float Duration { get; set; }
+        public float MinDistance { get; set; }
+    }
 }

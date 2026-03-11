@@ -26,7 +26,8 @@ namespace ProjectVagabond.Battle
                 Power = data.Power,
                 Tenacity = data.Tenacity,
                 Agility = data.Agility,
-                PortraitIndex = int.TryParse(data.MemberID, out int pid) ? pid : 0
+                PortraitIndex = int.TryParse(data.MemberID, out int pid) ? pid : 0,
+                ActiveSpell = data.ActiveSpell
             };
 
             member.CurrentHP = member.MaxHP;

@@ -15,6 +15,7 @@ namespace ProjectVagabond.Battle
         public static Dictionary<string, WizardCatData> WizardCats { get; private set; }
         public static Dictionary<string, MoveData> Moves { get; private set; }
         public static Dictionary<string, AnimationData> Animations { get; private set; }
+        public static Dictionary<string, ActiveSpellData> ActiveSpells { get; private set; }
 
         public static void LoadData(ContentManager content)
         {
@@ -52,6 +53,15 @@ namespace ProjectVagabond.Battle
                 Animations = animList.ToDictionary(a => a.ID, a => a, StringComparer.OrdinalIgnoreCase);
             }
             else Animations = new Dictionary<string, AnimationData>();
+
+            string spellsPath = Path.Combine(content.RootDirectory, "Data", "ActiveSpells.json");
+            if (File.Exists(spellsPath))
+            {
+                string spellsJson = File.ReadAllText(spellsPath);
+                var spellsList = JsonSerializer.Deserialize<List<ActiveSpellData>>(spellsJson, jsonOptions);
+                ActiveSpells = spellsList.ToDictionary(s => s.ID, s => s, StringComparer.OrdinalIgnoreCase);
+            }
+            else ActiveSpells = new Dictionary<string, ActiveSpellData>();
         }
     }
 }

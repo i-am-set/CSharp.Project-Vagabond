@@ -52,6 +52,15 @@ namespace ProjectVagabond.Battle
         public WizardState State = WizardState.Moving;
         public List<MoveDefinition> Moves = new List<MoveDefinition>();
 
+        public ActiveSpellData EquippedActiveSpell;
+        public float ActiveSpellCooldownTimer { get; private set; }
+        public float WardTimer { get; private set; }
+        public float TeleportTimer { get; private set; }
+        public bool IsTeleporting { get; private set; }
+        public Vector2 TeleportTargetPos { get; private set; }
+
+        public bool IsSuspended => IsTeleporting;
+
         public bool IsHovered;
 
         public float HealthBarLingerDuration = 2.5f;
@@ -89,6 +98,8 @@ namespace ProjectVagabond.Battle
         private float _knockbackTimer;
         private float _knockbackDuration;
         private Vector2 _previousPosition;
+
+        private Queue<Action> _suspendedActions = new Queue<Action>();
 
         private static readonly Random _random = new Random();
 
@@ -137,6 +148,11 @@ namespace ProjectVagabond.Battle
             _healthBarAlpha = 0f;
             _actionTimer = GetRandomActionTime();
 
+            if (!string.IsNullOrEmpty(data.ActiveSpell) && GameDataCache.ActiveSpells.TryGetValue(data.ActiveSpell, out var spellData))
+            {
+                EquippedActiveSpell = spellData;
+            }
+
             LoadMoves(data);
         }
 
@@ -156,6 +172,8 @@ namespace ProjectVagabond.Battle
 
         public Rectangle GetHitbox(SpriteManager spriteManager)
         {
+            if (IsSuspended) return Rectangle.Empty;
+
             var bounds = spriteManager.GetPlayerSpriteBounds(PortraitIndex, PlayerSpriteType.Portrait5x5);
             float hopOffset = State == WizardState.Dead ? 0f : -MathF.Abs(MathF.Sin(HopTimer)) * 4f;
 
@@ -181,7 +199,13 @@ namespace ProjectVagabond.Battle
 
         public bool TakeDamage(int amount, bool isCrit = false)
         {
-            if (InvincibilityTimer > 0 || State == WizardState.Dead || CurrentHP <= 0) return false;
+            if (InvincibilityTimer > 0 || State == WizardState.Dead || CurrentHP <= 0 || WardTimer > 0) return false;
+
+            if (IsSuspended)
+            {
+                _suspendedActions.Enqueue(() => TakeDamage(amount, isCrit));
+                return false;
+            }
 
             int oldHP = CurrentHP;
             CurrentHP = Math.Clamp(CurrentHP - amount, 0, MaxHP);
@@ -219,6 +243,12 @@ namespace ProjectVagabond.Battle
         {
             if (State == WizardState.Dead) return;
 
+            if (IsSuspended)
+            {
+                _suspendedActions.Enqueue(() => Heal(amount));
+                return;
+            }
+
             int oldHP = CurrentHP;
             CurrentHP = Math.Clamp(CurrentHP + amount, 0, MaxHP);
             int actualHeal = CurrentHP - oldHP;
@@ -243,7 +273,13 @@ namespace ProjectVagabond.Battle
 
         public void ApplyKnockback(Vector2 sourcePosition, float distance, ArenaScene arena)
         {
-            if (State == WizardState.Dead) return;
+            if (State == WizardState.Dead || WardTimer > 0) return;
+
+            if (IsSuspended)
+            {
+                _suspendedActions.Enqueue(() => ApplyKnockback(sourcePosition, distance, arena));
+                return;
+            }
 
             if ((State == WizardState.Casting || State == WizardState.Telegraphing) && _queuedMove != null)
             {
@@ -273,6 +309,71 @@ namespace ProjectVagabond.Battle
 
             _knockbackDuration = 0.5f + (distance / 80f);
             _knockbackTimer = _knockbackDuration;
+        }
+
+        public bool TriggerActiveSpell(ArenaScene arena)
+        {
+            if (EquippedActiveSpell == null || ActiveSpellCooldownTimer > 0 || State == WizardState.Dead || IsSuspended) return false;
+
+            if (EquippedActiveSpell.ID == "force_cast" && State != WizardState.Moving) return false;
+
+            ActiveSpellCooldownTimer = EquippedActiveSpell.Cooldown;
+
+            if (EquippedActiveSpell.ID == "ward")
+            {
+                WardTimer = EquippedActiveSpell.Duration;
+            }
+            else if (EquippedActiveSpell.ID == "force_cast")
+            {
+                _actionTimer = 0f;
+                PrepareAttack(arena);
+            }
+            else if (EquippedActiveSpell.ID == "teleport")
+            {
+                IsTeleporting = true;
+                TeleportTimer = EquippedActiveSpell.Duration;
+                _knockbackTimer = 0f; // Clear any active knockback so we don't snap back
+
+                var psm = ServiceLocator.Get<ParticleSystemManager>();
+                var emitter = psm.CreateEmitter(ParticleEffects.CreateTeleportParticles());
+                emitter.Position = Position;
+                emitter.EmitBurst(20);
+
+                Vector2 target;
+                int attempts = 0;
+                do
+                {
+                    target = arena.GetRandomArenaPoint();
+                    attempts++;
+                } while (Vector2.Distance(Position, target) < EquippedActiveSpell.MinDistance && attempts < 50);
+
+                TeleportTargetPos = target;
+            }
+
+            return true;
+        }
+
+        private void UpdateAIController(ArenaScene arena)
+        {
+            if (IsPlayer || EquippedActiveSpell == null || ActiveSpellCooldownTimer > 0 || State == WizardState.Dead || IsSuspended) return;
+
+            bool shouldCast = false;
+            if (EquippedActiveSpell.ID == "ward")
+            {
+                if (CurrentHP < MaxHP * 0.5f && _random.NextDouble() < 0.01f) shouldCast = true;
+                else if (_random.NextDouble() < 0.005f) shouldCast = true;
+            }
+            else if (EquippedActiveSpell.ID == "force_cast")
+            {
+                if (State == WizardState.Moving && _actionTimer > 1.0f && _random.NextDouble() < 0.02f) shouldCast = true;
+            }
+            else if (EquippedActiveSpell.ID == "teleport")
+            {
+                if (CurrentHP < MaxHP * 0.5f && _random.NextDouble() < 0.01f) shouldCast = true;
+                else if (_random.NextDouble() < 0.005f) shouldCast = true;
+            }
+
+            if (shouldCast) TriggerActiveSpell(arena);
         }
 
         private void TriggerHeartFlash(int oldHP, int newHP)
@@ -314,6 +415,32 @@ namespace ProjectVagabond.Battle
 
         public void Update(float dt, ArenaScene arena)
         {
+            if (ActiveSpellCooldownTimer > 0) ActiveSpellCooldownTimer -= dt;
+            if (WardTimer > 0) WardTimer -= dt;
+
+            if (IsTeleporting)
+            {
+                TeleportTimer -= dt;
+                if (TeleportTimer <= 0)
+                {
+                    IsTeleporting = false;
+                    Position = TeleportTargetPos;
+                    TargetPosition = Position;
+                    var psm = ServiceLocator.Get<ParticleSystemManager>();
+                    var emitter = psm.CreateEmitter(ParticleEffects.CreateTeleportParticles());
+                    emitter.Position = Position;
+                    emitter.EmitBurst(20);
+
+                    while (_suspendedActions.Count > 0)
+                    {
+                        _suspendedActions.Dequeue()?.Invoke();
+                    }
+                }
+                return;
+            }
+
+            UpdateAIController(arena);
+
             for (int i = _floatingTexts.Count - 1; i >= 0; i--)
             {
                 var ft = _floatingTexts[i];
@@ -352,7 +479,6 @@ namespace ProjectVagabond.Battle
                 _knockbackTimer -= dt;
                 float progress = 1f - Math.Max(0, _knockbackTimer) / _knockbackDuration;
 
-                // Use EaseOutQuad instead of Cubic for a softer, less jarring initial push
                 float eased = Easing.EaseOutQuad(progress);
 
                 Position = Vector2.Lerp(_knockbackStartPos, _knockbackTargetPos, eased);
@@ -433,6 +559,14 @@ namespace ProjectVagabond.Battle
                     break;
 
                 case WizardState.Telegraphing:
+                    if (_queuedTargetWizard != null && _queuedTargetWizard.IsSuspended)
+                    {
+                        State = WizardState.Recovering;
+                        _stateTimer = 0.25f;
+                        _queuedTargetWizard = null;
+                        break;
+                    }
+
                     if (_queuedMove.TargetSelf)
                     {
                         _queuedTargetPos = Position;
@@ -457,11 +591,11 @@ namespace ProjectVagabond.Battle
 
                 case WizardState.Casting:
                     bool animFinished = _currentActiveAttack == null || _currentActiveAttack.Animation == null || _currentActiveAttack.Animation.IsFinished;
-                    if (_currentActiveAttack == null || (_currentActiveAttack.DeliveryInstance.IsFinished && animFinished))
+                    if (_currentActiveAttack == null || (_currentActiveAttack.DeliveryInstance.IsFinished && animFinished) || _currentActiveAttack.IsCanceled)
                     {
                         State = WizardState.Recovering;
                         _stateTimer = 0.25f;
-                        TargetPosition = Position; 
+                        TargetPosition = Position;
                     }
                     break;
 
@@ -534,7 +668,7 @@ namespace ProjectVagabond.Battle
                     float closestDist = float.MaxValue;
                     foreach (var w in arena.Wizards)
                     {
-                        if (w == this || w.CurrentHP <= 0) continue;
+                        if (w == this || w.CurrentHP <= 0 || w.IsSuspended) continue;
                         float dist = Vector2.DistanceSquared(Position, w.Position);
                         if (dist < closestDist)
                         {
@@ -548,7 +682,7 @@ namespace ProjectVagabond.Battle
                     int validCount = 0;
                     foreach (var w in arena.Wizards)
                     {
-                        if (w != this && w.CurrentHP > 0) validCount++;
+                        if (w != this && w.CurrentHP > 0 && !w.IsSuspended) validCount++;
                     }
 
                     if (validCount > 0)
@@ -557,7 +691,7 @@ namespace ProjectVagabond.Battle
                         int curr = 0;
                         foreach (var w in arena.Wizards)
                         {
-                            if (w != this && w.CurrentHP > 0)
+                            if (w != this && w.CurrentHP > 0 && !w.IsSuspended)
                             {
                                 if (curr == targetRoll)
                                 {

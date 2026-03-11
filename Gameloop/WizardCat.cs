@@ -14,6 +14,7 @@ namespace ProjectVagabond
         public int Agility { get; set; }
 
         public int PortraitIndex { get; set; } = 0;
+        public string ActiveSpell { get; set; }
 
         public WizardCat() { }
 

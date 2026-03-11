@@ -448,7 +448,6 @@ namespace ProjectVagabond.Scenes
             bool isPrinting = _tickets.Any(t => !t.IsDispensed);
             if (!isPrinting && _pendingTickets.Count > 0)
             {
-                // Drop any currently hanging tickets to make room for the new print
                 foreach (var t in _tickets)
                 {
                     if (t.IsHanging)
@@ -537,11 +536,9 @@ namespace ProjectVagabond.Scenes
                 {
                     draggedTicket.IsDragging = false;
 
-                    // Cap release velocity to prevent physics explosions
                     draggedTicket.Velocity.X = Math.Clamp(draggedTicket.Velocity.X, -600f, 600f);
                     draggedTicket.Velocity.Y = Math.Clamp(draggedTicket.Velocity.Y, -600f, 600f);
 
-                    // Give it a good spin when thrown
                     draggedTicket.VelRotX = Math.Clamp(draggedTicket.Velocity.Y * 0.015f, -8f, 8f) + (float)(_random.NextDouble() * 4.0 - 2.0);
                     draggedTicket.VelRotY = Math.Clamp(draggedTicket.Velocity.X * 0.015f, -8f, 8f) + (float)(_random.NextDouble() * 4.0 - 2.0);
                     draggedTicket.VelRotZ = Math.Clamp(draggedTicket.Velocity.X * 0.005f, -3f, 3f) + (float)(_random.NextDouble() * 2.0 - 1.0);
@@ -568,26 +565,20 @@ namespace ProjectVagabond.Scenes
                 {
                     if (!t.IsDragging && !t.IsHanging)
                     {
-                        // Air resistance (Drag)
                         t.Velocity.X *= MathF.Max(0f, 1f - 3f * dt);
                         t.Velocity.Y *= MathF.Max(0f, 1f - 3f * dt);
 
-                        // Gravity
                         t.Velocity.Y += 400f * dt;
 
-                        // Terminal velocity (leaf-like, slow fall)
                         if (t.Velocity.Y > 100f) t.Velocity.Y = 100f;
 
-                        // Flutter (Sway)
                         t.FlutterPhase += t.FlutterSpeed * dt;
                         t.Velocity.X += MathF.Sin(t.FlutterPhase) * 120f * dt;
 
-                        // Rotational drag (light drag so it keeps tumbling)
                         t.VelRotX *= MathF.Max(0f, 1f - 1.5f * dt);
                         t.VelRotY *= MathF.Max(0f, 1f - 1.5f * dt);
                         t.VelRotZ *= MathF.Max(0f, 1f - 1.5f * dt);
 
-                        // Rotational flutter (adds continuous tumbling energy)
                         t.VelRotX += MathF.Sin(t.FlutterPhase * 1.3f) * 4f * dt;
                         t.VelRotY += MathF.Cos(t.FlutterPhase * 1.1f) * 4f * dt;
                         t.VelRotZ += MathF.Sin(t.FlutterPhase * 0.8f) * 1.5f * dt;
@@ -658,6 +649,12 @@ namespace ProjectVagabond.Scenes
             {
                 _phaseTimer += dt;
 
+                if (_inputManager.ActiveSpellTriggered && _arenaState == ArenaState.Fighting)
+                {
+                    var player = _wizards.FirstOrDefault(w => w.IsPlayer);
+                    if (player != null) player.TriggerActiveSpell(this);
+                }
+
                 foreach (var wizard in _wizards)
                 {
                     wizard.IsHovered = wizard.State != WizardState.Dead && wizard.GetHitbox(_spriteManager).Contains(virtualMousePos);
@@ -705,6 +702,13 @@ namespace ProjectVagabond.Scenes
                 for (int i = _activeAttacks.Count - 1; i >= 0; i--)
                 {
                     var attack = _activeAttacks[i];
+
+                    // Fizzle logic: If the target blinks away, lose homing
+                    if (attack.TargetWizard != null && attack.TargetWizard.IsSuspended)
+                    {
+                        attack.TargetWizard = null;
+                    }
+
                     attack.Update(dt, this);
 
                     if (attack.IsFinished)
@@ -762,13 +766,6 @@ namespace ProjectVagabond.Scenes
                     {
                         _sceneManager.ChangeScene(GameSceneState.DayPrep, TransitionType.FadeOff, TransitionType.FadeOff);
                     }
-                }
-            }
-            else
-            {
-                foreach (var w in _wizards)
-                {
-                    w.HopTimer += dt * 2f;
                 }
             }
 
@@ -968,7 +965,7 @@ namespace ProjectVagabond.Scenes
                 float brightness = 0.8f + 0.2f * normalZ;
 
                 Color ticketColor = new Color((int)(255 * brightness), (int)(255 * brightness), (int)(255 * brightness), 255);
-                Color textColor = new Color((int)(_global.Palette_Black.R * brightness), (int)(_global.Palette_Black.G * brightness), (int)(_global.Palette_Black.B * brightness), 255);
+                Color textColor = new Color((int)(_global.Palette_Black.R * brightness), (int)(_global.Palette_Black.G * brightness), (int)(_global.Palette_DarkestPale.B * brightness), 255);
 
                 if (ticketSheet != null)
                 {
@@ -1074,6 +1071,18 @@ namespace ProjectVagabond.Scenes
 
             Vector2 gPos = new Vector2(amountPos.X + amountWidth + 2, 11 + yOffset);
             spriteBatch.DrawStringSnapped(tertiaryFont, gText, gPos, _global.Palette_DarkSun);
+
+            var player = _wizards.FirstOrDefault(w => w.IsPlayer);
+            if (player != null && player.EquippedActiveSpell != null)
+            {
+                string spellName = player.EquippedActiveSpell.Name.ToUpper();
+                string status = player.ActiveSpellCooldownTimer > 0 ? $"{player.ActiveSpellCooldownTimer:F1}S" : "READY";
+                Color statusColor = player.ActiveSpellCooldownTimer > 0 ? _global.Palette_DarkShadow : _global.Palette_Sky;
+
+                string text = $"{spellName}: {status}";
+                Vector2 size = tertiaryFont.MeasureString(text);
+                spriteBatch.DrawStringSnapped(tertiaryFont, text, new Vector2(Global.VIRTUAL_WIDTH - size.X - 18, 12), statusColor);
+            }
         }
 
         private void DrawSideHUD(SpriteBatch spriteBatch)
@@ -1224,6 +1233,8 @@ namespace ProjectVagabond.Scenes
 
         private void DrawWizard(SpriteBatch spriteBatch, ArenaWizard wizard)
         {
+            if (wizard.IsTeleporting) return;
+
             var sheet = _spriteManager.PlayerMasterSpriteSheet;
             if (sheet == null) return;
 
@@ -1274,6 +1285,17 @@ namespace ProjectVagabond.Scenes
                 else
                 {
                     spriteBatch.DrawSnapped(sheet, drawPos, sourceRect, color, rotation, origin, 1f, spriteEffects, 0f);
+                }
+            }
+
+            if (wizard.WardTimer > 0 && !isDead)
+            {
+                var circle = _spriteManager.CircleTextureSprite;
+                if (circle != null)
+                {
+                    float scale = 24f / circle.Width;
+                    Vector2 circleOrigin = new Vector2(circle.Width / 2f, circle.Height / 2f);
+                    spriteBatch.DrawSnapped(circle, drawPos, null, _global.Palette_Sky * 0.4f, 0f, circleOrigin, scale, SpriteEffects.None, 0f);
                 }
             }
         }
