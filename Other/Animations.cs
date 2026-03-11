@@ -1,11 +1,9 @@
-﻿// text/plain
-using Microsoft.Xna.Framework;
+﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using ProjectVagabond;
-using ProjectVagabond.Animations;
 using ProjectVagabond.Battle;
+using ProjectVagabond.Deliveries;
 using ProjectVagabond.Particles;
-using ProjectVagabond.Scenes;
 using ProjectVagabond.Utils;
 using System;
 using System.Collections.Generic;
@@ -90,12 +88,12 @@ namespace ProjectVagabond.Animations
         public bool SnapToPixelGrid { get; set; }
     }
 
-    public interface IAnimationInstance
+    public interface IAnimationInstance : IPoolable
     {
         bool IsFinished { get; }
         bool HasTriggeredImpact { get; }
-        void Start(ActiveAttack attack, ArenaScene arena);
-        void Update(float dt, ArenaScene arena, ActiveAttack attack);
+        void Start(ActiveAttack attack, BattleContext context);
+        void Update(float dt, BattleContext context, ActiveAttack attack);
         void Draw(SpriteBatch spriteBatch, ActiveAttack attack);
         void Cancel();
     }
@@ -119,7 +117,9 @@ namespace ProjectVagabond.Animations
                     GameLogger.Log(LogSeverity.Error, $"[AnimationSystem] Animation '{animationId}' is Type 'Sprite' but is missing the nested 'Sprite' object in JSON.");
                     return null;
                 }
-                return new SpriteAnimationInstance(data.Sprite);
+                var anim = Pools.SpriteAnimations.Get();
+                anim.Setup(data.Sprite);
+                return anim;
             }
             else if (data.Type == "Particle")
             {
@@ -128,13 +128,15 @@ namespace ProjectVagabond.Animations
                     GameLogger.Log(LogSeverity.Error, $"[AnimationSystem] Animation '{animationId}' is Type 'Particle' but is missing the nested 'Particles' array in JSON.");
                     return null;
                 }
-                return new ParticleAnimationInstance(data.Particles);
+                var anim = Pools.ParticleAnimations.Get();
+                anim.Setup(data.Particles);
+                return anim;
             }
 
             return null;
         }
 
-        public static ParticleEmitterSettings MapEmitterData(ParticleEmitterData data)
+        public static ParticleEmitterSettings MapEmitterData(ParticleEmitterData data, SpriteManager spriteManager, Core core, Global global, Texture2D pixel)
         {
             var settings = ParticleEmitterSettings.CreateDefault();
 
@@ -176,8 +178,8 @@ namespace ProjectVagabond.Animations
             settings.Bounciness = data.Bounciness;
             settings.FloorScatterY = data.FloorScatterY;
 
-            settings.StartColor = ParseColor(data.StartColor);
-            settings.EndColor = ParseColor(data.EndColor);
+            settings.StartColor = ParseColor(data.StartColor, global);
+            settings.EndColor = ParseColor(data.EndColor, global);
             settings.StartAlpha = data.StartAlpha;
             settings.EndAlpha = data.EndAlpha;
 
@@ -186,7 +188,6 @@ namespace ProjectVagabond.Animations
 
             if (!string.IsNullOrEmpty(data.TexturePath))
             {
-                var spriteManager = ServiceLocator.Get<SpriteManager>();
                 if (data.TexturePath == "HealParticle") settings.Texture = spriteManager.HealParticleSprite;
                 else if (data.TexturePath == "CircleParticle") settings.Texture = spriteManager.CircleParticleSprite;
                 else if (data.TexturePath == "SoftParticle") settings.Texture = spriteManager.SoftParticleSprite;
@@ -196,11 +197,11 @@ namespace ProjectVagabond.Animations
                 {
                     try
                     {
-                        settings.Texture = ServiceLocator.Get<Core>().Content.Load<Texture2D>(data.TexturePath);
+                        settings.Texture = core.Content.Load<Texture2D>(data.TexturePath);
                     }
                     catch
                     {
-                        settings.Texture = ServiceLocator.Get<Texture2D>();
+                        settings.Texture = pixel;
                     }
                 }
             }
@@ -208,14 +209,14 @@ namespace ProjectVagabond.Animations
             return settings;
         }
 
-        private static Color ParseColor(string hexOrName)
+        private static Color ParseColor(string hexOrName, Global global)
         {
             if (string.IsNullOrEmpty(hexOrName)) return Color.White;
 
             var globalProp = typeof(Global).GetProperty(hexOrName, System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.IgnoreCase);
             if (globalProp != null && globalProp.PropertyType == typeof(Color))
             {
-                return (Color)globalProp.GetValue(ServiceLocator.Get<Global>());
+                return (Color)globalProp.GetValue(global);
             }
 
             var prop = typeof(Color).GetProperty(hexOrName, System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.IgnoreCase);
@@ -241,7 +242,8 @@ namespace ProjectVagabond.Animations
 
     public class SpriteAnimationInstance : IAnimationInstance
     {
-        private readonly SpriteAnimationData _data;
+        public bool IsPooled { get; set; }
+        private SpriteAnimationData _data;
         private float _timer;
         private int _currentFrame;
         private List<Vector2> _targetPositions = new List<Vector2>();
@@ -250,9 +252,22 @@ namespace ProjectVagabond.Animations
         public bool IsFinished { get; private set; }
         public bool HasTriggeredImpact { get; private set; }
 
-        public SpriteAnimationInstance(SpriteAnimationData data)
+        public SpriteAnimationInstance() { }
+
+        public void Setup(SpriteAnimationData data)
         {
             _data = data;
+        }
+
+        public void Reset()
+        {
+            _timer = 0f;
+            _currentFrame = 0;
+            _targetPositions.Clear();
+            _texture = null;
+            IsFinished = false;
+            HasTriggeredImpact = false;
+            _data = null;
         }
 
         public void Cancel()
@@ -260,16 +275,16 @@ namespace ProjectVagabond.Animations
             IsFinished = true;
         }
 
-        public void Start(ActiveAttack attack, ArenaScene arena)
+        public void Start(ActiveAttack attack, BattleContext context)
         {
             try
             {
-                _texture = ServiceLocator.Get<Core>().Content.Load<Texture2D>(_data.TexturePath);
+                _texture = context.Core.Content.Load<Texture2D>(_data.TexturePath);
             }
             catch
             {
                 GameLogger.Log(LogSeverity.Error, $"[AnimationSystem] Failed to load texture '{_data.TexturePath}'. Using debug fallback.");
-                _texture = ServiceLocator.Get<TextureFactory>().CreateTwoColorTexture(32, 32, Color.Magenta, Color.Black);
+                _texture = context.TextureFactory.CreateTwoColorTexture(32, 32, Color.Magenta, Color.Black);
             }
 
             _targetPositions.Clear();
@@ -297,7 +312,7 @@ namespace ProjectVagabond.Animations
             {
                 if (attack.DeliveryInstance is InstantAOEDelivery aoe)
                 {
-                    var targets = arena.GetWizardsInCircle(attack.TargetPosition, aoe.Radius);
+                    var targets = context.Arena.GetWizardsInCircle(attack.TargetPosition, aoe.Radius);
                     foreach (var t in targets)
                     {
                         if (!attack.Move.CanEffectSelf && t == attack.Caster) continue;
@@ -306,7 +321,7 @@ namespace ProjectVagabond.Animations
                 }
                 else if (attack.DeliveryInstance is TickingBeamDelivery beam)
                 {
-                    var targets = arena.GetWizardsInOBB(attack.Origin, attack.Direction, beam.Width, beam.Length);
+                    var targets = context.Arena.GetWizardsInOBB(attack.Origin, attack.Direction, beam.Width, beam.Length);
                     foreach (var t in targets)
                     {
                         if (!attack.Move.CanEffectSelf && t == attack.Caster) continue;
@@ -335,7 +350,7 @@ namespace ProjectVagabond.Animations
             }
         }
 
-        public void Update(float dt, ArenaScene arena, ActiveAttack attack)
+        public void Update(float dt, BattleContext context, ActiveAttack attack)
         {
             if (IsFinished) return;
 
@@ -433,7 +448,8 @@ namespace ProjectVagabond.Animations
 
     public class ParticleAnimationInstance : IAnimationInstance
     {
-        private readonly List<ParticleAnimationData> _layers;
+        public bool IsPooled { get; set; }
+        private List<ParticleAnimationData> _layers;
         private readonly List<ParticleEmitter> _emitters = new();
         private readonly List<ParticleEmitter> _trailEmitters = new();
         private readonly List<FloatRange> _baseEmitterSizes = new();
@@ -445,12 +461,34 @@ namespace ProjectVagabond.Animations
         private Vector2 _targetPos;
         private float _totalDist;
 
+        private ParticleSystemManager _psm;
+
         public bool IsFinished { get; private set; }
         public bool HasTriggeredImpact { get; private set; }
 
-        public ParticleAnimationInstance(List<ParticleAnimationData> layers)
+        public ParticleAnimationInstance() { }
+
+        public void Setup(List<ParticleAnimationData> layers)
         {
             _layers = layers;
+        }
+
+        public void Reset()
+        {
+            _timer = 0f;
+            _totalDist = 0f;
+            IsFinished = false;
+            HasTriggeredImpact = false;
+            _layers = null;
+            _psm = null;
+
+            foreach (var e in _emitters) if (e != null) e.IsActive = false;
+            foreach (var e in _trailEmitters) if (e != null) e.IsActive = false;
+
+            _emitters.Clear();
+            _trailEmitters.Clear();
+            _baseEmitterSizes.Clear();
+            _baseTrailSizes.Clear();
         }
 
         public void Cancel()
@@ -460,9 +498,9 @@ namespace ProjectVagabond.Animations
             foreach (var e in _trailEmitters) if (e != null) e.IsActive = false;
         }
 
-        public void Start(ActiveAttack attack, ArenaScene arena)
+        public void Start(ActiveAttack attack, BattleContext context)
         {
-            var psm = ServiceLocator.Get<ParticleSystemManager>();
+            _psm = context.ParticleSystemManager;
             _startPos = attack.Origin;
             _targetPos = attack.TargetPosition;
             _totalDist = Vector2.Distance(_startPos, _targetPos);
@@ -475,7 +513,7 @@ namespace ProjectVagabond.Animations
 
             foreach (var layer in _layers)
             {
-                var settings = AnimationFactory.MapEmitterData(layer.Emitter);
+                var settings = AnimationFactory.MapEmitterData(layer.Emitter, context.SpriteManager, context.Core, context.Global, context.Pixel);
                 _baseEmitterSizes.Add(settings.InitialSize);
 
                 if (layer.Mode == "Spray")
@@ -486,7 +524,7 @@ namespace ProjectVagabond.Animations
                     settings.InitialRotation = new FloatRange(angle);
                 }
 
-                var emitter = psm.CreateEmitter(settings);
+                var emitter = _psm.CreateEmitter(settings);
 
                 if (layer.Mode == "Spray")
                 {
@@ -525,9 +563,9 @@ namespace ProjectVagabond.Animations
                     emitter.Position = _projectilePos + new Vector2(layer.Emitter.OffsetX, layer.Emitter.OffsetY);
                     if (layer.Trail != null)
                     {
-                        var trailSettings = AnimationFactory.MapEmitterData(layer.Trail);
+                        var trailSettings = AnimationFactory.MapEmitterData(layer.Trail, context.SpriteManager, context.Core, context.Global, context.Pixel);
                         _baseTrailSizes.Add(trailSettings.InitialSize);
-                        var trail = psm.CreateEmitter(trailSettings);
+                        var trail = _psm.CreateEmitter(trailSettings);
                         trail.Position = _projectilePos + new Vector2(layer.Trail.OffsetX, layer.Trail.OffsetY);
                         _trailEmitters.Add(trail);
                     }
@@ -547,7 +585,7 @@ namespace ProjectVagabond.Animations
             }
         }
 
-        public void Update(float dt, ArenaScene arena, ActiveAttack attack)
+        public void Update(float dt, BattleContext context, ActiveAttack attack)
         {
             if (IsFinished) return;
             _timer += dt;
@@ -623,15 +661,14 @@ namespace ProjectVagabond.Animations
             {
                 HasTriggeredImpact = true;
 
-                var psm = ServiceLocator.Get<ParticleSystemManager>();
                 foreach (var layer in _layers)
                 {
                     if (layer.Mode == "Projectile" && layer.Impacts != null)
                     {
                         foreach (var impactData in layer.Impacts)
                         {
-                            var impactSettings = AnimationFactory.MapEmitterData(impactData);
-                            var impactEmitter = psm.CreateEmitter(impactSettings);
+                            var impactSettings = AnimationFactory.MapEmitterData(impactData, context.SpriteManager, context.Core, context.Global, context.Pixel);
+                            var impactEmitter = _psm.CreateEmitter(impactSettings);
                             impactEmitter.Position = _targetPos;
                             impactEmitter.EmitBurst(impactSettings.BurstCount > 0 ? impactSettings.BurstCount : 30);
                         }

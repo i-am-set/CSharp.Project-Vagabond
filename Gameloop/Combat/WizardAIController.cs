@@ -1,4 +1,5 @@
 ﻿using Microsoft.Xna.Framework;
+using ProjectVagabond.Deliveries;
 using ProjectVagabond.Scenes;
 using ProjectVagabond.Utils;
 using System;
@@ -23,7 +24,7 @@ namespace ProjectVagabond.Battle
         private readonly HashSet<object> _knownThreats = new HashSet<object>();
         private static readonly Random _random = new Random();
 
-        public void Update(float dt, ArenaScene arena, ArenaWizard self)
+        public void Update(float dt, BattleContext context, ArenaWizard self)
         {
             if (self.Data.Combat.State == WizardState.Dead || self.Data.Combat.IsSuspended) return;
 
@@ -49,7 +50,7 @@ namespace ProjectVagabond.Battle
                 string spellId = self.Data.Combat.EquippedActiveSpell.ID;
                 if (spellId == "ward" || spellId == "teleport")
                 {
-                    ScanForThreats(arena, self);
+                    ScanForThreats(context, self);
                 }
             }
 
@@ -59,14 +60,14 @@ namespace ProjectVagabond.Battle
                 _opportunityTimer = OpportunityCheckInterval;
                 if (self.Data.Combat.EquippedActiveSpell != null && self.Data.Combat.ActiveSpellCooldownTimer <= 0 && _plannedAction == null)
                 {
-                    EvaluateOpportunities(arena, self);
+                    EvaluateOpportunities(context, self);
                 }
             }
         }
 
-        private void ScanForThreats(ArenaScene arena, ArenaWizard self)
+        private void ScanForThreats(BattleContext context, ArenaWizard self)
         {
-            foreach (var enemy in arena.Wizards)
+            foreach (var enemy in context.Arena.Wizards)
             {
                 if (enemy == self || enemy.Data.Combat.State != WizardState.Telegraphing || _knownThreats.Contains(enemy)) continue;
 
@@ -94,13 +95,13 @@ namespace ProjectVagabond.Battle
                     _knownThreats.Add(enemy);
                     if (_random.NextDouble() <= ReactionChance)
                     {
-                        PlanDefensiveAction(self, arena);
+                        PlanDefensiveAction(self, context);
                         return;
                     }
                 }
             }
 
-            foreach (var attack in arena.ActiveAttacks)
+            foreach (var attack in context.Arena.ActiveAttacks)
             {
                 if (attack.Caster == self || _knownThreats.Contains(attack)) continue;
 
@@ -113,47 +114,47 @@ namespace ProjectVagabond.Battle
                     _knownThreats.Add(attack);
                     if (_random.NextDouble() <= ReactionChance)
                     {
-                        PlanDefensiveAction(self, arena);
+                        PlanDefensiveAction(self, context);
                         return;
                     }
                 }
             }
         }
 
-        private void PlanDefensiveAction(ArenaWizard self, ArenaScene arena)
+        private void PlanDefensiveAction(ArenaWizard self, BattleContext context)
         {
             _reactionTimer = MinReactionTime + (float)_random.NextDouble() * (MaxReactionTime - MinReactionTime);
             _plannedAction = () =>
             {
                 if (self.Data.Combat.ActiveSpellCooldownTimer <= 0 && self.Data.Combat.State != WizardState.Dead && !self.Data.Combat.IsSuspended)
                 {
-                    self.Controller.TriggerActiveSpell(arena);
+                    self.Controller.TriggerActiveSpell(context);
                 }
             };
         }
 
-        private void EvaluateOpportunities(ArenaScene arena, ArenaWizard self)
+        private void EvaluateOpportunities(BattleContext context, ArenaWizard self)
         {
             string spellId = self.Data.Combat.EquippedActiveSpell.ID;
 
             if (spellId == "force_cast" && self.Data.Combat.State == WizardState.Moving)
             {
-                if (arena.Wizards.Any(w => w != self && w.Data.Stats.CurrentHP > 0))
+                if (context.Arena.Wizards.Any(w => w != self && w.Data.Stats.CurrentHP > 0))
                 {
                     if (_random.NextDouble() < 0.3f)
                     {
                         _reactionTimer = MinReactionTime;
-                        _plannedAction = () => self.Controller.TriggerActiveSpell(arena);
+                        _plannedAction = () => self.Controller.TriggerActiveSpell(context);
                     }
                 }
             }
             else if (spellId == "teleport")
             {
-                int closeEnemies = arena.Wizards.Count(w => w != self && w.Data.Stats.CurrentHP > 0 && Vector2.Distance(self.Data.Combat.Position, w.Data.Combat.Position) < 40f);
+                int closeEnemies = context.Arena.Wizards.Count(w => w != self && w.Data.Stats.CurrentHP > 0 && Vector2.Distance(self.Data.Combat.Position, w.Data.Combat.Position) < 40f);
                 if (closeEnemies >= 3)
                 {
                     _reactionTimer = MinReactionTime;
-                    _plannedAction = () => self.Controller.TriggerActiveSpell(arena);
+                    _plannedAction = () => self.Controller.TriggerActiveSpell(context);
                 }
             }
         }

@@ -1,15 +1,33 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using Microsoft.Xna.Framework.Input;
+using MonoGame.Extended.Animations;
 using MonoGame.Extended.BitmapFonts;
+using ProjectVagabond.Battle;
+using ProjectVagabond.Deliveries;
+using ProjectVagabond.Particles;
 using ProjectVagabond.Scenes;
+using ProjectVagabond.Transitions;
 using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
+using System.Collections.Generic;
 
 namespace ProjectVagabond.Battle
 {
     public class WizardRenderer
     {
+        private readonly Global _global;
+        private readonly Core _core;
+        private readonly Texture2D _pixel;
+
+        public WizardRenderer()
+        {
+            _global = ServiceLocator.Get<Global>();
+            _core = ServiceLocator.Get<Core>();
+            _pixel = ServiceLocator.Get<Texture2D>();
+        }
+
         public void DrawUI(ArenaWizard wizard, SpriteBatch spriteBatch, SpriteManager spriteManager, GameTime gameTime)
         {
             var combat = wizard.Data.Combat;
@@ -20,12 +38,9 @@ namespace ProjectVagabond.Battle
             float hopOffset = combat.State == WizardState.Dead ? 0f : -MathF.Abs(MathF.Sin(ui.HopTimer)) * 4f;
             int wizY = (int)MathF.Round(combat.Position.Y + hopOffset);
 
-            var global = ServiceLocator.Get<Global>();
-            var core = ServiceLocator.Get<Core>();
-
             if (ui.MoveTextTimer > 0 && !string.IsNullOrEmpty(ui.ActiveMoveText) && combat.State != WizardState.Dead)
             {
-                var font = core.SecondaryFont;
+                var font = _core.SecondaryFont;
 
                 float timeElapsed = ui.MoveTextDuration - ui.MoveTextTimer;
                 float scale = 1f;
@@ -51,7 +66,7 @@ namespace ProjectVagabond.Battle
                     Vector2 textPos = new Vector2(wizX, wizY - 16);
                     Vector2 origin = new Vector2(MathF.Round(textSize.X / 2f), MathF.Round(textSize.Y / 2f));
 
-                    spriteBatch.DrawStringOutlinedSnapped(font, ui.ActiveMoveText, textPos, global.Palette_Sun * alpha, global.Palette_Off * alpha, 0f, origin, scale, SpriteEffects.None, 0f);
+                    spriteBatch.DrawStringOutlinedSnapped(font, ui.ActiveMoveText, textPos, _global.Palette_Sun * alpha, _global.Palette_Off * alpha, 0f, origin, scale, SpriteEffects.None, 0f);
                 }
             }
 
@@ -60,27 +75,27 @@ namespace ProjectVagabond.Battle
                 bool isFlash = (ft.Timer % 0.1f) > 0.05f;
                 string text = (ft.IsHealing ? $"+{ft.Number}" : $"-{ft.Number}");
 
-                BitmapFont font = core.TertiaryFont;
+                BitmapFont font = _core.TertiaryFont;
                 if (ft.Number > 4)
                 {
-                    font = core.DefaultFont;
+                    font = _core.DefaultFont;
                 }
                 else if (ft.Number > 2)
                 {
-                    font = core.SecondaryFont;
+                    font = _core.SecondaryFont;
                 }
                 else
                 {
-                    font = core.TertiaryFont;
+                    font = _core.TertiaryFont;
                 }
 
                 Color textColor = ft.IsHealing
-                    ? (isFlash ? global.Palette_Sun : global.Palette_Leaf)
-                    : (isFlash ? global.Palette_Sun : global.Palette_Rust);
+                    ? (isFlash ? _global.Palette_Sun : _global.Palette_Leaf)
+                    : (isFlash ? _global.Palette_Sun : _global.Palette_Rust);
 
                 float alphaMult = Math.Clamp(ft.Timer / 0.2f, 0f, 1f);
                 Color finalTextColor = textColor * alphaMult;
-                Color outlineColor = global.Palette_Off * alphaMult;
+                Color outlineColor = _global.Palette_Off * alphaMult;
 
                 Vector2 textPos = new Vector2(MathF.Round(combat.Position.X), MathF.Round(combat.Position.Y)) + ft.LocalOffset;
                 Vector2 textSize = font.MeasureString(text);
@@ -91,13 +106,13 @@ namespace ProjectVagabond.Battle
                 if (ft.IsCrit)
                 {
                     string critText = "CRIT";
-                    BitmapFont critFont = core.TertiaryFont;
+                    BitmapFont critFont = _core.TertiaryFont;
                     Vector2 critSize = critFont.MeasureString(critText);
 
                     Vector2 critCenter = textPos - new Vector2(0, MathF.Round(textSize.Y / 2f + critSize.Y / 2f + 1));
                     Vector2 critTopLeft = new Vector2(MathF.Round(critCenter.X - critSize.X / 2f), MathF.Round(critCenter.Y - critSize.Y / 2f));
 
-                    Color critTextColor = isFlash ? global.Palette_Sun : global.CritcalHitIndicatorColor;
+                    Color critTextColor = isFlash ? _global.Palette_Sun : _global.CritcalHitIndicatorColor;
                     Color finalCritTextColor = critTextColor * alphaMult;
 
                     TextAnimator.DrawTextWithEffectOutlined(
@@ -160,23 +175,22 @@ namespace ProjectVagabond.Battle
             }
         }
 
-        public void DrawDebug(ArenaWizard wizard, SpriteBatch spriteBatch, SpriteManager spriteManager)
+        public void DrawDebug(ArenaWizard wizard, SpriteBatch spriteBatch, BattleContext context)
         {
             var combat = wizard.Data.Combat;
 
-            if (ServiceLocator.Get<Global>().ShowDebugOverlays)
+            if (_global.ShowDebugOverlays)
             {
-                var pixel = ServiceLocator.Get<Texture2D>();
-                var hitbox = wizard.Controller.GetHitbox(spriteManager);
-                spriteBatch.Draw(pixel, new Rectangle(hitbox.X, hitbox.Y, hitbox.Width, 1), Color.Lime * 0.5f);
-                spriteBatch.Draw(pixel, new Rectangle(hitbox.X, hitbox.Bottom - 1, hitbox.Width, 1), Color.Lime * 0.5f);
-                spriteBatch.Draw(pixel, new Rectangle(hitbox.X, hitbox.Y, 1, hitbox.Height), Color.Lime * 0.5f);
-                spriteBatch.Draw(pixel, new Rectangle(hitbox.Right - 1, hitbox.Y, 1, hitbox.Height), Color.Lime * 0.5f);
+                var hitbox = wizard.Controller.GetHitbox(context.SpriteManager);
+                spriteBatch.Draw(_pixel, new Rectangle(hitbox.X, hitbox.Y, hitbox.Width, 1), Color.Lime * 0.5f);
+                spriteBatch.Draw(_pixel, new Rectangle(hitbox.X, hitbox.Bottom - 1, hitbox.Width, 1), Color.Lime * 0.5f);
+                spriteBatch.Draw(_pixel, new Rectangle(hitbox.X, hitbox.Y, 1, hitbox.Height), Color.Lime * 0.5f);
+                spriteBatch.Draw(_pixel, new Rectangle(hitbox.Right - 1, hitbox.Y, 1, hitbox.Height), Color.Lime * 0.5f);
             }
 
             if (combat.State == WizardState.Telegraphing && combat.QueuedMove != null)
             {
-                combat.QueuedMove.Delivery.DrawTelegraph(spriteBatch, combat.Position, combat.QueuedDirection, combat.QueuedTargetPos);
+                combat.QueuedMove.Delivery.DrawTelegraph(spriteBatch, combat.Position, combat.QueuedDirection, combat.QueuedTargetPos, context);
             }
         }
 

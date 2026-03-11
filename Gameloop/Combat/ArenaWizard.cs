@@ -1,6 +1,7 @@
 ﻿using Microsoft.Xna.Framework;
 using ProjectVagabond.Animations;
 using ProjectVagabond.Scenes;
+using ProjectVagabond.Utils;
 using System;
 using System.Collections.Generic;
 
@@ -15,14 +16,25 @@ namespace ProjectVagabond.Battle
         Dead
     }
 
-    public class FloatingText
+    public class FloatingText : IPoolable
     {
+        public bool IsPooled { get; set; }
         public int Number;
         public bool IsHealing;
         public bool IsCrit;
         public float Timer;
         public float Duration;
         public Vector2 LocalOffset;
+
+        public void Reset()
+        {
+            Number = 0;
+            IsHealing = false;
+            IsCrit = false;
+            Timer = 0f;
+            Duration = 0f;
+            LocalOffset = Vector2.Zero;
+        }
     }
 
     #region Base Stats

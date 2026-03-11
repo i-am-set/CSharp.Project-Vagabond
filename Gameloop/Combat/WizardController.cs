@@ -1,7 +1,15 @@
 ﻿using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Graphics;
+using Microsoft.Xna.Framework.Input;
+using MonoGame.Extended.Animations;
+using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond.Animations;
+using ProjectVagabond.Battle;
+using ProjectVagabond.Deliveries;
 using ProjectVagabond.Particles;
 using ProjectVagabond.Scenes;
+using ProjectVagabond.Transitions;
+using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
 using System.Collections.Generic;
@@ -13,9 +21,23 @@ namespace ProjectVagabond.Battle
         private readonly ArenaWizard _wizard;
         private static readonly Random _random = new Random();
 
+        // Cached Dependencies
+        private readonly Global _global;
+        private readonly SpriteManager _spriteManager;
+        private readonly Core _core;
+        private readonly ParticleSystemManager _particleSystemManager;
+        private readonly TextureFactory _textureFactory;
+        private readonly Texture2D _pixel;
+
         public WizardController(ArenaWizard wizard)
         {
             _wizard = wizard;
+            _global = ServiceLocator.Get<Global>();
+            _spriteManager = ServiceLocator.Get<SpriteManager>();
+            _core = ServiceLocator.Get<Core>();
+            _particleSystemManager = ServiceLocator.Get<ParticleSystemManager>();
+            _textureFactory = ServiceLocator.Get<TextureFactory>();
+            _pixel = ServiceLocator.Get<Texture2D>();
         }
 
         public void Initialize(WizardCatData data, Vector2 startPos, bool isPlayer)
@@ -148,19 +170,18 @@ namespace ProjectVagabond.Battle
                 ui.HealthBarVisibilityTimer = ui.HealthBarLingerDuration;
                 ui.HealthBarAlpha = 1.0f;
 
-                var spriteManager = ServiceLocator.Get<SpriteManager>();
-                var hitbox = GetHitbox(spriteManager);
+                var hitbox = GetHitbox(_spriteManager);
                 Vector2 centerOffset = new Vector2(hitbox.Center.X - combat.Position.X, hitbox.Center.Y - combat.Position.Y);
 
-                ui.FloatingTexts.Add(new FloatingText
-                {
-                    Number = actualDamage,
-                    IsHealing = false,
-                    IsCrit = isCrit,
-                    Duration = 1.0f,
-                    Timer = 1.0f,
-                    LocalOffset = centerOffset + new Vector2(_random.Next(-8, 9), 0)
-                });
+                var ft = Pools.FloatingText.Get();
+                ft.Reset();
+                ft.Number = actualDamage;
+                ft.IsHealing = false;
+                ft.IsCrit = isCrit;
+                ft.Duration = 1.0f;
+                ft.Timer = 1.0f;
+                ft.LocalOffset = centerOffset + new Vector2(_random.Next(-8, 9), 0);
+                ui.FloatingTexts.Add(ft);
 
                 return true;
             }
@@ -187,19 +208,18 @@ namespace ProjectVagabond.Battle
 
             if (actualHeal > 0)
             {
-                var spriteManager = ServiceLocator.Get<SpriteManager>();
-                var hitbox = GetHitbox(spriteManager);
+                var hitbox = GetHitbox(_spriteManager);
                 Vector2 centerOffset = new Vector2(hitbox.Center.X - combat.Position.X, hitbox.Center.Y - combat.Position.Y);
 
-                ui.FloatingTexts.Add(new FloatingText
-                {
-                    Number = actualHeal,
-                    IsHealing = true,
-                    IsCrit = false,
-                    Duration = 1.0f,
-                    Timer = 1.0f,
-                    LocalOffset = centerOffset + new Vector2(_random.Next(-8, 9), 0)
-                });
+                var ft = Pools.FloatingText.Get();
+                ft.Reset();
+                ft.Number = actualHeal;
+                ft.IsHealing = true;
+                ft.IsCrit = false;
+                ft.Duration = 1.0f;
+                ft.Timer = 1.0f;
+                ft.LocalOffset = centerOffset + new Vector2(_random.Next(-8, 9), 0);
+                ui.FloatingTexts.Add(ft);
             }
         }
 
@@ -219,11 +239,11 @@ namespace ProjectVagabond.Battle
             {
                 if (combat.QueuedMove.RequiresFocus)
                 {
-                    if (combat.CurrentActiveAttack != null)
+                    if (combat.CurrentActiveAttack != null && !combat.CurrentActiveAttack.IsPooled)
                     {
                         combat.CurrentActiveAttack.IsCanceled = true;
-                        combat.CurrentActiveAttack = null;
                     }
+                    combat.CurrentActiveAttack = null;
                     combat.State = WizardState.Recovering;
                     combat.StateTimer = 0.5f;
                     combat.TargetPosition = combat.Position;
@@ -245,7 +265,7 @@ namespace ProjectVagabond.Battle
             combat.KnockbackTimer = combat.KnockbackDuration;
         }
 
-        public bool TriggerActiveSpell(ArenaScene arena)
+        public bool TriggerActiveSpell(BattleContext context)
         {
             var combat = _wizard.Data.Combat;
 
@@ -262,7 +282,7 @@ namespace ProjectVagabond.Battle
             else if (combat.EquippedActiveSpell.ID == "force_cast")
             {
                 combat.ActionTimer = 0f;
-                PrepareAttack(arena);
+                PrepareAttack(context);
             }
             else if (combat.EquippedActiveSpell.ID == "teleport")
             {
@@ -270,8 +290,7 @@ namespace ProjectVagabond.Battle
                 combat.TeleportTimer = combat.EquippedActiveSpell.Duration;
                 combat.KnockbackTimer = 0f;
 
-                var psm = ServiceLocator.Get<ParticleSystemManager>();
-                var emitter = psm.CreateEmitter(ParticleEffects.CreateTeleportParticles());
+                var emitter = _particleSystemManager.CreateEmitter(ParticleEffects.CreateTeleportParticles());
                 emitter.Position = combat.Position;
                 emitter.EmitBurst(20);
 
@@ -279,7 +298,7 @@ namespace ProjectVagabond.Battle
                 int attempts = 0;
                 do
                 {
-                    target = arena.GetRandomArenaPoint();
+                    target = context.Arena.GetRandomArenaPoint();
                     attempts++;
                 } while (Vector2.Distance(combat.Position, target) < combat.EquippedActiveSpell.MinDistance && attempts < 50);
 
@@ -330,7 +349,7 @@ namespace ProjectVagabond.Battle
             return MathHelper.Lerp(1.0f, ui.DeadBodyMinAlpha, progress);
         }
 
-        public void Update(float dt, ArenaScene arena)
+        public void Update(float dt, BattleContext context)
         {
             var combat = _wizard.Data.Combat;
             var stats = _wizard.Data.Stats;
@@ -348,8 +367,7 @@ namespace ProjectVagabond.Battle
                     combat.IsTeleporting = false;
                     combat.Position = combat.TeleportTargetPos;
                     combat.TargetPosition = combat.Position;
-                    var psm = ServiceLocator.Get<ParticleSystemManager>();
-                    var emitter = psm.CreateEmitter(ParticleEffects.CreateTeleportParticles());
+                    var emitter = _particleSystemManager.CreateEmitter(ParticleEffects.CreateTeleportParticles());
                     emitter.Position = combat.Position;
                     emitter.EmitBurst(20);
 
@@ -361,7 +379,7 @@ namespace ProjectVagabond.Battle
                 return;
             }
 
-            _wizard.AIController?.Update(dt, arena, _wizard);
+            _wizard.AIController?.Update(dt, context, _wizard);
 
             for (int i = ui.FloatingTexts.Count - 1; i >= 0; i--)
             {
@@ -371,6 +389,7 @@ namespace ProjectVagabond.Battle
                 if (ft.Timer <= 0)
                 {
                     ui.FloatingTexts.RemoveAt(i);
+                    Pools.FloatingText.Return(ft);
                 }
             }
 
@@ -404,7 +423,7 @@ namespace ProjectVagabond.Battle
                 float eased = Easing.EaseOutQuad(progress);
 
                 combat.Position = Vector2.Lerp(combat.KnockbackStartPos, combat.KnockbackTargetPos, eased);
-                combat.Position = arena.ClampToArena(combat.Position, 12f);
+                combat.Position = context.Arena.ClampToArena(combat.Position, 12f);
             }
             else
             {
@@ -472,11 +491,11 @@ namespace ProjectVagabond.Battle
             switch (combat.State)
             {
                 case WizardState.Moving:
-                    if (combat.KnockbackTimer <= 0) UpdateMovement(dt, arena);
+                    if (combat.KnockbackTimer <= 0) UpdateMovement(dt, context.Arena);
                     combat.ActionTimer -= dt;
                     if (combat.ActionTimer <= 0)
                     {
-                        PrepareAttack(arena);
+                        PrepareAttack(context);
                     }
                     break;
 
@@ -507,14 +526,26 @@ namespace ProjectVagabond.Battle
                     combat.StateTimer -= dt;
                     if (combat.StateTimer <= 0)
                     {
-                        ExecuteAttack(arena);
+                        ExecuteAttack(context);
                     }
                     break;
 
                 case WizardState.Casting:
-                    bool animFinished = combat.CurrentActiveAttack == null || combat.CurrentActiveAttack.Animation == null || combat.CurrentActiveAttack.Animation.IsFinished;
-                    if (combat.CurrentActiveAttack == null || (combat.CurrentActiveAttack.DeliveryInstance.IsFinished && animFinished) || combat.CurrentActiveAttack.IsCanceled)
+                    if (combat.CurrentActiveAttack == null || combat.CurrentActiveAttack.IsPooled)
                     {
+                        combat.CurrentActiveAttack = null;
+                        combat.State = WizardState.Recovering;
+                        combat.StateTimer = 0.25f;
+                        combat.TargetPosition = combat.Position;
+                        break;
+                    }
+
+                    bool animFinished = combat.CurrentActiveAttack.Animation == null || combat.CurrentActiveAttack.Animation.IsFinished;
+                    bool deliveryFinished = combat.CurrentActiveAttack.DeliveryInstance == null || combat.CurrentActiveAttack.DeliveryInstance.IsFinished;
+
+                    if ((deliveryFinished && animFinished) || combat.CurrentActiveAttack.IsCanceled)
+                    {
+                        combat.CurrentActiveAttack = null;
                         combat.State = WizardState.Recovering;
                         combat.StateTimer = 0.25f;
                         combat.TargetPosition = combat.Position;
@@ -554,7 +585,7 @@ namespace ProjectVagabond.Battle
             }
         }
 
-        private void PrepareAttack(ArenaScene arena)
+        private void PrepareAttack(BattleContext context)
         {
             var combat = _wizard.Data.Combat;
             var ui = _wizard.Data.UI;
@@ -595,7 +626,7 @@ namespace ProjectVagabond.Battle
                 if (combat.QueuedMove.TargetClosest || combat.QueuedMove.Delivery is DashMeleeDelivery || combat.QueuedMove.Delivery is SeekAndDashDelivery)
                 {
                     float closestDist = float.MaxValue;
-                    foreach (var w in arena.Wizards)
+                    foreach (var w in context.Arena.Wizards)
                     {
                         if (w == _wizard || w.Data.Stats.CurrentHP <= 0 || w.Data.Combat.IsSuspended) continue;
                         float dist = Vector2.DistanceSquared(combat.Position, w.Data.Combat.Position);
@@ -609,7 +640,7 @@ namespace ProjectVagabond.Battle
                 else
                 {
                     int validCount = 0;
-                    foreach (var w in arena.Wizards)
+                    foreach (var w in context.Arena.Wizards)
                     {
                         if (w != _wizard && w.Data.Stats.CurrentHP > 0 && !w.Data.Combat.IsSuspended) validCount++;
                     }
@@ -618,7 +649,7 @@ namespace ProjectVagabond.Battle
                     {
                         int targetRoll = _random.Next(validCount);
                         int curr = 0;
-                        foreach (var w in arena.Wizards)
+                        foreach (var w in context.Arena.Wizards)
                         {
                             if (w != _wizard && w.Data.Stats.CurrentHP > 0 && !w.Data.Combat.IsSuspended)
                             {
@@ -661,7 +692,7 @@ namespace ProjectVagabond.Battle
 
             if (combat.QueuedMove.ExecuteOnChargeStart)
             {
-                ExecuteAttack(arena);
+                ExecuteAttack(context);
             }
             else
             {
@@ -670,25 +701,25 @@ namespace ProjectVagabond.Battle
             }
         }
 
-        private void ExecuteAttack(ArenaScene arena)
+        private void ExecuteAttack(BattleContext context)
         {
             var combat = _wizard.Data.Combat;
 
-            var attack = new ActiveAttack
-            {
-                Caster = _wizard,
-                TargetWizard = combat.QueuedTargetWizard,
-                Move = combat.QueuedMove,
-                Origin = combat.Position,
-                Direction = combat.QueuedDirection,
-                TargetPosition = combat.QueuedTargetPos,
-                DeliveryInstance = combat.QueuedMove.Delivery.Clone(),
-                Animation = AnimationFactory.CreateAnimation(combat.QueuedMove.AnimationID),
-                HasTriggeredImpact = false
-            };
+            var attack = Pools.ActiveAttack.Get();
+            attack.Reset();
+            attack.Context = context;
+            attack.Caster = _wizard;
+            attack.TargetWizard = combat.QueuedTargetWizard;
+            attack.Move = combat.QueuedMove;
+            attack.Origin = combat.Position;
+            attack.Direction = combat.QueuedDirection;
+            attack.TargetPosition = combat.QueuedTargetPos;
+            attack.DeliveryInstance = combat.QueuedMove.Delivery.GetInstanceFromPool();
+            attack.Animation = AnimationFactory.CreateAnimation(combat.QueuedMove.AnimationID);
+            attack.HasTriggeredImpact = false;
 
             combat.CurrentActiveAttack = attack;
-            arena.SpawnAttack(attack);
+            context.Arena.SpawnAttack(attack);
 
             combat.State = WizardState.Casting;
         }

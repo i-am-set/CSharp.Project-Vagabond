@@ -28,6 +28,11 @@ namespace ProjectVagabond.Scenes
         private readonly InputManager _inputManager;
         private readonly SceneManager _sceneManager;
         private readonly TransitionManager _transitionManager;
+        private readonly Texture2D _pixel;
+        private readonly Core _core;
+        private readonly ParticleSystemManager _particleSystemManager;
+        private readonly TextureFactory _textureFactory;
+        private readonly CursorManager _cursorManager;
 
         private readonly List<ArenaWizard> _wizards = new List<ArenaWizard>();
         private List<ArenaWizard> _wizardsByHudOrder = new List<ArenaWizard>();
@@ -70,6 +75,8 @@ namespace ProjectVagabond.Scenes
         private readonly Dictionary<ArenaWizard, PlinkAnimator> _probPlinks = new Dictionary<ArenaWizard, PlinkAnimator>();
         private readonly Dictionary<ArenaWizard, float> _winProbabilities = new Dictionary<ArenaWizard, float>();
 
+        private BattleContext _battleContext;
+
         public IReadOnlyList<ArenaWizard> Wizards => _wizards;
         public IReadOnlyList<ActiveAttack> ActiveAttacks => _activeAttacks;
 
@@ -81,6 +88,11 @@ namespace ProjectVagabond.Scenes
             _inputManager = ServiceLocator.Get<InputManager>();
             _sceneManager = ServiceLocator.Get<SceneManager>();
             _transitionManager = ServiceLocator.Get<TransitionManager>();
+            _pixel = ServiceLocator.Get<Texture2D>();
+            _core = ServiceLocator.Get<Core>();
+            _particleSystemManager = ServiceLocator.Get<ParticleSystemManager>();
+            _textureFactory = ServiceLocator.Get<TextureFactory>();
+            _cursorManager = ServiceLocator.Get<CursorManager>();
         }
 
         public override Rectangle GetAnimatedBounds()
@@ -163,6 +175,17 @@ namespace ProjectVagabond.Scenes
             _probPlinks.Clear();
             _winProbabilities.Clear();
 
+            _battleContext = new BattleContext
+            {
+                Arena = this,
+                Global = _global,
+                SpriteManager = _spriteManager,
+                Core = _core,
+                ParticleSystemManager = _particleSystemManager,
+                TextureFactory = _textureFactory,
+                Pixel = _pixel
+            };
+
             _arenaState = ArenaState.Countdown;
             _phaseTimer = 5.0f;
             _lastCountdownSecond = 5;
@@ -182,8 +205,8 @@ namespace ProjectVagabond.Scenes
             _arenaTexture?.Dispose();
             _arenaOutlineTexture?.Dispose();
 
-            _arenaOutlineTexture = ServiceLocator.Get<TextureFactory>().CreatePolygonTexture((int)ARENA_RADIUS + 2, _arenaEdges);
-            _arenaTexture = ServiceLocator.Get<TextureFactory>().CreatePolygonTexture((int)ARENA_RADIUS, _arenaEdges);
+            _arenaOutlineTexture = _textureFactory.CreatePolygonTexture((int)ARENA_RADIUS + 2, _arenaEdges);
+            _arenaTexture = _textureFactory.CreatePolygonTexture((int)ARENA_RADIUS, _arenaEdges);
 
             var playerLeader = _gameState.PlayerState.Leader;
             if (playerLeader == null) return;
@@ -236,9 +259,9 @@ namespace ProjectVagabond.Scenes
 
         private void CalculateHUDLayout()
         {
-            var defaultFont = ServiceLocator.Get<Core>().DefaultFont;
-            var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
-            var tertiaryFont = ServiceLocator.Get<Core>().TertiaryFont;
+            var defaultFont = _core.DefaultFont;
+            var secondaryFont = _core.SecondaryFont;
+            var tertiaryFont = _core.TertiaryFont;
 
             int totalWizards = _wizards.Count;
             if (totalWizards == 0) return;
@@ -353,7 +376,7 @@ namespace ProjectVagabond.Scenes
 
             if (_ticketManager.IsHoveringTicket || _ticketManager.IsDraggingTicket)
             {
-                ServiceLocator.Get<CursorManager>().SetState(_ticketManager.IsDraggingTicket ? CursorState.Dragging : CursorState.HoverDraggable);
+                _cursorManager.SetState(_ticketManager.IsDraggingTicket ? CursorState.Dragging : CursorState.HoverDraggable);
             }
 
             if (_arenaState == ArenaState.Countdown)
@@ -381,13 +404,13 @@ namespace ProjectVagabond.Scenes
                 if (_inputManager.ActiveSpellTriggered && _arenaState == ArenaState.Fighting)
                 {
                     var player = _wizards.FirstOrDefault(w => w.Data.Stats.IsPlayer);
-                    if (player != null) player.Controller.TriggerActiveSpell(this);
+                    if (player != null) player.Controller.TriggerActiveSpell(_battleContext);
                 }
 
                 foreach (var wizard in _wizards)
                 {
                     wizard.Data.UI.IsHovered = wizard.Data.Combat.State != WizardState.Dead && wizard.Controller.GetHitbox(_spriteManager).Contains(virtualMousePos);
-                    wizard.Controller.Update(dt, this);
+                    wizard.Controller.Update(dt, _battleContext);
                 }
 
                 for (int i = 0; i < _wizards.Count; i++)
@@ -437,11 +460,12 @@ namespace ProjectVagabond.Scenes
                         attack.TargetWizard = null;
                     }
 
-                    attack.Update(dt, this);
+                    attack.Update(dt, _battleContext);
 
                     if (attack.IsFinished)
                     {
                         _activeAttacks.RemoveAt(i);
+                        Pools.ActiveAttack.Return(attack);
                     }
                 }
 
@@ -570,8 +594,7 @@ namespace ProjectVagabond.Scenes
 
         protected override void DrawSceneContent(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Matrix transform)
         {
-            var pixel = ServiceLocator.Get<Texture2D>();
-            spriteBatch.Draw(pixel, new Rectangle(0, 0, Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT), _global.GameBg);
+            spriteBatch.Draw(_pixel, new Rectangle(0, 0, Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT), _global.GameBg);
 
             if (_arenaOutlineTexture != null)
             {
@@ -608,7 +631,7 @@ namespace ProjectVagabond.Scenes
             }
 
             spriteBatch.End();
-            ServiceLocator.Get<ParticleSystemManager>().Draw(spriteBatch, transform);
+            _particleSystemManager.Draw(spriteBatch, transform);
             spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp, null, null, null, transform);
 
             if (_hoveredHudWizard != null && _hoveredHudWizard.Data.Combat.State != WizardState.Dead)
@@ -618,21 +641,21 @@ namespace ProjectVagabond.Scenes
                 int offset = (int)(gameTime.TotalGameTime.TotalSeconds * 30) % 6;
                 for (int i = offset; i < points.Count; i += 6)
                 {
-                    spriteBatch.Draw(pixel, new Vector2(points[i].X, points[i].Y), _global.Palette_Fruit);
+                    spriteBatch.Draw(_pixel, new Vector2(points[i].X, points[i].Y), _global.Palette_Fruit);
                 }
             }
 
             foreach (var wizard in _wizards)
             {
                 _wizardRenderer.DrawUI(wizard, spriteBatch, _spriteManager, gameTime);
-                _wizardRenderer.DrawDebug(wizard, spriteBatch, _spriteManager);
+                _wizardRenderer.DrawDebug(wizard, spriteBatch, _battleContext);
             }
 
             DrawSideHUD(spriteBatch);
             DrawTopHUD(spriteBatch);
 
-            var mainFont = ServiceLocator.Get<Core>().DefaultFont;
-            var tertFont = ServiceLocator.Get<Core>().TertiaryFont;
+            var mainFont = _core.DefaultFont;
+            var tertFont = _core.TertiaryFont;
 
             _ticketManager.Draw(spriteBatch, _spriteManager, _global, mainFont, tertFont);
 
@@ -684,9 +707,8 @@ namespace ProjectVagabond.Scenes
 
         private void DrawTopHUD(SpriteBatch spriteBatch)
         {
-            var core = ServiceLocator.Get<Core>();
-            var tertiaryFont = core.TertiaryFont;
-            var defaultFont = core.DefaultFont;
+            var tertiaryFont = _core.TertiaryFont;
+            var defaultFont = _core.DefaultFont;
 
             string amountText = _gameState.PlayerState.Gold.ToString();
             string gText = "G";
@@ -715,11 +737,10 @@ namespace ProjectVagabond.Scenes
 
         private void DrawSideHUD(SpriteBatch spriteBatch)
         {
-            var defaultFont = ServiceLocator.Get<Core>().DefaultFont;
-            var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
-            var tertiaryFont = ServiceLocator.Get<Core>().TertiaryFont;
+            var defaultFont = _core.DefaultFont;
+            var secondaryFont = _core.SecondaryFont;
+            var tertiaryFont = _core.TertiaryFont;
             var sheet = _spriteManager.HealthHeartsSpriteSheet;
-            var pixel = ServiceLocator.Get<Texture2D>();
             if (sheet == null || _wizards.Count == 0) return;
 
             int heartWidth = 5;
@@ -742,7 +763,7 @@ namespace ProjectVagabond.Scenes
                 Rectangle hudRect = new Rectangle((int)_hudBaseX - 2, (int)w.Data.UI.HudNamePos.Y - 2, (int)(_hudMultCenterX - _hudBaseX + 30), 20);
                 if (_hoveredHudWizard == w)
                 {
-                    spriteBatch.Draw(pixel, hudRect, _global.Palette_DarkShadow * 0.5f);
+                    spriteBatch.Draw(_pixel, hudRect, _global.Palette_DarkShadow * 0.5f);
                 }
 
                 Color baseNameColor = w.Data.Stats.IsPlayer ? _global.Palette_DarkPale : _global.Palette_DarkestPale;
@@ -781,7 +802,7 @@ namespace ProjectVagabond.Scenes
                             pipColor = Color.Lerp(pipColor, _global.Palette_Black, fadeProgress);
                         }
 
-                        spriteBatch.Draw(pixel, new Rectangle((int)currentX, (int)currentY, 1, 1), pipColor);
+                        spriteBatch.Draw(_pixel, new Rectangle((int)currentX, (int)currentY, 1, 1), pipColor);
                     }
                 }
 
@@ -824,7 +845,7 @@ namespace ProjectVagabond.Scenes
                     if (currentLineWidth > 0)
                     {
                         int lineY = (int)MathF.Round(finalNamePos.Y + w.Data.UI.HudNameSize.Y / 2f);
-                        spriteBatch.Draw(pixel, new Rectangle((int)finalNamePos.X, lineY, currentLineWidth, 1), _global.Palette_Black);
+                        spriteBatch.Draw(_pixel, new Rectangle((int)finalNamePos.X, lineY, currentLineWidth, 1), _global.Palette_Black);
                     }
                 }
 
