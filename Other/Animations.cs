@@ -553,8 +553,9 @@ namespace ProjectVagabond.Animations
             if (IsFinished) return;
             _timer += dt;
 
-            // True Homing: Update target position dynamically if the target is still alive
-            if (attack.TargetWizard != null)
+            // True Homing: Update target position dynamically if the target is still alive.
+            // AOE attacks target a fixed location on the ground, so they do not home.
+            if (attack.TargetWizard != null && !(attack.DeliveryInstance is InstantAOEDelivery))
             {
                 _targetPos = attack.TargetWizard.Position;
             }

@@ -18,25 +18,14 @@ namespace ProjectVagabond.Scenes
     {
         private enum ArenaState
         {
-            Betting,
-            LockingIn,
             Countdown,
             Fighting,
             MatchOver
         }
 
-        public enum TicketType
+        private class MatchTicket
         {
-            Win,
-            Place,
-            Show
-        }
-
-        private class BetTicket
-        {
-            public TicketType Type;
-            public int BetAmount;
-            public float Multiplier;
+            public int Placement;
             public int WizardNumber;
             public float AnimTimer;
             public float TargetX;
@@ -73,22 +62,17 @@ namespace ProjectVagabond.Scenes
         private List<ArenaWizard> _wizardsByHudOrder = new List<ArenaWizard>();
         private readonly List<ActiveAttack> _activeAttacks = new List<ActiveAttack>();
         private readonly List<ArenaWizard> _queryResults = new List<ArenaWizard>();
-        private readonly List<BetTicket> _tickets = new List<BetTicket>();
-        private readonly Queue<BetTicket> _pendingTickets = new Queue<BetTicket>();
+        private readonly List<MatchTicket> _tickets = new List<MatchTicket>();
+        private readonly Queue<MatchTicket> _pendingTickets = new Queue<MatchTicket>();
         private readonly Random _random = new Random();
 
         private ArenaState _arenaState;
         private float _phaseTimer = 0f;
-        private int _lastBettingSecond = 0;
-        private int _lockedInIndex = 0;
+        private int _lastCountdownSecond = 0;
 
-        private PlinkAnimator _plinkPlaceBets;
         private PlinkAnimator _plinkBetCountdown;
-        private PlinkAnimator _plinkLockedIn;
         private PlinkAnimator _plinkFight;
 
-        private Button _skipButton;
-        private NavigationGroup _navigationGroup;
         private MouseState _lastMouseState;
 
         private const float ARENA_RADIUS = 85f;
@@ -100,19 +84,18 @@ namespace ProjectVagabond.Scenes
         private float _matchOverTimer = 0f;
         private string _matchResultText = "";
         private Color _matchResultColor = Color.White;
-        private int _goldWon = 0;
 
         private float _hudBaseX;
         private float _hudNameX;
         private float _hudMultCenterX;
+        private ArenaWizard _hoveredHudWizard;
 
-        // Multiplier Tuning
-        private const float MULT_MIN = 2.0f;
-        private const float MULT_MAX = 12.0f;
+        private bool _playerTicketPrinted = false;
+
         private const int MULT_DEFAULT_MIN_STEP = 9; // Index 9 is Palette_Rust
 
-        private readonly Dictionary<ArenaWizard, int> _multSteps = new Dictionary<ArenaWizard, int>();
-        private readonly Dictionary<ArenaWizard, PlinkAnimator> _multPlinks = new Dictionary<ArenaWizard, PlinkAnimator>();
+        private readonly Dictionary<ArenaWizard, int> _probSteps = new Dictionary<ArenaWizard, int>();
+        private readonly Dictionary<ArenaWizard, PlinkAnimator> _probPlinks = new Dictionary<ArenaWizard, PlinkAnimator>();
         private readonly Dictionary<ArenaWizard, float> _winProbabilities = new Dictionary<ArenaWizard, float>();
 
         public IReadOnlyList<ArenaWizard> Wizards => _wizards;
@@ -199,26 +182,22 @@ namespace ProjectVagabond.Scenes
             _activeAttacks.Clear();
             _tickets.Clear();
             _pendingTickets.Clear();
-            _multSteps.Clear();
-            _multPlinks.Clear();
+            _probSteps.Clear();
+            _probPlinks.Clear();
             _winProbabilities.Clear();
 
-            _arenaState = ArenaState.Betting;
-            _phaseTimer = 10.0f;
-            _lastBettingSecond = 10;
-            _lockedInIndex = 0;
+            _arenaState = ArenaState.Countdown;
+            _phaseTimer = 5.0f;
+            _lastCountdownSecond = 5;
+            _playerTicketPrinted = false;
 
-            _plinkPlaceBets = new PlinkAnimator();
             _plinkBetCountdown = new PlinkAnimator();
-            _plinkLockedIn = new PlinkAnimator();
             _plinkFight = new PlinkAnimator();
 
-            _plinkPlaceBets.Start(0f, 0.3f);
             _plinkBetCountdown.Start(0f, 0.3f);
 
             _matchOverTimer = 0f;
             _matchResultText = "";
-            _goldWon = 0;
 
             _arenaCenter = new Vector2(Global.VIRTUAL_WIDTH - 4 - ARENA_RADIUS, Global.VIRTUAL_HEIGHT / 2f);
             _arenaEdges = Math.Max(3, _arenaEdges);
@@ -228,23 +207,6 @@ namespace ProjectVagabond.Scenes
 
             _arenaOutlineTexture = ServiceLocator.Get<TextureFactory>().CreatePolygonTexture((int)ARENA_RADIUS + 2, _arenaEdges);
             _arenaTexture = ServiceLocator.Get<TextureFactory>().CreatePolygonTexture((int)ARENA_RADIUS, _arenaEdges);
-
-            _skipButton = new Button(new Rectangle((int)_arenaCenter.X - 30, (int)_arenaCenter.Y + 20, 60, 15), "SKIP", font: ServiceLocator.Get<Core>().SecondaryFont)
-            {
-                HoverAnimation = HoverAnimationType.Hop,
-                TriggerHapticOnHover = true
-            };
-            _skipButton.OnClick += () => {
-                if (_arenaState == ArenaState.Betting)
-                {
-                    _phaseTimer = 0f;
-                    ServiceLocator.Get<HapticsManager>().TriggerUICompoundShake(_global.ButtonHapticStrength);
-                }
-            };
-
-            _navigationGroup = new NavigationGroup(wrapNavigation: false);
-            _navigationGroup.Add(_skipButton);
-            if (_inputManager.CurrentInputDevice != InputDeviceType.Mouse) _navigationGroup.SelectFirst();
 
             var playerLeader = _gameState.PlayerState.Leader;
             if (playerLeader == null) return;
@@ -279,38 +241,20 @@ namespace ProjectVagabond.Scenes
             {
                 if (totalRating > 0 && w.Rating > 0)
                 {
-                    float winProb = (float)w.Rating / totalRating;
-                    _winProbabilities[w] = winProb;
-                    float rawOdds = 1.0f / winProb;
-                    w.PayoutMultiplier = (float)Math.Round(rawOdds * 1.0f, 1); // Pre-bet odds
+                    _winProbabilities[w] = (float)w.Rating / totalRating;
                 }
                 else
                 {
                     _winProbabilities[w] = 0f;
-                    w.PayoutMultiplier = 1.0f;
                 }
 
-                _multSteps[w] = GetMultiplierStep(w.PayoutMultiplier);
-                _multPlinks[w] = new PlinkAnimator { MaxScale = 1.5f, PlinkTriggerThreshold = 0f };
+                _probSteps[w] = GetProbabilityStep(_winProbabilities[w]);
+                _probPlinks[w] = new PlinkAnimator { MaxScale = 1.5f, PlinkTriggerThreshold = 0f };
             }
 
             CalculateHUDLayout();
 
             _wizardsByHudOrder = _wizards.OrderBy(w => w.HudNamePos.Y).ToList();
-
-            if (_wizards.Count > 0)
-            {
-                _pendingTickets.Enqueue(new BetTicket
-                {
-                    Type = TicketType.Win,
-                    BetAmount = _gameState.CurrentEntryFee,
-                    Multiplier = _wizards[0].PayoutMultiplier,
-                    WizardNumber = 1,
-                    AnimTimer = 0f,
-                    TargetX = 44,
-                    Position = new Vector2(44, -16f)
-                });
-            }
         }
 
         private void CalculateHUDLayout()
@@ -341,15 +285,15 @@ namespace ProjectVagabond.Scenes
             float nameXOffset = statBlockWidth + 4;
             float multXOffset = nameXOffset + maxNameWidth + 8;
 
-            float standardMultWidth = secondaryFont.MeasureString("9.9").Width + 1f + tertiaryFont.MeasureString("x").Width;
-            float totalWidth = multXOffset + standardMultWidth + 10f;
+            float standardProbWidth = defaultFont.MeasureString("100%").Width;
+            float totalWidth = multXOffset + standardProbWidth + 10f;
 
             _hudBaseX = MathF.Round((uiAreaWidth - totalWidth) / 2f);
             if (_hudBaseX < 4) _hudBaseX = 4;
 
             _hudBaseX -= 5f;
             _hudNameX = MathF.Round(_hudBaseX + nameXOffset);
-            _hudMultCenterX = MathF.Round(_hudBaseX + multXOffset + 7f + (standardMultWidth / 2f));
+            _hudMultCenterX = MathF.Round(_hudBaseX + multXOffset + 7f + (standardProbWidth / 2f));
 
             for (int i = 0; i < totalWizards; i++)
             {
@@ -386,7 +330,7 @@ namespace ProjectVagabond.Scenes
             return point;
         }
 
-        private void UpdateTicketDispense(BetTicket ticket, float dt)
+        private void UpdateTicketDispense(MatchTicket ticket, float dt)
         {
             ticket.AnimTimer += dt;
             float startY = -16f;
@@ -445,19 +389,30 @@ namespace ProjectVagabond.Scenes
             return angle;
         }
 
+        private void PrintTicket(ArenaWizard wizard, int placement)
+        {
+            _pendingTickets.Enqueue(new MatchTicket
+            {
+                Placement = placement,
+                WizardNumber = _wizards.IndexOf(wizard) + 1,
+                AnimTimer = 0f,
+                TargetX = 44,
+                Position = new Vector2(44, -16f),
+                Scale = 1.0f
+            });
+        }
+
         public override void Update(GameTime gameTime)
         {
             base.Update(gameTime);
             float dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
 
-            _plinkPlaceBets?.Update(gameTime, _arenaCenter);
             _plinkBetCountdown?.Update(gameTime, _arenaCenter);
-            _plinkLockedIn?.Update(gameTime, _arenaCenter);
             _plinkFight?.Update(gameTime, _arenaCenter);
 
             foreach (var w in _wizards)
             {
-                if (_multPlinks.TryGetValue(w, out var plink) && plink.IsActive)
+                if (_probPlinks.TryGetValue(w, out var plink) && plink.IsActive)
                 {
                     plink.Update(gameTime, Vector2.Zero);
                 }
@@ -467,6 +422,27 @@ namespace ProjectVagabond.Scenes
             Vector2 virtualMousePos = Core.TransformMouse(mouseState.Position);
             bool isClicking = mouseState.LeftButton == ButtonState.Pressed;
             bool justClicked = isClicking && _lastMouseState.LeftButton == ButtonState.Released;
+
+            int aliveCount = _wizards.Count(w => w.State != WizardState.Dead);
+
+            _hoveredHudWizard = null;
+            bool canHover = _arenaState == ArenaState.Countdown || (_arenaState == ArenaState.Fighting && aliveCount > 1);
+
+            if (canHover)
+            {
+                for (int i = 0; i < _wizardsByHudOrder.Count; i++)
+                {
+                    var w = _wizardsByHudOrder[i];
+                    if (w.State == WizardState.Dead) continue;
+
+                    Rectangle hudRect = new Rectangle((int)_hudBaseX - 2, (int)w.HudNamePos.Y - 2, (int)(_hudMultCenterX - _hudBaseX + 30), 20);
+
+                    if (hudRect.Contains(virtualMousePos))
+                    {
+                        _hoveredHudWizard = w;
+                    }
+                }
+            }
 
             // Process Ticket Queue
             bool isPrinting = _tickets.Any(t => !t.IsDispensed);
@@ -479,18 +455,18 @@ namespace ProjectVagabond.Scenes
                     {
                         t.IsHanging = false;
                         t.Velocity = new Vector2((float)(_random.NextDouble() * 60 - 30), 0f);
-                        t.VelRotX = (float)(_random.NextDouble() * 12.0 - 6.0);
-                        t.VelRotY = (float)(_random.NextDouble() * 12.0 - 6.0);
-                        t.VelRotZ = (float)(_random.NextDouble() * 4.0 - 2.0);
+                        t.VelRotX = (float)(_random.NextDouble() * 4.0 - 2.0);
+                        t.VelRotY = (float)(_random.NextDouble() * 4.0 - 2.0);
+                        t.VelRotZ = (float)(_random.NextDouble() * 2.0 - 1.0);
                         t.FlutterPhase = (float)(_random.NextDouble() * MathHelper.TwoPi);
-                        t.FlutterSpeed = (float)(_random.NextDouble() * 3.0 + 2.0);
+                        t.FlutterSpeed = (float)(_random.NextDouble() * 2.0 + 1.5);
                     }
                 }
 
                 _tickets.Add(_pendingTickets.Dequeue());
             }
 
-            BetTicket draggedTicket = _tickets.FirstOrDefault(t => t.IsDragging);
+            MatchTicket draggedTicket = _tickets.FirstOrDefault(t => t.IsDragging);
 
             if (justClicked && draggedTicket == null && _inputManager.IsMouseClickAvailable())
             {
@@ -549,9 +525,9 @@ namespace ProjectVagabond.Scenes
                     draggedTicket.RotY = WrapAngle(draggedTicket.RotY);
                     draggedTicket.RotZ = WrapAngle(draggedTicket.RotZ);
 
-                    draggedTicket.RotX = MathHelper.Lerp(draggedTicket.RotX, Math.Clamp(draggedTicket.Velocity.Y * 0.005f, -0.5f, 0.5f), 15f * dt);
-                    draggedTicket.RotY = MathHelper.Lerp(draggedTicket.RotY, Math.Clamp(draggedTicket.Velocity.X * 0.005f, -0.5f, 0.5f), 15f * dt);
-                    draggedTicket.RotZ = MathHelper.Lerp(draggedTicket.RotZ, Math.Clamp(draggedTicket.Velocity.X * 0.002f, -0.5f, 0.5f), 15f * dt);
+                    draggedTicket.RotX = MathHelper.Lerp(draggedTicket.RotX, Math.Clamp(draggedTicket.Velocity.Y * 0.002f, -0.3f, 0.3f), 15f * dt);
+                    draggedTicket.RotY = MathHelper.Lerp(draggedTicket.RotY, Math.Clamp(draggedTicket.Velocity.X * 0.002f, -0.3f, 0.3f), 15f * dt);
+                    draggedTicket.RotZ = MathHelper.Lerp(draggedTicket.RotZ, Math.Clamp(draggedTicket.Velocity.X * 0.001f, -0.2f, 0.2f), 15f * dt);
 
                     draggedTicket.VelRotX = 0f;
                     draggedTicket.VelRotY = 0f;
@@ -560,11 +536,18 @@ namespace ProjectVagabond.Scenes
                 else
                 {
                     draggedTicket.IsDragging = false;
-                    draggedTicket.VelRotX = draggedTicket.Velocity.Y * 0.015f + (float)(_random.NextDouble() * 4.0 - 2.0);
-                    draggedTicket.VelRotY = draggedTicket.Velocity.X * 0.015f + (float)(_random.NextDouble() * 4.0 - 2.0);
-                    draggedTicket.VelRotZ = draggedTicket.Velocity.X * 0.005f + (float)(_random.NextDouble() * 2.0 - 1.0);
+
+                    // Cap release velocity to prevent physics explosions
+                    draggedTicket.Velocity.X = Math.Clamp(draggedTicket.Velocity.X, -600f, 600f);
+                    draggedTicket.Velocity.Y = Math.Clamp(draggedTicket.Velocity.Y, -600f, 600f);
+
+                    // Give it a good spin when thrown
+                    draggedTicket.VelRotX = Math.Clamp(draggedTicket.Velocity.Y * 0.015f, -8f, 8f) + (float)(_random.NextDouble() * 4.0 - 2.0);
+                    draggedTicket.VelRotY = Math.Clamp(draggedTicket.Velocity.X * 0.015f, -8f, 8f) + (float)(_random.NextDouble() * 4.0 - 2.0);
+                    draggedTicket.VelRotZ = Math.Clamp(draggedTicket.Velocity.X * 0.005f, -3f, 3f) + (float)(_random.NextDouble() * 2.0 - 1.0);
+
                     draggedTicket.FlutterPhase = (float)(_random.NextDouble() * MathHelper.TwoPi);
-                    draggedTicket.FlutterSpeed = (float)(_random.NextDouble() * 3.0 + 2.0);
+                    draggedTicket.FlutterSpeed = (float)(_random.NextDouble() * 2.0 + 1.5);
                     draggedTicket = null;
                 }
             }
@@ -585,12 +568,29 @@ namespace ProjectVagabond.Scenes
                 {
                     if (!t.IsDragging && !t.IsHanging)
                     {
-                        t.Velocity.Y += 300f * dt;
-                        if (t.Velocity.Y > 150f) t.Velocity.Y = 150f;
+                        // Air resistance (Drag)
+                        t.Velocity.X *= MathF.Max(0f, 1f - 3f * dt);
+                        t.Velocity.Y *= MathF.Max(0f, 1f - 3f * dt);
 
+                        // Gravity
+                        t.Velocity.Y += 400f * dt;
+
+                        // Terminal velocity (leaf-like, slow fall)
+                        if (t.Velocity.Y > 100f) t.Velocity.Y = 100f;
+
+                        // Flutter (Sway)
                         t.FlutterPhase += t.FlutterSpeed * dt;
-                        t.Velocity.X += MathF.Sin(t.FlutterPhase) * 400f * dt;
-                        t.Velocity.X -= t.Velocity.X * 2.0f * dt;
+                        t.Velocity.X += MathF.Sin(t.FlutterPhase) * 120f * dt;
+
+                        // Rotational drag (light drag so it keeps tumbling)
+                        t.VelRotX *= MathF.Max(0f, 1f - 1.5f * dt);
+                        t.VelRotY *= MathF.Max(0f, 1f - 1.5f * dt);
+                        t.VelRotZ *= MathF.Max(0f, 1f - 1.5f * dt);
+
+                        // Rotational flutter (adds continuous tumbling energy)
+                        t.VelRotX += MathF.Sin(t.FlutterPhase * 1.3f) * 4f * dt;
+                        t.VelRotY += MathF.Cos(t.FlutterPhase * 1.1f) * 4f * dt;
+                        t.VelRotZ += MathF.Sin(t.FlutterPhase * 0.8f) * 1.5f * dt;
 
                         t.RotX += t.VelRotX * dt;
                         t.RotY += t.VelRotY * dt;
@@ -636,102 +636,14 @@ namespace ProjectVagabond.Scenes
                 ServiceLocator.Get<CursorManager>().SetState(draggedTicket != null ? CursorState.Dragging : CursorState.HoverDraggable);
             }
 
-            if (_arenaState == ArenaState.Betting)
+            if (_arenaState == ArenaState.Countdown)
             {
                 _phaseTimer -= dt;
                 int currentSecond = (int)Math.Ceiling(_phaseTimer);
-                if (currentSecond != _lastBettingSecond && currentSecond > 0)
+                if (currentSecond != _lastCountdownSecond && currentSecond > 0)
                 {
-                    _lastBettingSecond = currentSecond;
+                    _lastCountdownSecond = currentSecond;
                     _plinkBetCountdown.Start(0f, 0.2f);
-                }
-
-                for (int i = 0; i < _wizardsByHudOrder.Count; i++)
-                {
-                    var w = _wizardsByHudOrder[i];
-                    Rectangle hudRect = new Rectangle((int)_hudBaseX - 2, (int)w.HudNamePos.Y - 2, (int)(_hudMultCenterX - _hudBaseX + 30), 20);
-
-                    if (hudRect.Contains(virtualMousePos) && justClicked && _inputManager.IsMouseClickAvailable())
-                    {
-                        if (_gameState.PlayerState.Gold >= 5)
-                        {
-                            _inputManager.ConsumeMouseClick();
-                            _gameState.PlayerState.Gold -= 5;
-                            ServiceLocator.Get<HapticsManager>().TriggerUICompoundShake(_global.ButtonHapticStrength);
-
-                            _pendingTickets.Enqueue(new BetTicket
-                            {
-                                Type = TicketType.Win,
-                                BetAmount = 5,
-                                Multiplier = w.PayoutMultiplier,
-                                WizardNumber = _wizards.IndexOf(w) + 1,
-                                AnimTimer = 0f,
-                                TargetX = 44,
-                                Position = new Vector2(44, -16f)
-                            });
-                        }
-                        else
-                        {
-                            ServiceLocator.Get<HapticsManager>().TriggerUICompoundShake(_global.ButtonHapticStrength * 0.5f);
-                        }
-                    }
-                }
-
-                _skipButton.Update(mouseState);
-
-                if (_inputManager.CurrentInputDevice == InputDeviceType.Mouse)
-                {
-                    _navigationGroup.DeselectAll();
-                }
-                else
-                {
-                    _navigationGroup.UpdateInput(_inputManager);
-                }
-
-                if (_phaseTimer <= 0)
-                {
-                    _arenaState = ArenaState.LockingIn;
-                    _phaseTimer = 1.0f;
-                    _lockedInIndex = 0;
-                    _plinkLockedIn.Start(0f, 0.3f);
-                }
-            }
-            else if (_arenaState == ArenaState.LockingIn)
-            {
-                _phaseTimer -= dt;
-
-                int expectedIndex = (int)((1.0f - _phaseTimer) / (1.0f / _wizardsByHudOrder.Count));
-                while (_lockedInIndex < expectedIndex && _lockedInIndex < _wizardsByHudOrder.Count)
-                {
-                    var w = _wizardsByHudOrder[_lockedInIndex];
-                    float prob = _winProbabilities[w];
-                    if (prob > 0)
-                    {
-                        float rawOdds = 1.0f / prob;
-                        w.PayoutMultiplier = (float)Math.Round(Math.Max(1.1f, rawOdds * 0.65f), 1);
-                    }
-                    int step = GetMultiplierStep(w.PayoutMultiplier);
-                    _multSteps[w] = step;
-                    _multPlinks[w].Start(0f, 0.3f);
-                    _lockedInIndex++;
-                }
-
-                if (_phaseTimer <= 0)
-                {
-                    _arenaState = ArenaState.Countdown;
-                    _phaseTimer = 3.0f;
-                    _lastBettingSecond = 3;
-                    _plinkFight.Start(0f, 0.2f);
-                }
-            }
-            else if (_arenaState == ArenaState.Countdown)
-            {
-                _phaseTimer -= dt;
-                int currentSecond = (int)Math.Ceiling(_phaseTimer);
-                if (currentSecond != _lastBettingSecond && currentSecond > 0)
-                {
-                    _lastBettingSecond = currentSecond;
-                    _plinkFight.Start(0f, 0.2f);
                 }
 
                 if (_phaseTimer <= 0)
@@ -805,8 +717,16 @@ namespace ProjectVagabond.Scenes
                 {
                     UpdateDynamicOdds();
 
-                    int aliveCount = _wizards.Count(w => w.State != WizardState.Dead);
-                    if (aliveCount <= 1)
+                    int currentAliveCount = _wizards.Count(w => w.State != WizardState.Dead);
+
+                    var playerWizard = _wizards.FirstOrDefault(w => w.IsPlayer);
+                    if (playerWizard != null && !_playerTicketPrinted && playerWizard.State == WizardState.Dead)
+                    {
+                        _playerTicketPrinted = true;
+                        PrintTicket(playerWizard, currentAliveCount + 1);
+                    }
+
+                    if (currentAliveCount <= 1)
                     {
                         _arenaState = ArenaState.MatchOver;
                         _matchOverTimer = 4.0f;
@@ -814,36 +734,22 @@ namespace ProjectVagabond.Scenes
                         var winner = _wizards.FirstOrDefault(w => w.State != WizardState.Dead);
                         if (winner != null)
                         {
-                            int winnerNumber = _wizards.IndexOf(winner) + 1;
-
-                            // Check both active and pending tickets
-                            foreach (var ticket in _tickets.Concat(_pendingTickets))
+                            _matchResultText = $"{winner.Name.ToUpper()} WINS!";
+                            if (winner.IsPlayer && !_playerTicketPrinted)
                             {
-                                if (ticket.WizardNumber == winnerNumber)
-                                {
-                                    _goldWon += (int)(ticket.BetAmount * ticket.Multiplier);
-                                }
+                                _playerTicketPrinted = true;
+                                PrintTicket(winner, 1);
                             }
-
-                            if (winner.IsPlayer)
-                            {
-                                _matchResultText = "VICTORY!";
-                                _matchResultColor = _global.Palette_Sky;
-                                _goldWon += (int)(_gameState.CurrentEntryFee * winner.PayoutMultiplier);
-                            }
-                            else
-                            {
-                                _matchResultText = "DEFEAT";
-                                _matchResultColor = _global.Palette_Rust;
-                            }
-
-                            _gameState.PlayerState.Gold += _goldWon;
                         }
                         else
                         {
                             _matchResultText = "DRAW";
                             _matchResultColor = _global.Palette_Gray;
-                            _goldWon = 0;
+                            if (playerWizard != null && !_playerTicketPrinted)
+                            {
+                                _playerTicketPrinted = true;
+                                PrintTicket(playerWizard, 2);
+                            }
                         }
 
                         _gameState.AdvanceDay();
@@ -874,18 +780,9 @@ namespace ProjectVagabond.Scenes
             _lastMouseState = mouseState;
         }
 
-        private int GetMultiplierStep(float mult)
+        private int GetProbabilityStep(float prob)
         {
-            if (mult < 2.0f)
-            {
-                float t = Math.Clamp((mult - 1.0f) / 1.0f, 0f, 1f);
-                return Math.Clamp((int)(t * 4), 0, 3);
-            }
-            else
-            {
-                float t = Math.Clamp((mult - 2.0f) / 10.0f, 0f, 1f);
-                return 4 + Math.Clamp((int)(t * 9), 0, 8);
-            }
+            return Math.Clamp((int)Math.Round(prob * 12.0f), 0, 12);
         }
 
         private void UpdateDynamicOdds()
@@ -904,35 +801,23 @@ namespace ProjectVagabond.Scenes
             {
                 if (w.State == WizardState.Dead || w.CurrentHP <= 0)
                 {
-                    w.PayoutMultiplier = 0.0f;
                     _winProbabilities[w] = 0f;
                 }
                 else if (totalDynamicRating > 0)
                 {
                     float dynamicRating = w.Rating * ((float)w.CurrentHP / w.MaxHP);
-                    if (dynamicRating > 0)
-                    {
-                        float winProb = dynamicRating / totalDynamicRating;
-                        _winProbabilities[w] = winProb;
-                        float rawOdds = 1.0f / winProb;
-
-                        w.PayoutMultiplier = (float)Math.Round(Math.Max(1.1f, rawOdds * 0.65f), 1);
-                    }
-                    else
-                    {
-                        _winProbabilities[w] = 0f;
-                    }
+                    _winProbabilities[w] = dynamicRating / totalDynamicRating;
                 }
 
-                int step = GetMultiplierStep(w.PayoutMultiplier);
+                int step = GetProbabilityStep(_winProbabilities[w]);
 
-                if (_multSteps.TryGetValue(w, out int currentStep) && currentStep != step)
+                if (_probSteps.TryGetValue(w, out int currentStep) && currentStep != step)
                 {
                     if (currentStep != -1)
                     {
-                        _multPlinks[w].Start(0f, 0.3f);
+                        _probPlinks[w].Start(0f, 0.3f);
                     }
-                    _multSteps[w] = step;
+                    _probSteps[w] = step;
                 }
             }
         }
@@ -963,6 +848,19 @@ namespace ProjectVagabond.Scenes
             float cos = MathF.Cos(rot);
             float sin = MathF.Sin(rot);
             return new Vector2(offset.X * cos - offset.Y * sin, offset.X * sin + offset.Y * cos);
+        }
+
+        private string GetOrdinalSuffix(int number)
+        {
+            int mod100 = number % 100;
+            if (mod100 >= 11 && mod100 <= 13) return "TH";
+            switch (number % 10)
+            {
+                case 1: return "ST";
+                case 2: return "ND";
+                case 3: return "RD";
+                default: return "TH";
+            }
         }
 
         protected override void DrawSceneContent(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Matrix transform)
@@ -1008,6 +906,17 @@ namespace ProjectVagabond.Scenes
             ServiceLocator.Get<ParticleSystemManager>().Draw(spriteBatch, transform);
             spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp, null, null, null, transform);
 
+            if (_hoveredHudWizard != null && _hoveredHudWizard.State != WizardState.Dead)
+            {
+                Vector2 mousePos = Core.TransformMouse(_inputManager.GetEffectiveMouseState().Position);
+                var points = SpriteBatchExtensions.GetBresenhamLinePoints(mousePos, _hoveredHudWizard.Position);
+                int offset = (int)(gameTime.TotalGameTime.TotalSeconds * 30) % 6;
+                for (int i = offset; i < points.Count; i += 6)
+                {
+                    spriteBatch.Draw(pixel, new Vector2(points[i].X, points[i].Y), _global.Palette_Fruit);
+                }
+            }
+
             foreach (var wizard in _wizards)
             {
                 wizard.DrawUI(spriteBatch, _spriteManager, gameTime);
@@ -1025,13 +934,20 @@ namespace ProjectVagabond.Scenes
             foreach (var ticket in _tickets)
             {
                 Vector2 origin = new Vector2(10f, 16f);
-                Rectangle sourceRect = new Rectangle((int)ticket.Type * 19, 0, 19, 31);
 
                 float cosX = MathF.Cos(ticket.RotX);
                 float cosY = MathF.Cos(ticket.RotY);
 
-                float absScaleX = Math.Abs(cosY) * ticket.Scale;
-                float absScaleY = Math.Abs(cosX) * ticket.Scale;
+                bool isBackside = (cosX * cosY) < 0;
+
+                // Frame 0 is front background, Frame 1 is back background
+                Rectangle sourceRect = isBackside
+                    ? new Rectangle(1 * 19, 0, 19, 31)
+                    : new Rectangle(0 * 19, 0, 19, 31);
+
+                // Clamp the minimum scale so it looks like a thin edge instead of shrinking to a tiny dot
+                float absScaleX = Math.Max(0.15f, Math.Abs(cosY)) * ticket.Scale;
+                float absScaleY = Math.Max(0.15f, Math.Abs(cosX)) * ticket.Scale;
                 Vector2 finalScale = new Vector2(absScaleX, absScaleY);
 
                 SpriteEffects effects = SpriteEffects.None;
@@ -1046,7 +962,16 @@ namespace ProjectVagabond.Scenes
 
                 if (ticketSheet != null)
                 {
+                    // Draw base ticket
                     spriteBatch.DrawSnapped(ticketSheet, ticket.Position, sourceRect, ticketColor, ticket.RotZ, origin, finalScale, effects, 0f);
+
+                    // Draw overlay sticker if applicable
+                    if (!isBackside && ticket.Placement >= 1 && ticket.Placement <= 3)
+                    {
+                        int overlayFrameIndex = ticket.Placement + 1; // 1st -> Frame 2, 2nd -> Frame 3, 3rd -> Frame 4
+                        Rectangle overlayRect = new Rectangle(overlayFrameIndex * 19, 0, 19, 31);
+                        spriteBatch.DrawSnapped(ticketSheet, ticket.Position, overlayRect, ticketColor, ticket.RotZ, origin, finalScale, effects, 0f);
+                    }
                 }
                 else
                 {
@@ -1054,54 +979,28 @@ namespace ProjectVagabond.Scenes
                     spriteBatch.DrawSnapped(pixel, ticket.Position, new Rectangle(0, 0, 19, 31), fallbackColor, ticket.RotZ, origin, finalScale, effects, 0f);
                 }
 
-                string numText = ticket.WizardNumber.ToString();
-                Vector2 numSize = mainFont.MeasureString(numText);
-
-                float yOffsetFromCenter = 0f;
-                Vector2 numOrigin = new Vector2(MathF.Round(numSize.X / 2f) + 3f, MathF.Round(numSize.Y / 2f) - yOffsetFromCenter);
-
-                spriteBatch.DrawStringSnapped(mainFont, numText, ticket.Position, textColor, ticket.RotZ, numOrigin, finalScale, SpriteEffects.None, 0f);
-            }
-
-            if (_arenaState == ArenaState.Betting)
-            {
-                string title = "PLACE YOUR BETS";
-                Vector2 titleSize = mainFont.MeasureString(title);
-                Vector2 titlePos = new Vector2(MathF.Round(_arenaCenter.X - titleSize.X / 2f), MathF.Round(_arenaCenter.Y - titleSize.Y / 2f - 15));
-                Vector2 titleOrigin = new Vector2(MathF.Round(titleSize.X / 2f), MathF.Round(titleSize.Y / 2f));
-                float titleScale = _plinkPlaceBets.IsActive ? _plinkPlaceBets.Scale : 1f;
-                float titleRot = _plinkPlaceBets.IsActive ? _plinkPlaceBets.Rotation : 0f;
-
-                spriteBatch.DrawStringSnapped(mainFont, title, titlePos + titleOrigin, _global.Palette_DarkRust, titleRot, titleOrigin, titleScale, SpriteEffects.None, 0f);
-
-                int currentSecond = (int)Math.Ceiling(_phaseTimer);
-                if (currentSecond > 0)
+                if (!isBackside)
                 {
-                    string countText = currentSecond.ToString();
-                    Vector2 countSize = mainFont.MeasureString(countText);
-                    Vector2 countPos = new Vector2(MathF.Round(_arenaCenter.X - countSize.X / 2f), MathF.Round(_arenaCenter.Y - countSize.Y / 2f + 5));
-                    Vector2 countOrigin = new Vector2(MathF.Round(countSize.X / 2f), MathF.Round(countSize.Y / 2f));
-                    float countScale = _plinkBetCountdown.IsActive ? _plinkBetCountdown.Scale : 1f;
-                    float countRot = _plinkBetCountdown.IsActive ? _plinkBetCountdown.Rotation : 0f;
-                    Color countColor = currentSecond <= 3 ? _global.Palette_Rust : _global.Palette_Sun;
+                    string numText = ticket.Placement.ToString();
+                    string sufText = GetOrdinalSuffix(ticket.Placement);
 
-                    spriteBatch.DrawStringSnapped(mainFont, countText, countPos + countOrigin, countColor, countRot, countOrigin, countScale, SpriteEffects.None, 0f);
+                    Vector2 numSize = mainFont.MeasureString(numText);
+                    Vector2 sufSize = tertFont.MeasureString(sufText);
+
+                    float totalWidth = numSize.X + sufSize.X;
+
+                    // Shift pivot X by +2 to move the text 2 pixels to the left
+                    Vector2 pivot = new Vector2(MathF.Round(totalWidth / 2f) + 2f, MathF.Round(numSize.Y / 2f));
+
+                    Vector2 numOrigin = new Vector2(MathF.Round(pivot.X), MathF.Round(pivot.Y));
+                    Vector2 sufOrigin = new Vector2(MathF.Round(pivot.X - numSize.X), MathF.Round(pivot.Y));
+
+                    spriteBatch.DrawStringSnapped(mainFont, numText, ticket.Position, textColor, ticket.RotZ, numOrigin, finalScale, SpriteEffects.None, 0f);
+                    spriteBatch.DrawStringSnapped(tertFont, sufText, ticket.Position, textColor, ticket.RotZ, sufOrigin, finalScale, SpriteEffects.None, 0f);
                 }
-
-                _skipButton.Draw(spriteBatch, secFont, gameTime, transform);
             }
-            else if (_arenaState == ArenaState.LockingIn)
-            {
-                string title = "BETS LOCKED IN";
-                Vector2 titleSize = mainFont.MeasureString(title);
-                Vector2 titlePos = new Vector2(MathF.Round(_arenaCenter.X - titleSize.X / 2f), MathF.Round(_arenaCenter.Y - titleSize.Y / 2f));
-                Vector2 titleOrigin = new Vector2(MathF.Round(titleSize.X / 2f), MathF.Round(titleSize.Y / 2f));
-                float titleScale = _plinkLockedIn.IsActive ? _plinkLockedIn.Scale : 1f;
-                float titleRot = _plinkLockedIn.IsActive ? _plinkLockedIn.Rotation : 0f;
 
-                spriteBatch.DrawStringSnapped(mainFont, title, titlePos + titleOrigin, _global.Palette_DarkRust, titleRot, titleOrigin, titleScale, SpriteEffects.None, 0f);
-            }
-            else if (_arenaState == ArenaState.Countdown)
+            if (_arenaState == ArenaState.Countdown)
             {
                 int currentSecond = (int)Math.Ceiling(_phaseTimer);
                 if (currentSecond > 0)
@@ -1110,10 +1009,11 @@ namespace ProjectVagabond.Scenes
                     Vector2 countSize = mainFont.MeasureString(countText);
                     Vector2 countPos = new Vector2(MathF.Round(_arenaCenter.X - countSize.X / 2f), MathF.Round(_arenaCenter.Y - countSize.Y / 2f));
                     Vector2 countOrigin = new Vector2(MathF.Round(countSize.X / 2f), MathF.Round(countSize.Y / 2f));
-                    float countScale = _plinkFight.IsActive ? _plinkFight.Scale : 1f;
-                    float countRot = _plinkFight.IsActive ? _plinkFight.Rotation : 0f;
+                    float countScale = _plinkBetCountdown.IsActive ? _plinkBetCountdown.Scale : 1f;
+                    float countRot = _plinkBetCountdown.IsActive ? _plinkBetCountdown.Rotation : 0f;
+                    Color countColor = currentSecond <= 3 ? _global.Palette_Rust : _global.Palette_Sun;
 
-                    spriteBatch.DrawStringSnapped(mainFont, countText, countPos + countOrigin, _global.Palette_Sun, countRot, countOrigin, countScale, SpriteEffects.None, 0f);
+                    spriteBatch.DrawStringSnapped(mainFont, countText, countPos + countOrigin, countColor, countRot, countOrigin, countScale, SpriteEffects.None, 0f);
                 }
             }
             else if (_arenaState == ArenaState.Fighting && _phaseTimer < 1.0f)
@@ -1132,18 +1032,17 @@ namespace ProjectVagabond.Scenes
             {
                 string text = _matchResultText;
                 Color textColor = _matchResultColor;
+
+                if (text.EndsWith("WINS!"))
+                {
+                    float flash = (float)(Math.Sin(gameTime.TotalGameTime.TotalSeconds * 15f) + 1f) / 2f;
+                    textColor = Color.Lerp(_global.Palette_Sky, _global.Palette_Sun, flash);
+                }
+
                 Vector2 size = mainFont.MeasureString(text);
                 Vector2 pos = new Vector2(MathF.Round(_arenaCenter.X - size.X / 2f), MathF.Round(_arenaCenter.Y - size.Y / 2f - 10));
 
                 spriteBatch.DrawStringSnapped(mainFont, text, pos, textColor);
-
-                if (_goldWon > 0)
-                {
-                    string goldText = $"+{_goldWon}G";
-                    Vector2 goldSize = secFont.MeasureString(goldText);
-                    Vector2 goldPos = new Vector2(MathF.Round(_arenaCenter.X - goldSize.X / 2f), MathF.Round(pos.Y + size.Y + 4));
-                    spriteBatch.DrawStringSnapped(secFont, goldText, goldPos, _global.Palette_Sun);
-                }
             }
         }
 
@@ -1178,7 +1077,8 @@ namespace ProjectVagabond.Scenes
             int heartWidth = 5;
             int heartSpacing = 1;
 
-            Vector2 virtualMousePos = Core.TransformMouse(_inputManager.GetEffectiveMouseState().Position);
+            int aliveCount = _wizards.Count(wiz => wiz.State != WizardState.Dead);
+            bool showProbabilities = _arenaState == ArenaState.Countdown || (_arenaState == ArenaState.Fighting && aliveCount > 1);
 
             foreach (var w in _wizards)
             {
@@ -1192,12 +1092,12 @@ namespace ProjectVagabond.Scenes
                 }
 
                 Rectangle hudRect = new Rectangle((int)_hudBaseX - 2, (int)w.HudNamePos.Y - 2, (int)(_hudMultCenterX - _hudBaseX + 30), 20);
-                if (_arenaState == ArenaState.Betting && hudRect.Contains(virtualMousePos))
+                if (_hoveredHudWizard == w)
                 {
                     spriteBatch.Draw(pixel, hudRect, _global.Palette_DarkShadow * 0.5f);
                 }
 
-                Color baseNameColor = w.IsPlayer ? _global.Palette_Sky : _global.Palette_Sun;
+                Color baseNameColor = w.IsPlayer ? _global.Palette_DarkPale : _global.Palette_DarkestPale;
                 Color nameColor = baseNameColor;
 
                 if (w.State == WizardState.Dead)
@@ -1237,51 +1137,36 @@ namespace ProjectVagabond.Scenes
                     }
                 }
 
-                if (w.State != WizardState.Dead)
+                if (w.State != WizardState.Dead && showProbabilities)
                 {
-                    int step = _multSteps.TryGetValue(w, out var s) ? s : 0;
-                    Color multColor = GetMultiplierColor(step);
-                    BitmapFont multFont = secondaryFont;
+                    int step = _probSteps.TryGetValue(w, out var s) ? s : 0;
+                    Color probColor = GetMultiplierColor(step);
+                    BitmapFont probFont = secondaryFont;
 
-                    if (w.PayoutMultiplier < 2.0f) multFont = tertiaryFont;
-                    else if (step >= MULT_DEFAULT_MIN_STEP) multFont = defaultFont;
+                    if (step < 4) probFont = tertiaryFont;
+                    else if (step >= MULT_DEFAULT_MIN_STEP) probFont = defaultFont;
 
-                    string numText = $"{w.PayoutMultiplier:F1}";
-                    string xText = "x";
+                    float prob = _winProbabilities.TryGetValue(w, out var p) ? p : 0f;
+                    string probText = $"{(prob * 100f):F0}%";
 
-                    var plink = _multPlinks[w];
+                    var plink = _probPlinks[w];
                     float pScale = plink.IsActive ? plink.Scale : 1f;
                     float pRot = plink.IsActive ? plink.Rotation : 0f;
 
                     if (plink.IsActive && plink.FlashTint.HasValue)
                     {
                         float flashAmount = plink.FlashTint.Value.A / 255f;
-                        multColor = Color.Lerp(multColor, Color.White, flashAmount);
+                        probColor = Color.Lerp(probColor, Color.White, flashAmount);
                     }
 
-                    Vector2 numSize = multFont.MeasureString(numText);
-                    Vector2 xSize = tertiaryFont.MeasureString(xText);
+                    Vector2 probSize = probFont.MeasureString(probText);
+                    Vector2 pivot = new Vector2(MathF.Round(probSize.X / 2f), MathF.Round(probSize.Y / 2f));
+                    Vector2 probOrigin = new Vector2(MathF.Round(pivot.X), MathF.Round(pivot.Y));
 
-                    float totalWidth = numSize.X + 1f + xSize.X;
-                    Vector2 pivot = new Vector2(MathF.Round(totalWidth / 2f), MathF.Round(numSize.Y / 2f));
+                    float probYOffset = MathF.Round(MathF.Max(0, (defaultFont.LineHeight - probSize.Y) / 2f));
+                    Vector2 drawPos = new Vector2(MathF.Round(_hudMultCenterX + shakeX), MathF.Round(finalNamePos.Y + probYOffset + pivot.Y));
 
-                    float numYAdjust = (multFont == defaultFont) ? 1f : 0f;
-                    Vector2 numOrigin = new Vector2(MathF.Round(pivot.X), MathF.Round(pivot.Y - numYAdjust));
-                    Vector2 xOrigin = new Vector2(MathF.Round(pivot.X - numSize.X - 1f), MathF.Round(pivot.Y - numSize.Y + xSize.Y));
-
-                    float multYOffset = MathF.Round(MathF.Max(0, (defaultFont.LineHeight - numSize.Y) / 2f));
-                    Vector2 drawPos = new Vector2(MathF.Round(_hudMultCenterX + shakeX), MathF.Round(finalNamePos.Y + multYOffset + pivot.Y));
-
-                    spriteBatch.DrawStringSnapped(multFont, numText, drawPos, multColor, pRot, numOrigin, pScale, SpriteEffects.None, 0f);
-                    spriteBatch.DrawStringSnapped(tertiaryFont, xText, drawPos, multColor, pRot, xOrigin, pScale, SpriteEffects.None, 0f);
-
-                    float prob = _winProbabilities.TryGetValue(w, out var p) ? p : 0f;
-                    string probText = $"{(prob * 100f):F0}%";
-                    Vector2 probSize = tertiaryFont.MeasureString(probText);
-                    Vector2 probOrigin = new Vector2(MathF.Round(probSize.X / 2f), 0);
-                    Vector2 probPos = new Vector2(MathF.Round(_hudMultCenterX + shakeX), MathF.Round(w.HudHeartStartPos.Y + shakeY));
-
-                    spriteBatch.DrawStringSnapped(tertiaryFont, probText, probPos, _global.Palette_Black, 0f, probOrigin, 1f, SpriteEffects.None, 0f);
+                    spriteBatch.DrawStringSnapped(probFont, probText, drawPos, probColor, pRot, probOrigin, pScale, SpriteEffects.None, 0f);
                 }
 
                 if (w.State == WizardState.Dead)

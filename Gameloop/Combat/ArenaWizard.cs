@@ -48,7 +48,6 @@ namespace ProjectVagabond.Battle
         public int Agility;
 
         public int Rating { get; private set; }
-        public float PayoutMultiplier { get; set; }
 
         public WizardState State = WizardState.Moving;
         public List<MoveDefinition> Moves = new List<MoveDefinition>();

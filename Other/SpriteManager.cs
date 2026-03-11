@@ -886,7 +886,7 @@ namespace ProjectVagabond
             StatChangeIconsSpriteSheet = LoadTexWithSilhouette("Sprites/UI/BasicIcons/stat_change_icons_spritesheet", 9, 3, Color.Magenta, out var scisSil);
             StatChangeIconsSpriteSheetSilhouette = scisSil;
 
-            BetTicketSpriteSheet = LoadTex("Sprites/UI/Betting/bet_ticket_30x44_spritesheet", 57, 31, Color.White);
+            BetTicketSpriteSheet = LoadTex("Sprites/UI/Betting/bet_ticket_30x44_spritesheet", 76, 31, Color.White);
 
             LoadPlayerPortraits();
         }
