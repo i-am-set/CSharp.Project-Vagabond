@@ -312,6 +312,7 @@ namespace ProjectVagabond.Scenes
             base.Exit();
             _arenaTexture?.Dispose();
             _arenaOutlineTexture?.Dispose();
+            PoolManager.ClearAll();
         }
 
         public Vector2 ClampToArena(Vector2 point, float margin = 4f)

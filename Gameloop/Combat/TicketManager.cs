@@ -43,7 +43,7 @@ namespace ProjectVagabond.Battle
         public float DispenseStartY { get; set; } = -16f;
         public float DispenseEndY { get; set; } = 14.5f;
 
-        private const float GRAVITY_ACCELERATION = 500f;
+        private const float GRAVITY_ACCELERATION = 200f;
         private const float DRAG_X_MULTIPLIER = 2.0f;
         private const float DRAG_Y_MIN = 0.5f;
         private const float DRAG_Y_MAX = 8.0f;

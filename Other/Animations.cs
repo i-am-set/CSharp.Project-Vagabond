@@ -240,7 +240,7 @@ namespace ProjectVagabond.Animations
         }
     }
 
-    public class SpriteAnimationInstance : IAnimationInstance
+    public sealed class SpriteAnimationInstance : IAnimationInstance
     {
         public bool IsPooled { get; set; }
         private SpriteAnimationData _data;
@@ -270,14 +270,14 @@ namespace ProjectVagabond.Animations
             _data = null;
         }
 
-        public void ReturnToPool()
-        {
-            Pool<SpriteAnimationInstance>.Return(this);
-        }
-
         public void Cancel()
         {
             IsFinished = true;
+        }
+
+        public void ReturnToPool()
+        {
+            Pool<SpriteAnimationInstance>.Return(this);
         }
 
         public void Start(ActiveAttack attack, BattleContext context)
@@ -451,7 +451,7 @@ namespace ProjectVagabond.Animations
         }
     }
 
-    public class ParticleAnimationInstance : IAnimationInstance
+    public sealed class ParticleAnimationInstance : IAnimationInstance
     {
         public bool IsPooled { get; set; }
         private List<ParticleAnimationData> _layers;
@@ -496,16 +496,16 @@ namespace ProjectVagabond.Animations
             _baseTrailSizes.Clear();
         }
 
-        public void ReturnToPool()
-        {
-            Pool<ParticleAnimationInstance>.Return(this);
-        }
-
         public void Cancel()
         {
             IsFinished = true;
             foreach (var e in _emitters) e.IsActive = false;
             foreach (var e in _trailEmitters) if (e != null) e.IsActive = false;
+        }
+
+        public void ReturnToPool()
+        {
+            Pool<ParticleAnimationInstance>.Return(this);
         }
 
         public void Start(ActiveAttack attack, BattleContext context)

@@ -7,7 +7,7 @@ using System;
 
 namespace ProjectVagabond.Deliveries
 {
-    public class TickingBeamDelivery : IDelivery
+    public sealed class TickingBeamDelivery : IDelivery
     {
         public bool IsPooled { get; set; }
         public float Width { get; set; }

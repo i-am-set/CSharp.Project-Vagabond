@@ -7,7 +7,7 @@ using System;
 
 namespace ProjectVagabond.Deliveries
 {
-    public class SingleTargetDelivery : IDelivery
+    public sealed class SingleTargetDelivery : IDelivery
     {
         public bool IsPooled { get; set; }
         public bool IsFinished { get; private set; }

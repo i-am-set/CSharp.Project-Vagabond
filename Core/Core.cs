@@ -319,6 +319,7 @@ namespace ProjectVagabond
             _transitionManager.Reset();
 
             _gameState.Reset();
+            PoolManager.ClearAll();
         }
 
         protected override void Update(GameTime gameTime)

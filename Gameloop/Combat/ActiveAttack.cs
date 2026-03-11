@@ -20,7 +20,7 @@ namespace ProjectVagabond.Battle
         public Texture2D Pixel;
     }
 
-    public class ActiveAttack : IPoolable
+    public sealed class ActiveAttack : IPoolable
     {
         public bool IsPooled { get; set; }
         public ArenaWizard Caster { get; set; }

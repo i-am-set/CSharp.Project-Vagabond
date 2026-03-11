@@ -7,7 +7,7 @@ using System;
 
 namespace ProjectVagabond.Deliveries
 {
-    public class InstantAOEDelivery : IDelivery
+    public sealed class InstantAOEDelivery : IDelivery
     {
         public bool IsPooled { get; set; }
         public float Radius { get; set; }

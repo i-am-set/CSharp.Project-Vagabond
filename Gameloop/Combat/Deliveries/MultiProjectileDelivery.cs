@@ -10,7 +10,7 @@ using System.Linq;
 
 namespace ProjectVagabond.Deliveries
 {
-    public class MultiProjectileDelivery : IDelivery
+    public sealed class MultiProjectileDelivery : IDelivery
     {
         public bool IsPooled { get; set; }
         public int ProjectileCount { get; set; }

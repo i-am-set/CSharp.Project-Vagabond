@@ -10,7 +10,7 @@ using System.Linq;
 
 namespace ProjectVagabond.Deliveries
 {
-    public class MeteorStrikeDelivery : IDelivery
+    public sealed class MeteorStrikeDelivery : IDelivery
     {
         public bool IsPooled { get; set; }
         public float Radius { get; set; }

@@ -16,7 +16,7 @@ namespace ProjectVagabond.Battle
         Dead
     }
 
-    public class FloatingText : IPoolable
+    public sealed class FloatingText : IPoolable
     {
         public bool IsPooled { get; set; }
         public int Number;

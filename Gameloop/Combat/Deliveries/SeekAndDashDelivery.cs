@@ -8,7 +8,7 @@ using System.Collections.Generic;
 
 namespace ProjectVagabond.Deliveries
 {
-    public class SeekAndDashDelivery : IDelivery
+    public sealed class SeekAndDashDelivery : IDelivery
     {
         public bool IsPooled { get; set; }
         public float SeekRadius { get; set; }
