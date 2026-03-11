@@ -2,12 +2,16 @@
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
+using ProjectVagabond.Animations;
 using ProjectVagabond.Battle;
+using ProjectVagabond.Deliveries;
 using ProjectVagabond.Particles;
+using ProjectVagabond.Scenes;
 using ProjectVagabond.Transitions;
 using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -211,7 +215,7 @@ namespace ProjectVagabond.Scenes
             var playerLeader = _gameState.PlayerState.Leader;
             if (playerLeader == null) return;
 
-            var availableIds = GameDataCache.WizardCats.Keys.ToList();
+            var availableIds = _gameState.RunWizards.Keys.ToList();
 
             var playerEntry = GameDataCache.WizardCats.FirstOrDefault(kvp => kvp.Value.Name == playerLeader.Name);
             if (playerEntry.Key != null)
@@ -226,13 +230,15 @@ namespace ProjectVagabond.Scenes
             {
                 string id = selectedIds[i];
                 if (!GameDataCache.WizardCats.TryGetValue(id, out var data)) continue;
+                if (!_gameState.RunWizards.TryGetValue(id, out var rolledStats)) continue;
 
                 float angle = (i / 6f) * MathHelper.TwoPi;
                 float spawnRadius = GetMaxRadiusAtAngle(angle, 16f);
                 Vector2 spawnPos = _arenaCenter + new Vector2(MathF.Cos(angle) * spawnRadius, MathF.Sin(angle) * spawnRadius);
 
                 var wizard = new ArenaWizard();
-                wizard.Controller.Initialize(data, spawnPos, i == 0);
+                WizardCat statsToUse = (i == 0) ? playerLeader : rolledStats;
+                wizard.Controller.Initialize(data, statsToUse, spawnPos, i == 0);
                 _wizards.Add(wizard);
             }
 

@@ -25,6 +25,7 @@ namespace ProjectVagabond
         private readonly Random _random = new Random();
 
         public PlayerState PlayerState { get; private set; }
+        public Dictionary<string, WizardCat> RunWizards { get; private set; }
 
         public bool IsPausedByConsole { get; set; } = false;
         public bool IsPaused => _isPaused || IsPausedByConsole;
@@ -40,15 +41,50 @@ namespace ProjectVagabond
             _spriteManager = spriteManager;
         }
 
+        private int RollStat(int baseStat)
+        {
+            int roll = _random.Next(100);
+            int offset = 0;
+
+            // Weighted variance
+            if (roll < 40) offset = 0;
+            else if (roll < 60) offset = 1;
+            else if (roll < 80) offset = -1;
+            else if (roll < 90) offset = 2;
+            else offset = -2;
+
+            return Math.Clamp(baseStat + offset, 1, 10);
+        }
+
         public void InitializeWorld(string startingMemberId)
         {
+            RunWizards = new Dictionary<string, WizardCat>();
+
+            // Roll stats for every wizard cat for this run
+            foreach (var kvp in GameDataCache.WizardCats)
+            {
+                var data = kvp.Value;
+                var cat = new WizardCat
+                {
+                    Name = data.Name,
+                    HP = data.HP,
+                    Power = RollStat(data.Power),
+                    Tenacity = RollStat(data.Tenacity),
+                    Agility = RollStat(data.Agility),
+                    PortraitIndex = int.TryParse(data.MemberID, out int pid) ? pid : 0,
+                    ActiveSpell = data.ActiveSpell
+                };
+                cat.CurrentHP = cat.MaxHP;
+                RunWizards[kvp.Key] = cat;
+            }
+
             PlayerState = new PlayerState();
             PlayerState.Party.Clear();
 
-            var member = WizardCatFactory.CreateMember(startingMemberId);
-            if (member == null) throw new Exception($"CRITICAL: Could not load starting member (ID: {startingMemberId})");
+            if (!RunWizards.TryGetValue(startingMemberId, out var member))
+                throw new Exception($"CRITICAL: Could not load starting member (ID: {startingMemberId})");
 
-            PlayerState.Party.Add(member);
+            PlayerState.Party.Add(member.Clone());
             PlayerState.Gold = _global.StartingGold;
 
             CurrentDay = 1;
@@ -64,6 +100,7 @@ namespace ProjectVagabond
         public void Reset()
         {
             PlayerState = null;
+            RunWizards = null;
             _isPaused = false;
             IsPausedByConsole = false;
             LastRunKiller = "Unknown";

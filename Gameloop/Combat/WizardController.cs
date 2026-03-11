@@ -12,7 +12,9 @@ using ProjectVagabond.Transitions;
 using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
+using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace ProjectVagabond.Battle
 {
@@ -70,7 +72,7 @@ namespace ProjectVagabond.Battle
             _pixel = ServiceLocator.Get<Texture2D>();
         }
 
-        public void Initialize(WizardCatData data, Vector2 startPos, bool isPlayer)
+        public void Initialize(WizardCatData data, WizardCat rolledStats, Vector2 startPos, bool isPlayer)
         {
             var stats = _wizard.Data.Stats;
             var combat = _wizard.Data.Combat;
@@ -90,10 +92,10 @@ namespace ProjectVagabond.Battle
             ui.HudHeartWaveInterval = HEART_WAVE_BASE_INTERVAL + (float)_random.NextDouble() * HEART_WAVE_VARIANCE;
             ui.HudHeartWaveTimer = 0f;
 
-            stats.HP = data.HP;
-            stats.Power = data.Power;
-            stats.Tenacity = data.Tenacity;
-            stats.Agility = data.Agility;
+            stats.HP = rolledStats.HP;
+            stats.Power = rolledStats.Power;
+            stats.Tenacity = rolledStats.Tenacity;
+            stats.Agility = rolledStats.Agility;
 
             stats.MaxHP = stats.HP * 3;
             stats.Rating = (stats.Power + stats.Tenacity + stats.Agility) * stats.MaxHP;
@@ -102,7 +104,7 @@ namespace ProjectVagabond.Battle
             ui.HeartFlashTimers = new float[maxHearts];
             ui.HeartFlashFrame = new int[maxHearts];
 
-            stats.CurrentHP = stats.MaxHP;
+            stats.CurrentHP = rolledStats.CurrentHP;
             stats.Speed = stats.Agility * BASE_SPEED_MULTIPLIER + BASE_SPEED_OFFSET;
 
             ui.HealthBarAlpha = 0f;

@@ -613,9 +613,7 @@ namespace ProjectVagabond.Scenes
 
             int statBlockX = centerX - 30;
             float standardLabelWidth = secondaryFont.MeasureString("POW").Width;
-
-            Texture2D statBg = _spriteManager.InventoryStatBarEmpty;
-            Texture2D statFull = _spriteManager.InventoryStatBarFull;
+            float areaStartX = statBlockX + standardLabelWidth + 4;
 
             for (int i = 0; i < labels.Length; i++)
             {
@@ -624,24 +622,47 @@ namespace ProjectVagabond.Scenes
 
                 spriteBatch.DrawStringSnapped(secondaryFont, labels[i], new Vector2(labelX, currentY), _global.Palette_DarkestPale);
 
-                if (statBg != null)
-                {
-                    float pipX = statBlockX + 19;
-                    float pipY = currentY + MathF.Ceiling((secondaryFont.LineHeight - statBg.Height) / 2f);
-                    spriteBatch.DrawSnapped(statBg, new Vector2(pipX, pipY), Color.White);
+                int val = values[i];
+                string textVal;
+                Color textColor;
 
-                    if (statFull != null)
-                    {
-                        int val = values[i];
-                        int basePoints = Math.Clamp(val, 0, 10);
-                        if (basePoints > 0)
-                        {
-                            var srcBase = new Rectangle(0, 0, basePoints * 4, 3);
-                            Color pipColor = GetStatColor(basePoints);
-                            spriteBatch.DrawSnapped(statFull, new Vector2(pipX, pipY), srcBase, pipColor);
-                        }
-                    }
+                if (val <= 1)
+                {
+                    textVal = "VERY LOW";
+                    textColor = _global.Palette_Rust;
                 }
+                else if (val <= 3)
+                {
+                    textVal = "LOW";
+                    textColor = _global.Palette_DarkestPale;
+                }
+                else if (val <= 5)
+                {
+                    textVal = "AVERAGE";
+                    textColor = _global.Palette_DarkPale;
+                }
+                else if (val <= 7)
+                {
+                    textVal = "AVERAGE";
+                    textColor = _global.Palette_DarkPale;
+                }
+                else if (val <= 9)
+                {
+                    textVal = "HIGH";
+                    textColor = _global.Palette_Pale;
+                }
+                else
+                {
+                    textVal = "VERY HIGH";
+                    textColor = _global.Palette_Leaf;
+                }
+
+                float textWidth = tertiaryFont.MeasureString(textVal).Width;
+                float textX = MathF.Round(areaStartX + (40f - textWidth) / 2f);
+                float textY = currentY + MathF.Ceiling((secondaryFont.LineHeight - tertiaryFont.LineHeight) / 2f);
+
+                spriteBatch.DrawStringSnapped(tertiaryFont, textVal, new Vector2(textX, textY), textColor);
+
                 currentY += secondaryFont.LineHeight + 1;
             }
 
