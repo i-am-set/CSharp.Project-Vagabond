@@ -17,7 +17,7 @@
     "ID": "teleport",
     "Name": "Teleport",
     "Cooldown": 8.0,
-    "Duration": 0.5,
+    "Duration": 1.0,
     "MinDistance": 80.0
   }
 ]

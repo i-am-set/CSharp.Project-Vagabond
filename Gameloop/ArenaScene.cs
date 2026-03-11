@@ -100,6 +100,7 @@ namespace ProjectVagabond.Scenes
         private readonly Dictionary<ArenaWizard, float> _winProbabilities = new Dictionary<ArenaWizard, float>();
 
         public IReadOnlyList<ArenaWizard> Wizards => _wizards;
+        public IReadOnlyList<ActiveAttack> ActiveAttacks => _activeAttacks;
 
         public ArenaScene()
         {

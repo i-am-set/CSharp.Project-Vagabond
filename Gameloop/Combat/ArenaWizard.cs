@@ -76,6 +76,13 @@ namespace ProjectVagabond.Battle
         public Vector2 HudHeartStartPos;
         public bool HudIsLeft;
 
+        public float StateTimer => _stateTimer;
+        public MoveDefinition QueuedMove => _queuedMove;
+        public ArenaWizard QueuedTargetWizard => _queuedTargetWizard;
+        public Vector2 QueuedTargetPos => _queuedTargetPos;
+        public Vector2 QueuedDirection => _queuedDirection;
+        public WizardAIController AIController { get; private set; }
+
         private float _actionTimer;
         private float _stateTimer;
         private MoveDefinition _queuedMove;
@@ -152,6 +159,11 @@ namespace ProjectVagabond.Battle
             if (!string.IsNullOrEmpty(data.ActiveSpell) && GameDataCache.ActiveSpells.TryGetValue(data.ActiveSpell, out var spellData))
             {
                 EquippedActiveSpell = spellData;
+            }
+
+            if (!IsPlayer)
+            {
+                AIController = new WizardAIController();
             }
 
             LoadMoves(data);
@@ -360,29 +372,6 @@ namespace ProjectVagabond.Battle
             return true;
         }
 
-        private void UpdateAIController(ArenaScene arena)
-        {
-            if (IsPlayer || EquippedActiveSpell == null || ActiveSpellCooldownTimer > 0 || State == WizardState.Dead || IsSuspended) return;
-
-            bool shouldCast = false;
-            if (EquippedActiveSpell.ID == "ward")
-            {
-                if (CurrentHP < MaxHP * 0.5f && _random.NextDouble() < 0.01f) shouldCast = true;
-                else if (_random.NextDouble() < 0.005f) shouldCast = true;
-            }
-            else if (EquippedActiveSpell.ID == "force_cast")
-            {
-                if (State == WizardState.Moving && _actionTimer > 1.0f && _random.NextDouble() < 0.02f) shouldCast = true;
-            }
-            else if (EquippedActiveSpell.ID == "teleport")
-            {
-                if (CurrentHP < MaxHP * 0.5f && _random.NextDouble() < 0.01f) shouldCast = true;
-                else if (_random.NextDouble() < 0.005f) shouldCast = true;
-            }
-
-            if (shouldCast) TriggerActiveSpell(arena);
-        }
-
         private void TriggerHeartFlash(int oldHP, int newHP)
         {
             if (_heartFlashTimers == null) return;
@@ -447,7 +436,7 @@ namespace ProjectVagabond.Battle
                 return;
             }
 
-            UpdateAIController(arena);
+            AIController?.Update(dt, arena, this);
 
             for (int i = _floatingTexts.Count - 1; i >= 0; i--)
             {

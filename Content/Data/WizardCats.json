@@ -26,7 +26,8 @@
     "Move1": "magic_missile",
     "Move2": "scratch",
     "Move3": "magic_dart",
-    "Move4": "meteor_shower"
+    "Move4": "meteor_shower",
+    "ActiveSpell": "ward"
   },
   {
     "MemberID": "2",
@@ -40,7 +41,8 @@
     "Move1": "lick_wounds",
     "Move2": "scratch",
     "Move3": "bite",
-    "Move4": "magic_dart"
+    "Move4": "magic_dart",
+    "ActiveSpell": "ward"
   },
   {
     "MemberID": "3",
@@ -54,7 +56,8 @@
     "Move1": "bite",
     "Move2": "scratch",
     "Move3": "magic_missile",
-    "Move4": ""
+    "Move4": "",
+    "ActiveSpell": "ward"
   },
   {
     "MemberID": "4",
@@ -68,7 +71,8 @@
     "Move1": "ray_of_frost",
     "Move2": "magic_missile",
     "Move3": "bite",
-    "Move4": "meteor_shower"
+    "Move4": "meteor_shower",
+    "ActiveSpell": "ward"
   },
   {
     "MemberID": "5",
@@ -82,7 +86,8 @@
     "Move1": "lick_wounds",
     "Move2": "ray_of_frost",
     "Move3": "scratch",
-    "Move4": "magic_missile"
+    "Move4": "magic_missile",
+    "ActiveSpell": "ward"
   },
   {
     "MemberID": "6",
@@ -96,7 +101,8 @@
     "Move1": "fireball",
     "Move2": "scratch",
     "Move3": "bite",
-    "Move4": "meteor_shower"
+    "Move4": "meteor_shower",
+    "ActiveSpell": "ward"
   },
   {
     "MemberID": "7",
@@ -110,7 +116,8 @@
     "Move1": "lick_wounds",
     "Move2": "scratch",
     "Move3": "bite",
-    "Move4": "magic_missile"
+    "Move4": "magic_missile",
+    "ActiveSpell": "ward"
   },
   {
     "MemberID": "8",
@@ -124,7 +131,8 @@
     "Move1": "ray_of_frost",
     "Move2": "scratch",
     "Move3": "bite",
-    "Move4": "meteor_shower"
+    "Move4": "meteor_shower",
+    "ActiveSpell": "ward"
   },
   {
     "MemberID": "9",
@@ -138,7 +146,8 @@
     "Move1": "fireball",
     "Move2": "scratch",
     "Move3": "bite",
-    "Move4": "magic_missile"
+    "Move4": "magic_missile",
+    "ActiveSpell": "ward"
   },
   {
     "MemberID": "10",
@@ -152,7 +161,8 @@
     "Move1": "lick_wounds",
     "Move2": "ray_of_frost",
     "Move3": "magic_dart",
-    "Move4": "bite"
+    "Move4": "bite",
+    "ActiveSpell": "ward"
   },
   {
     "MemberID": "11",
@@ -166,7 +176,8 @@
     "Move1": "scratch",
     "Move2": "bite",
     "Move3": "meteor_shower",
-    "Move4": "magic_dart"
+    "Move4": "magic_dart",
+    "ActiveSpell": "ward"
   },
   {
     "MemberID": "12",
@@ -180,7 +191,8 @@
     "Move1": "fireball",
     "Move2": "scratch",
     "Move3": "bite",
-    "Move4": "magic_dart"
+    "Move4": "magic_dart",
+    "ActiveSpell": "ward"
   },
   {
     "MemberID": "13",
@@ -194,7 +206,8 @@
     "Move1": "lick_wounds",
     "Move2": "magic_missile",
     "Move3": "bite",
-    "Move4": ""
+    "Move4": "",
+    "ActiveSpell": "ward"
   },
   {
     "MemberID": "14",
@@ -208,6 +221,7 @@
     "Move1": "ray_of_frost",
     "Move2": "scratch",
     "Move3": "magic_dart",
-    "Move4": "meteor_shower"
+    "Move4": "meteor_shower",
+    "ActiveSpell": "ward"
   }
 ]
