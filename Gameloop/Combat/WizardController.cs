@@ -603,14 +603,20 @@ namespace ProjectVagabond.Battle
             var combat = _wizard.Data.Combat;
             var ui = _wizard.Data.UI;
 
-            if (combat.Moves.Count == 0)
+            var validMoves = combat.Moves;
+            if (context.Arena.IsOvertime)
+            {
+                validMoves = combat.Moves.Where(m => !m.Effects.Any(e => e is HealEffect)).ToList();
+            }
+
+            if (validMoves.Count == 0)
             {
                 combat.ActionTimer = GetRandomActionTime();
                 return;
             }
 
             int totalWeight = 0;
-            foreach (var move in combat.Moves)
+            foreach (var move in validMoves)
             {
                 totalWeight += move.Weight;
             }
@@ -618,12 +624,12 @@ namespace ProjectVagabond.Battle
             int roll = _random.Next(totalWeight);
             int currentWeight = 0;
 
-            for (int i = 0; i < combat.Moves.Count; i++)
+            for (int i = 0; i < validMoves.Count; i++)
             {
-                currentWeight += combat.Moves[i].Weight;
+                currentWeight += validMoves[i].Weight;
                 if (roll < currentWeight)
                 {
-                    combat.QueuedMove = combat.Moves[i];
+                    combat.QueuedMove = validMoves[i];
                     break;
                 }
             }

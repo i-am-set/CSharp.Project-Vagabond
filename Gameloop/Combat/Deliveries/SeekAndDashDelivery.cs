@@ -106,6 +106,36 @@ namespace ProjectVagabond.Deliveries
                     IsFinished = true;
                     attack.IsCanceled = true;
                 }
+                else
+                {
+                    ArenaWizard closest = null;
+                    float closestDist = float.MaxValue;
+                    foreach (var w in context.Arena.Wizards)
+                    {
+                        if (w != attack.Caster && w.Data.Stats.CurrentHP > 0 && !w.Data.Combat.IsTeleporting)
+                        {
+                            float dist = Vector2.DistanceSquared(attack.Caster.Data.Combat.Position, w.Data.Combat.Position);
+                            if (dist < closestDist)
+                            {
+                                closestDist = dist;
+                                closest = w;
+                            }
+                        }
+                    }
+
+                    if (closest != null)
+                    {
+                        Vector2 dir = closest.Data.Combat.Position - attack.Caster.Data.Combat.Position;
+                        if (dir.LengthSquared() > 0)
+                        {
+                            dir.Normalize();
+                            attack.Caster.Data.Combat.Position += dir * attack.Caster.Data.Stats.Speed * dt;
+                            attack.Caster.Data.Combat.Position = context.Arena.ClampToArena(attack.Caster.Data.Combat.Position, 12f);
+                            attack.Caster.Data.Combat.IsFacingRight = dir.X > 0;
+                            attack.Caster.Data.UI.HopTimer += dt * attack.Caster.Data.Stats.Speed * 0.5f;
+                        }
+                    }
+                }
             }
             else if (_state == State.Dashing)
             {

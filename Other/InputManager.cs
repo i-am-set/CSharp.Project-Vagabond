@@ -199,9 +199,9 @@ namespace ProjectVagabond
             ActiveSpellTriggered = IsKeyPressed(Keys.Space) || (_currentMouseState.RightButton == ButtonState.Pressed && _previousMouseState.RightButton == ButtonState.Released);
 
             // Continuous input check for fast-forwarding/speeding up time
-            IsSpeedUpHeld = _currentKeyboardState.IsKeyDown(Keys.Space) ||
-                            _currentKeyboardState.IsKeyDown(Keys.Enter) ||
-                            _currentMouseState.LeftButton == ButtonState.Pressed ||
+            IsSpeedUpHeld = _currentKeyboardState.IsKeyDown(Keys.Enter) ||
+                            _currentKeyboardState.IsKeyDown(Keys.Tab) ||
+                            _currentMouseState.MiddleButton == ButtonState.Pressed ||
                             _currentGamePadState.IsButtonDown(Buttons.A);
         }
 

@@ -84,6 +84,13 @@ namespace ProjectVagabond.Scenes
         public IReadOnlyList<ArenaWizard> Wizards => _wizards;
         public IReadOnlyList<ActiveAttack> ActiveAttacks => _activeAttacks;
 
+        public bool IsOvertime { get; private set; }
+        private float _matchTimer;
+        private int _lastMatchSecond;
+        private PlinkAnimator _plinkTimerText;
+        private PlinkAnimator _plinkSuddenDeath;
+        private float _suddenDeathTimer;
+
         public ArenaScene()
         {
             _global = ServiceLocator.Get<Global>();
@@ -195,6 +202,13 @@ namespace ProjectVagabond.Scenes
             _lastCountdownSecond = 5;
             _playerTicketPrinted = false;
 
+            IsOvertime = false;
+            _matchTimer = 60f;
+            _lastMatchSecond = 60;
+            _plinkTimerText = new PlinkAnimator();
+            _plinkSuddenDeath = new PlinkAnimator();
+            _suddenDeathTimer = 0f;
+
             _plinkBetCountdown = new PlinkAnimator();
             _plinkFight = new PlinkAnimator();
 
@@ -294,12 +308,14 @@ namespace ProjectVagabond.Scenes
             float standardProbWidth = defaultFont.MeasureString("100%").Width;
             float totalWidth = multXOffset + standardProbWidth + 10f;
 
-            _hudBaseX = MathF.Round((uiAreaWidth - totalWidth) / 2f);
-            if (_hudBaseX < 4) _hudBaseX = 4;
+            float originalBaseX = MathF.Round((uiAreaWidth - totalWidth) / 2f);
+            if (originalBaseX < 4) originalBaseX = 4;
 
-            _hudBaseX -= 5f;
-            _hudNameX = MathF.Round(_hudBaseX + nameXOffset);
-            _hudMultCenterX = MathF.Round(_hudBaseX + multXOffset + 7f + (standardProbWidth / 2f));
+            originalBaseX -= 5f;
+
+            _hudBaseX = originalBaseX + 8f;
+            _hudNameX = MathF.Round(originalBaseX + 8f + nameXOffset);
+            _hudMultCenterX = MathF.Round(originalBaseX + 3f + multXOffset + 7f + (standardProbWidth / 2f));
 
             for (int i = 0; i < totalWizards; i++)
             {
@@ -340,16 +356,20 @@ namespace ProjectVagabond.Scenes
         public override void Update(GameTime gameTime)
         {
             base.Update(gameTime);
-            float dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
 
-            _plinkBetCountdown?.Update(gameTime, _arenaCenter);
-            _plinkFight?.Update(gameTime, _arenaCenter);
+            GameTime effectiveGameTime = _inputManager.GetEffectiveGameTime(gameTime, true);
+            float dt = (float)effectiveGameTime.ElapsedGameTime.TotalSeconds;
+
+            _plinkBetCountdown?.Update(effectiveGameTime, _arenaCenter);
+            _plinkFight?.Update(effectiveGameTime, _arenaCenter);
+            _plinkTimerText?.Update(effectiveGameTime, new Vector2(_arenaCenter.X, 12));
+            _plinkSuddenDeath?.Update(effectiveGameTime, new Vector2(_arenaCenter.X, Global.VIRTUAL_HEIGHT / 2f - 20));
 
             foreach (var w in _wizards)
             {
                 if (_probPlinks.TryGetValue(w, out var plink) && plink.IsActive)
                 {
-                    plink.Update(gameTime, Vector2.Zero);
+                    plink.Update(effectiveGameTime, Vector2.Zero);
                 }
             }
 
@@ -370,7 +390,7 @@ namespace ProjectVagabond.Scenes
                     var w = _wizardsByHudOrder[i];
                     if (w.Data.Combat.State == WizardState.Dead) continue;
 
-                    Rectangle hudRect = new Rectangle((int)_hudBaseX - 2, (int)w.Data.UI.HudNamePos.Y - 2, (int)(_hudMultCenterX - _hudBaseX + 30), 20);
+                    Rectangle hudRect = new Rectangle((int)_hudBaseX - 2, (int)w.Data.UI.HudNamePos.Y - 2, (int)(_hudMultCenterX - _hudBaseX + 16), 20);
 
                     if (hudRect.Contains(virtualMousePos))
                     {
@@ -407,6 +427,58 @@ namespace ProjectVagabond.Scenes
             if (_arenaState == ArenaState.Fighting || _arenaState == ArenaState.MatchOver)
             {
                 _phaseTimer += dt;
+
+                if (_arenaState == ArenaState.Fighting)
+                {
+                    if (_phaseTimer >= 1.0f && !IsOvertime)
+                    {
+                        _matchTimer -= dt;
+                        int currentSec = (int)Math.Ceiling(_matchTimer);
+                        if (currentSec != _lastMatchSecond && currentSec >= 0)
+                        {
+                            _lastMatchSecond = currentSec;
+                            if (currentSec == 30 || currentSec <= 10)
+                            {
+                                _plinkTimerText.Start(0f, 0.3f);
+                            }
+                        }
+
+                        if (_matchTimer <= 0)
+                        {
+                            IsOvertime = true;
+                            _suddenDeathTimer = 1.0f;
+                            _plinkSuddenDeath.Start(0f, 0.3f);
+                            _plinkTimerText.Start(0f, 0.3f);
+
+                            foreach (var w in _wizards)
+                            {
+                                if (w.Data.Combat.State != WizardState.Dead)
+                                {
+                                    w.Data.Stats.CurrentHP = 1;
+                                    if (w.Data.Combat.QueuedMove != null && w.Data.Combat.QueuedMove.Effects.Any(e => e is HealEffect))
+                                    {
+                                        w.Data.Combat.State = WizardState.Recovering;
+                                        w.Data.Combat.StateTimer = 0.25f;
+                                        w.Data.Combat.QueuedMove = null;
+                                    }
+                                }
+                            }
+
+                            foreach (var attack in _activeAttacks)
+                            {
+                                if (attack.Move.Effects.Any(e => e is HealEffect))
+                                {
+                                    attack.IsCanceled = true;
+                                }
+                            }
+                        }
+                    }
+
+                    if (_suddenDeathTimer > 0)
+                    {
+                        _suddenDeathTimer -= dt;
+                    }
+                }
 
                 if (_inputManager.ActiveSpellTriggered && _arenaState == ArenaState.Fighting)
                 {
@@ -601,6 +673,8 @@ namespace ProjectVagabond.Scenes
 
         protected override void DrawSceneContent(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Matrix transform)
         {
+            GameTime effectiveGameTime = _inputManager.GetEffectiveGameTime(gameTime, true);
+
             spriteBatch.Draw(_pixel, new Rectangle(0, 0, Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT), _global.GameBg);
 
             if (_arenaOutlineTexture != null)
@@ -645,7 +719,7 @@ namespace ProjectVagabond.Scenes
             {
                 Vector2 mousePos = Core.TransformMouse(_inputManager.GetEffectiveMouseState().Position);
                 var points = SpriteBatchExtensions.GetBresenhamLinePoints(mousePos, _hoveredHudWizard.Data.Combat.Position);
-                int offset = (int)(gameTime.TotalGameTime.TotalSeconds * 30) % 6;
+                int offset = (int)(effectiveGameTime.TotalGameTime.TotalSeconds * 30) % 6;
                 for (int i = offset; i < points.Count; i += 6)
                 {
                     spriteBatch.Draw(_pixel, new Vector2(points[i].X, points[i].Y), _global.Palette_Fruit);
@@ -654,7 +728,7 @@ namespace ProjectVagabond.Scenes
 
             foreach (var wizard in _wizards)
             {
-                _wizardRenderer.DrawUI(wizard, spriteBatch, _spriteManager, gameTime);
+                _wizardRenderer.DrawUI(wizard, spriteBatch, _spriteManager, effectiveGameTime);
                 _wizardRenderer.DrawDebug(wizard, spriteBatch, _battleContext);
             }
 
@@ -665,6 +739,35 @@ namespace ProjectVagabond.Scenes
             var tertFont = _core.TertiaryFont;
 
             _ticketManager.Draw(spriteBatch, _spriteManager, _global, mainFont, tertFont);
+
+            if ((_arenaState == ArenaState.Fighting && _phaseTimer >= 1.0f) || _arenaState == ArenaState.MatchOver)
+            {
+                string timerText = IsOvertime ? "OVERTIME" : _lastMatchSecond.ToString();
+                Color timerColor = IsOvertime ? _global.Palette_Rust : (_lastMatchSecond <= 3 ? _global.Palette_Rust : _global.Palette_DarkPale);
+
+                Vector2 tSize = mainFont.MeasureString(timerText);
+                Vector2 tPos = new Vector2(MathF.Round(_arenaCenter.X), 12 + MathF.Round(tSize.Y / 2f));
+                Vector2 tOrigin = new Vector2(MathF.Round(tSize.X / 2f), MathF.Round(tSize.Y / 2f));
+
+                float tScale = _plinkTimerText.IsActive ? _plinkTimerText.Scale : 1f;
+                float tRot = _plinkTimerText.IsActive ? _plinkTimerText.Rotation : 0f;
+
+                spriteBatch.DrawStringSnapped(mainFont, timerText, tPos, timerColor, tRot, tOrigin, tScale, SpriteEffects.None, 0f);
+            }
+
+            if (_suddenDeathTimer > 0)
+            {
+                string sdText = "SUDDEN DEATH";
+                Vector2 sdSize = mainFont.MeasureString(sdText);
+                Vector2 sdPos = new Vector2(MathF.Round(_arenaCenter.X), MathF.Round(Global.VIRTUAL_HEIGHT / 2f - 20));
+                Vector2 sdOrigin = new Vector2(MathF.Round(sdSize.X / 2f), MathF.Round(sdSize.Y / 2f));
+
+                float sdScale = _plinkSuddenDeath.IsActive ? _plinkSuddenDeath.Scale : 1f;
+                float sdRot = _plinkSuddenDeath.IsActive ? _plinkSuddenDeath.Rotation : 0f;
+                float sdAlpha = Math.Clamp(_suddenDeathTimer, 0f, 1f);
+
+                spriteBatch.DrawStringSnapped(mainFont, sdText, sdPos, _global.Palette_Rust * sdAlpha, sdRot, sdOrigin, sdScale, SpriteEffects.None, 0f);
+            }
 
             if (_arenaState == ArenaState.Countdown)
             {
@@ -701,7 +804,7 @@ namespace ProjectVagabond.Scenes
 
                 if (text.EndsWith("WINS!"))
                 {
-                    float flash = (float)(Math.Sin(gameTime.TotalGameTime.TotalSeconds * 15f) + 1f) / 2f;
+                    float flash = (float)(Math.Sin(effectiveGameTime.TotalGameTime.TotalSeconds * 15f) + 1f) / 2f;
                     textColor = Color.Lerp(_global.Palette_Sky, _global.Palette_Sun, flash);
                 }
 
@@ -720,7 +823,7 @@ namespace ProjectVagabond.Scenes
             string amountText = _gameState.PlayerState.Gold.ToString();
             string gText = "G";
 
-            Vector2 amountPos = new Vector2(18, 12);
+            Vector2 amountPos = new Vector2(32, 12);
             spriteBatch.DrawStringSnapped(defaultFont, amountText, amountPos, _global.Palette_Sun);
 
             float amountWidth = MathF.Round(defaultFont.MeasureString(amountText).Width);
@@ -728,18 +831,6 @@ namespace ProjectVagabond.Scenes
 
             Vector2 gPos = new Vector2(amountPos.X + amountWidth + 2, 11 + yOffset);
             spriteBatch.DrawStringSnapped(tertiaryFont, gText, gPos, _global.Palette_DarkSun);
-
-            var player = _wizards.FirstOrDefault(w => w.Data.Stats.IsPlayer);
-            if (player != null && player.Data.Combat.EquippedActiveSpell != null)
-            {
-                string spellName = player.Data.Combat.EquippedActiveSpell.Name.ToUpper();
-                string status = player.Data.Combat.ActiveSpellCooldownTimer > 0 ? $"{player.Data.Combat.ActiveSpellCooldownTimer:F1}S" : "READY";
-                Color statusColor = player.Data.Combat.ActiveSpellCooldownTimer > 0 ? _global.Palette_DarkShadow : _global.Palette_Sky;
-
-                string text = $"{spellName}: {status}";
-                Vector2 size = tertiaryFont.MeasureString(text);
-                spriteBatch.DrawStringSnapped(tertiaryFont, text, new Vector2(Global.VIRTUAL_WIDTH - size.X - 18, 12), statusColor);
-            }
         }
 
         private void DrawSideHUD(SpriteBatch spriteBatch)
@@ -767,7 +858,7 @@ namespace ProjectVagabond.Scenes
                     shakeY = (float)(_random.NextDouble() * 2 - 1) * shakeMag;
                 }
 
-                Rectangle hudRect = new Rectangle((int)_hudBaseX - 2, (int)w.Data.UI.HudNamePos.Y - 2, (int)(_hudMultCenterX - _hudBaseX + 30), 20);
+                Rectangle hudRect = new Rectangle((int)_hudBaseX - 2, (int)w.Data.UI.HudNamePos.Y - 2, (int)(_hudMultCenterX - _hudBaseX + 16), 20);
                 if (_hoveredHudWizard == w)
                 {
                     spriteBatch.Draw(_pixel, hudRect, _global.Palette_DarkShadow * 0.5f);
@@ -785,31 +876,27 @@ namespace ProjectVagabond.Scenes
                 Vector2 finalNamePos = new Vector2(MathF.Round(w.Data.UI.HudNamePos.X + shakeX), MathF.Round(w.Data.UI.HudNamePos.Y + shakeY));
                 spriteBatch.DrawStringSnapped(defaultFont, w.Data.Stats.Name.ToUpper(), finalNamePos, nameColor);
 
-                int statBlockWidth = 19; // 10 pips * 1px + 9 gaps * 1px
-                int statBlockHeight = 5; // 3 rows * 1px + 2 gaps * 1px
-                float statBlockX = MathF.Round(_hudBaseX + shakeX);
-                float statBlockY = finalNamePos.Y + MathF.Max(0, (defaultFont.LineHeight - statBlockHeight) / 2f);
-
-                int[] stats = { w.Data.Stats.Power, w.Data.Stats.Tenacity, w.Data.Stats.Agility };
-                for (int row = 0; row < 3; row++)
+                if (w.Data.Combat.State != WizardState.Dead)
                 {
-                    int statVal = Math.Clamp(stats[row], 0, 10);
-                    Color filledColor = statVal >= 8 ? _global.StatColor_High : (statVal >= 4 ? _global.StatColor_Average : _global.StatColor_Low);
+                    int statBlockWidth = 19; // 10 pips * 1px + 9 gaps * 1px
+                    int statBlockHeight = 5; // 3 rows * 1px + 2 gaps * 1px
+                    float statBlockX = MathF.Round(_hudBaseX + shakeX);
+                    float statBlockY = finalNamePos.Y + MathF.Max(0, (defaultFont.LineHeight - statBlockHeight) / 2f) + 7f;
 
-                    float currentY = statBlockY + row * 2;
-
-                    for (int col = 0; col < 10; col++)
+                    int[] stats = { w.Data.Stats.Power, w.Data.Stats.Tenacity, w.Data.Stats.Agility };
+                    for (int row = 0; row < 3; row++)
                     {
-                        float currentX = statBlockX + col * 2;
-                        Color pipColor = col < statVal ? filledColor : _global.Palette_DarkShadow;
+                        int statVal = Math.Clamp(stats[row], 0, 10);
+                        Color filledColor = statVal >= 8 ? _global.StatColor_High : (statVal >= 4 ? _global.StatColor_Average : _global.StatColor_Low);
 
-                        if (w.Data.Combat.State == WizardState.Dead)
+                        float currentY = statBlockY + row * 2;
+
+                        for (int col = 0; col < 10; col++)
                         {
-                            float fadeProgress = Math.Clamp(w.Data.Combat.TimeSinceDeath / 0.5f, 0f, 1f);
-                            pipColor = Color.Lerp(pipColor, _global.Palette_Black, fadeProgress);
+                            float currentX = statBlockX + col * 2;
+                            Color pipColor = col < statVal ? filledColor : _global.Palette_DarkShadow;
+                            spriteBatch.Draw(_pixel, new Rectangle((int)currentX, (int)currentY, 1, 1), pipColor);
                         }
-
-                        spriteBatch.Draw(_pixel, new Rectangle((int)currentX, (int)currentY, 1, 1), pipColor);
                     }
                 }
 
@@ -840,9 +927,36 @@ namespace ProjectVagabond.Scenes
                     Vector2 probOrigin = new Vector2(MathF.Round(pivot.X), MathF.Round(pivot.Y));
 
                     float probYOffset = MathF.Round(MathF.Max(0, (defaultFont.LineHeight - probSize.Y) / 2f));
-                    Vector2 drawPos = new Vector2(MathF.Round(_hudMultCenterX + shakeX), MathF.Round(finalNamePos.Y + probYOffset + pivot.Y));
+                    Vector2 drawPos = new Vector2(MathF.Round(_hudBaseX + 9f + shakeX), MathF.Round(finalNamePos.Y + probYOffset + pivot.Y));
 
                     spriteBatch.DrawStringSnapped(probFont, probText, drawPos, probColor, pRot, probOrigin, pScale, SpriteEffects.None, 0f);
+                }
+
+                if (w.Data.Combat.EquippedActiveSpell != null && w.Data.Combat.State != WizardState.Dead)
+                {
+                    var spellSheet = _spriteManager.ActiveSpellsSpriteSheet;
+                    if (spellSheet != null)
+                    {
+                        int frame = w.Data.Combat.EquippedActiveSpell.SpriteFrame;
+                        Rectangle sourceRect = new Rectangle(frame * 9, 0, 9, 9);
+
+                        float spellYOffset = MathF.Round(MathF.Max(0, (defaultFont.LineHeight - 9f) / 2f)) + 4f;
+                        Vector2 spellPos = new Vector2(MathF.Round(_hudMultCenterX - 4.5f + shakeX), MathF.Round(finalNamePos.Y + spellYOffset + shakeY));
+
+                        float cd = w.Data.Combat.ActiveSpellCooldownTimer;
+                        float opacity = cd > 0 ? 0.15f : 1.0f;
+
+                        spriteBatch.DrawSnapped(spellSheet, spellPos, sourceRect, Color.White * opacity);
+
+                        if (cd > 0)
+                        {
+                            string cdText = MathF.Ceiling(cd).ToString();
+                            Vector2 cdSize = secondaryFont.MeasureString(cdText);
+                            Vector2 cdPos = spellPos + new Vector2(4f, 4f) - new Vector2(MathF.Round(cdSize.X / 2f), MathF.Round(cdSize.Y / 2f));
+
+                            spriteBatch.DrawStringSquareOutlinedSnapped(secondaryFont, cdText, cdPos, _global.Palette_Sun, _global.Palette_Black);
+                        }
+                    }
                 }
 
                 if (w.Data.Combat.State == WizardState.Dead)
@@ -855,34 +969,35 @@ namespace ProjectVagabond.Scenes
                         spriteBatch.Draw(_pixel, new Rectangle((int)finalNamePos.X, lineY, currentLineWidth, 1), _global.Palette_Black);
                     }
                 }
-
-                int maxHearts = (w.Data.Stats.MaxHP + 2) / 3;
-                for (int h = 0; h < maxHearts; h++)
+                else
                 {
-                    int heartVal = Math.Clamp(w.Data.Stats.CurrentHP - h * 3, 0, 3);
-                    int frameIndex = 3; // 0/3
-                    if (heartVal == 3) frameIndex = 0; // 3/3
-                    else if (heartVal == 2) frameIndex = 1; // 2/3
-                    else if (heartVal == 1) frameIndex = 2; // 1/3
-
-                    int flashFrame = w.Controller.GetHeartFlashFrame(h);
-                    if (flashFrame != -1) frameIndex = flashFrame;
-
-                    var sourceRect = new Rectangle(frameIndex * heartWidth, 0, heartWidth, 5);
-                    Color heartColor = w.Data.Combat.State == WizardState.Dead ? Color.Gray : Color.White;
-
-                    int yOffset = 0;
-                    if (w.Data.Stats.CurrentHP > 0)
+                    int maxHearts = (w.Data.Stats.MaxHP + 2) / 3;
+                    for (int h = 0; h < maxHearts; h++)
                     {
-                        float localWaveTime = w.Data.UI.HudHeartWaveTimer - w.Data.UI.HudHeartWaveInterval - (h * 0.08f);
-                        if (localWaveTime > 0 && localWaveTime < 0.15f)
-                        {
-                            yOffset = -1;
-                        }
-                    }
+                        int heartVal = Math.Clamp(w.Data.Stats.CurrentHP - h * 3, 0, 3);
+                        int frameIndex = 3; // 0/3
+                        if (heartVal == 3) frameIndex = 0; // 3/3
+                        else if (heartVal == 2) frameIndex = 1; // 2/3
+                        else if (heartVal == 1) frameIndex = 2; // 1/3
 
-                    Vector2 finalHeartPos = new Vector2(MathF.Round(w.Data.UI.HudHeartStartPos.X + h * (heartWidth + heartSpacing) + shakeX), MathF.Round(w.Data.UI.HudHeartStartPos.Y + shakeY) + yOffset);
-                    spriteBatch.DrawSnapped(sheet, finalHeartPos, sourceRect, heartColor);
+                        int flashFrame = w.Controller.GetHeartFlashFrame(h);
+                        if (flashFrame != -1) frameIndex = flashFrame;
+
+                        var sourceRect = new Rectangle(frameIndex * heartWidth, 0, heartWidth, 5);
+
+                        int yOffset = 0;
+                        if (w.Data.Stats.CurrentHP > 0)
+                        {
+                            float localWaveTime = w.Data.UI.HudHeartWaveTimer - w.Data.UI.HudHeartWaveInterval - (h * 0.08f);
+                            if (localWaveTime > 0 && localWaveTime < 0.15f)
+                            {
+                                yOffset = -1;
+                            }
+                        }
+
+                        Vector2 finalHeartPos = new Vector2(MathF.Round(w.Data.UI.HudHeartStartPos.X + h * (heartWidth + heartSpacing) + shakeX), MathF.Round(w.Data.UI.HudHeartStartPos.Y + shakeY) + yOffset);
+                        spriteBatch.DrawSnapped(sheet, finalHeartPos, sourceRect, Color.White);
+                    }
                 }
             }
         }

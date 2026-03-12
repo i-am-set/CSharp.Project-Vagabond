@@ -105,6 +105,9 @@ namespace ProjectVagabond.Scenes
         public override void Update(GameTime gameTime)
         {
             base.Update(gameTime);
+
+            GameTime effectiveGameTime = _inputManager.GetEffectiveGameTime(gameTime, true);
+
             if (_transitionManager.IsTransitioning) return;
 
             if (_isBankrupt)
@@ -113,7 +116,7 @@ namespace ProjectVagabond.Scenes
                 return;
             }
 
-            float dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
+            float dt = (float)effectiveGameTime.ElapsedGameTime.TotalSeconds;
             _timer += dt;
 
             if (_timer >= 2.0f && !_plinksStarted)
@@ -126,8 +129,8 @@ namespace ProjectVagabond.Scenes
 
             if (_plinksStarted)
             {
-                _plinkFee.Update(gameTime, new Vector2(Global.VIRTUAL_WIDTH / 2f, 70));
-                _plinkGold.Update(gameTime, new Vector2(Global.VIRTUAL_WIDTH / 2f, 90));
+                _plinkFee.Update(effectiveGameTime, new Vector2(Global.VIRTUAL_WIDTH / 2f, 70));
+                _plinkGold.Update(effectiveGameTime, new Vector2(Global.VIRTUAL_WIDTH / 2f, 90));
 
                 var mouseState = _inputManager.GetEffectiveMouseState();
                 _proceedButton.Update(mouseState);
@@ -145,6 +148,8 @@ namespace ProjectVagabond.Scenes
 
         protected override void DrawSceneContent(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Matrix transform)
         {
+            GameTime effectiveGameTime = _inputManager.GetEffectiveGameTime(gameTime, true);
+
             var pixel = ServiceLocator.Get<Texture2D>();
             spriteBatch.Draw(pixel, new Rectangle(0, 0, Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT), _global.GameBg);
 
@@ -189,7 +194,7 @@ namespace ProjectVagabond.Scenes
                     spriteBatch.DrawStringSnapped(secondaryFont, goldText, goldPos, _global.Palette_Sky, _plinkGold.Rotation, goldOrigin, _plinkGold.Scale, SpriteEffects.None, 0f);
                 }
 
-                _proceedButton.Draw(spriteBatch, defaultFont, gameTime, transform);
+                _proceedButton.Draw(spriteBatch, defaultFont, effectiveGameTime, transform);
             }
         }
     }

@@ -47,5 +47,6 @@
         public float Cooldown { get; set; }
         public float Duration { get; set; }
         public float MinDistance { get; set; }
+        public int SpriteFrame { get; set; }
     }
 }

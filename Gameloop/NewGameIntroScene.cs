@@ -309,7 +309,7 @@ namespace ProjectVagabond.Scenes
         {
             base.Update(gameTime);
 
-            GameTime effectiveGameTime = _inputManager.GetEffectiveGameTime(gameTime, _isPlinkingIn);
+            GameTime effectiveGameTime = _inputManager.GetEffectiveGameTime(gameTime, true);
             float dt = (float)effectiveGameTime.ElapsedGameTime.TotalSeconds;
 
             if (_transitionManager.IsTransitioning) return;
@@ -433,7 +433,7 @@ namespace ProjectVagabond.Scenes
 
         protected override void DrawSceneContent(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Matrix transform)
         {
-            GameTime effectiveGameTime = _inputManager.GetEffectiveGameTime(gameTime, _isPlinkingIn);
+            GameTime effectiveGameTime = _inputManager.GetEffectiveGameTime(gameTime, true);
 
             var core = ServiceLocator.Get<Core>();
             var secondaryFont = core.SecondaryFont;

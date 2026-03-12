@@ -23,7 +23,7 @@ namespace ProjectVagabond
 
         public Texture2D ActionButtonsSpriteSheet { get; private set; }
         public Texture2D ActionButtonTemplateSpriteSheet { get; private set; }
-
+        public Texture2D ActiveSpellsSpriteSheet { get; private set; }
         public Texture2D ActionTooltipBackgroundSprite { get; private set; }
         public Texture2D ActionIconsSpriteSheet { get; private set; }
         public Texture2D ActionButtonUsesSpriteSheet { get; private set; }
@@ -231,6 +231,7 @@ namespace ProjectVagabond
             ActionTooltipBackgroundSprite = LoadTex("Sprites/UI/BattleUI/ui_action_tooltip_background", 319, 178, Color.DarkGray);
             ActionIconsSpriteSheet = LoadTex("Sprites/UI/BasicIcons/ui_action_icons_spritesheet_9x9", 45, 9, Color.Magenta);
             ActionButtonUsesSpriteSheet = LoadTex("Sprites/UI/BattleUI/ui_action_button_uses_spritesheet", 471, 17, Color.Magenta);
+            ActiveSpellsSpriteSheet = LoadTex("Sprites/UI/BattleUI/active_spells_9x9_spritesheet", 27, 9, Color.Magenta);
 
             StatChangeIconsSpriteSheet = LoadTexWithSilhouette("Sprites/UI/BasicIcons/stat_change_icons_spritesheet", 9, 3, Color.Magenta, out var statSilhouette);
             StatChangeIconsSpriteSheetSilhouette = statSilhouette;

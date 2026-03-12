@@ -79,9 +79,12 @@ namespace ProjectVagabond.Scenes
         public override void Update(GameTime gameTime)
         {
             base.Update(gameTime);
+
+            GameTime effectiveGameTime = _inputManager.GetEffectiveGameTime(gameTime, true);
+
             if (_transitionManager.IsTransitioning) return;
 
-            float dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
+            float dt = (float)effectiveGameTime.ElapsedGameTime.TotalSeconds;
             _timer += dt;
 
             if (_timer >= 1.5f && !_mainMenuButton.Plink.IsActive && _mainMenuButton.HoverAnimator.CurrentOffset == 0f && !_mainMenuButton.IsHovered)
@@ -110,6 +113,8 @@ namespace ProjectVagabond.Scenes
 
         protected override void DrawSceneContent(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Matrix transform)
         {
+            GameTime effectiveGameTime = _inputManager.GetEffectiveGameTime(gameTime, true);
+
             var pixel = ServiceLocator.Get<Texture2D>();
             spriteBatch.Draw(pixel, new Rectangle(0, 0, Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT), _global.Palette_Off);
 
@@ -134,7 +139,7 @@ namespace ProjectVagabond.Scenes
 
             if (_timer >= 1.5f)
             {
-                _mainMenuButton.Draw(spriteBatch, secondaryFont, gameTime, transform);
+                _mainMenuButton.Draw(spriteBatch, secondaryFont, effectiveGameTime, transform);
             }
         }
     }
