@@ -1,12 +1,13 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace ProjectVagabond.Gameloop
+﻿namespace ProjectVagabond
 {
-    internal class ArenaTier
+    public class ArenaTier
     {
+        public string Name { get; set; }
+        public int EntryFee { get; set; }
+        public int FirstPlace { get; set; }
+        public int SecondPlace { get; set; }
+        public int ThirdPlace { get; set; }
+        public int BonusDamage { get; set; }
+        public int BonusKills { get; set; }
     }
 }

@@ -120,23 +120,20 @@ namespace ProjectVagabond.Scenes
             var killsRank = allWiz.OrderByDescending(w => w.Data.Metrics.Kills).ToList().IndexOf(playerWiz) + 1;
             var blockRank = allWiz.OrderByDescending(w => w.Data.Metrics.DamageBlocked).ToList().IndexOf(playerWiz) + 1;
 
-            int fee = _gameState.CurrentEntryFee;
+            ArenaTier tier = _gameState.SelectedTier;
+            if (tier == null) return;
 
-            if (playerWiz.Data.Metrics.Placement == 1) AddPayout("1ST PLACE", (int)(fee * 1.2f));
-            else if (playerWiz.Data.Metrics.Placement == 2) AddPayout("2ND PLACE", (int)(fee * 0.6f));
-            else if (playerWiz.Data.Metrics.Placement == 3) AddPayout("3RD PLACE", (int)(fee * 0.2f));
+            if (playerWiz.Data.Metrics.Placement == 1 && tier.FirstPlace > 0) AddPayout("1ST PLACE", tier.FirstPlace);
+            else if (playerWiz.Data.Metrics.Placement == 2 && tier.SecondPlace > 0) AddPayout("2ND PLACE", tier.SecondPlace);
+            else if (playerWiz.Data.Metrics.Placement == 3 && tier.ThirdPlace > 0) AddPayout("3RD PLACE", tier.ThirdPlace);
 
-            if (dmgRank == 1 && playerWiz.Data.Metrics.DamageDealt > 0) AddPayout("MOST DAMAGE", (int)(fee * 0.4f));
-            else if (dmgRank == 2 && playerWiz.Data.Metrics.DamageDealt > 0) AddPayout("2ND MOST DAMAGE", (int)(fee * 0.2f));
+            if (dmgRank == 1 && playerWiz.Data.Metrics.DamageDealt > 0 && tier.BonusDamage > 0) AddPayout("MOST DAMAGE", tier.BonusDamage);
 
-            if (killsRank == 1 && playerWiz.Data.Metrics.Kills > 0) AddPayout("MOST KILLS", (int)(fee * 0.4f));
+            if (killsRank == 1 && playerWiz.Data.Metrics.Kills > 0 && tier.BonusKills > 0) AddPayout("MOST KILLS", tier.BonusKills);
 
-            if (blockRank == 1 && playerWiz.Data.Metrics.DamageBlocked > 0) AddPayout("MOST DAMAGE BLOCKED", (int)(fee * 0.3f));
+            if (blockRank == 1 && playerWiz.Data.Metrics.DamageBlocked > 0 && tier.BonusDamage > 0) AddPayout("MOST DAMAGE BLOCKED", tier.BonusDamage);
 
-            int survivalGold = (int)(playerWiz.Data.Metrics.TimeSurvived * (fee * 0.01f));
-            if (survivalGold > 0) AddPayout($"SURVIVED {(int)playerWiz.Data.Metrics.TimeSurvived}s", survivalGold);
-
-            if (_payouts.Count == 0) AddPayout("PARTICIPATION", Math.Max(1, (int)(fee * 0.1f)));
+            if (_payouts.Count == 0) AddPayout("PARTICIPATION", 1);
 
             _gameState.PlayerState.Gold += _totalGold;
         }
@@ -179,6 +176,13 @@ namespace ProjectVagabond.Scenes
         {
             if (_transitionManager.IsTransitioning) return;
             _hapticsManager.TriggerUICompoundShake(_global.ButtonHapticStrength);
+
+            if (_gameState.CurrentDay >= 7)
+            {
+                _sceneManager.ChangeScene(GameSceneState.MainMenu, _transitionManager.GetRandomTransition(), _transitionManager.GetRandomTransition());
+                return;
+            }
+
             _gameState.AdvanceDay();
             _sceneManager.ChangeScene(GameSceneState.DayPrep, _transitionManager.GetRandomTransition(), _transitionManager.GetRandomTransition());
         }

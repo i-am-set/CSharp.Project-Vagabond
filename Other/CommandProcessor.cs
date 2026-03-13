@@ -196,42 +196,49 @@ namespace ProjectVagabond
                 int currentGold = ServiceLocator.Get<Global>().StartingGold;
                 int currentDay = 1;
                 Random rng = new Random();
+                var gameState = ServiceLocator.Get<GameState>();
 
                 for (int i = 0; i < days; i++)
                 {
-                    int entryFee = 10 + (currentDay * 5);
-                    currentGold -= entryFee;
+                    int floor = gameState.GetDailyFloor(currentDay);
 
-                    if (currentGold < 0)
+                    if (currentGold < floor)
                     {
-                        Log($"[Palette_Rust]BANKRUPT on Day {currentDay}! Short by {Math.Abs(currentGold)}G.[/]");
+                        Log($"[Palette_Rust]BANKRUPT on Day {currentDay}! Required {floor}G but only had {currentGold}G.[/]");
                         break;
                     }
+
+                    ArenaTier selectedTier = GameState.ArenaTiers[0];
+                    for (int t = GameState.ArenaTiers.Count - 1; t >= 0; t--)
+                    {
+                        if (GameState.ArenaTiers[t].EntryFee <= currentGold)
+                        {
+                            selectedTier = GameState.ArenaTiers[t];
+                            break;
+                        }
+                    }
+
+                    currentGold -= selectedTier.EntryFee;
 
                     bool isWin = rng.NextDouble() <= winRate;
                     int payout = 0;
 
                     if (isWin)
                     {
-                        payout += (int)(entryFee * 1.2f);
-                        payout += (int)(entryFee * 0.4f);
-                        payout += (int)(entryFee * 0.4f);
-                        payout += (int)(60f * (entryFee * 0.01f));
+                        payout = selectedTier.FirstPlace + selectedTier.BonusDamage + selectedTier.BonusKills;
                     }
                     else
                     {
-                        payout += (int)(entryFee * 0.2f);
-                        payout += (int)(entryFee * 0.2f);
-                        payout += (int)(30f * (entryFee * 0.01f));
+                        payout = selectedTier.ThirdPlace;
                     }
 
                     currentGold += payout;
-                    Log($"Day {currentDay} | Fee: {entryFee}G | Payout: {payout}G | Bank: {currentGold}G");
+                    Log($"Day {currentDay} | Tier: {selectedTier.Name} | Fee: {selectedTier.EntryFee}G | Payout: {payout}G | Bank: {currentGold}G");
 
                     currentDay++;
                 }
 
-                if (currentGold >= 0)
+                if (currentGold >= 0 && currentDay > days)
                 {
                     Log($"[Palette_Leaf]Simulation Complete. Final Bankroll: {currentGold}G[/]");
                 }

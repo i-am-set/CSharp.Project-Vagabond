@@ -91,6 +91,12 @@ namespace ProjectVagabond
             FailedIndicatorColor = Color.Red;
             TenacityBrokenIndicatorColor = Palette_Rust;
             VulnerableDamageIndicatorColor = Palette_Shadow;
+
+            LeagueColor_Iron = Palette_DarkPale;
+            LeagueColor_Silver = Palette_Pale;
+            LeagueColor_Gold = Palette_DarkSun;
+            LeagueColor_Platinum = Palette_LightPale;
+            LeagueColor_Diamond = Palette_Sky;
         }
 
         public static Global Instance => _instance;
@@ -265,6 +271,12 @@ namespace ProjectVagabond
         public Color InputCaratColor { get; set; }
         public Color AlertColor { get; private set; }
         public Color ConfirmSettingsColor { get; private set; }
+
+        public Color LeagueColor_Iron { get; private set; }
+        public Color LeagueColor_Silver { get; private set; }
+        public Color LeagueColor_Gold { get; private set; }
+        public Color LeagueColor_Platinum { get; private set; }
+        public Color LeagueColor_Diamond { get; private set; }
 
         public Color StatColor_Increase { get; private set; }
         public Color StatColor_Decrease { get; private set; }

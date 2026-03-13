@@ -33,7 +33,17 @@ namespace ProjectVagabond
         public string LastRunKiller { get; set; } = "Unknown";
 
         public int CurrentDay { get; private set; }
-        public int CurrentEntryFee { get; private set; }
+
+        public static readonly List<ArenaTier> ArenaTiers = new List<ArenaTier>
+        {
+            new ArenaTier { Name = "Iron", EntryFee = 10, FirstPlace = 20, SecondPlace = 10, ThirdPlace = 5, BonusDamage = 2, BonusKills = 2 },
+            new ArenaTier { Name = "Silver", EntryFee = 30, FirstPlace = 75, SecondPlace = 30, ThirdPlace = 10, BonusDamage = 5, BonusKills = 5 },
+            new ArenaTier { Name = "Gold", EntryFee = 80, FirstPlace = 240, SecondPlace = 80, ThirdPlace = 20, BonusDamage = 15, BonusKills = 15 },
+            new ArenaTier { Name = "Platinum", EntryFee = 200, FirstPlace = 700, SecondPlace = 200, ThirdPlace = 40, BonusDamage = 40, BonusKills = 40 },
+            new ArenaTier { Name = "Diamond", EntryFee = 500, FirstPlace = 2000, SecondPlace = 500, ThirdPlace = 0, BonusDamage = 100, BonusKills = 100 }
+        };
+
+        public ArenaTier SelectedTier { get; set; }
 
         public GameState(Global global, SpriteManager spriteManager)
         {
@@ -86,18 +96,20 @@ namespace ProjectVagabond
             PlayerState.Gold = _global.StartingGold;
 
             CurrentDay = 1;
-            CurrentEntryFee = CalculateEntryFee(CurrentDay);
+            SelectedTier = ArenaTiers[0];
         }
 
         public void AdvanceDay()
         {
             CurrentDay++;
-            CurrentEntryFee = CalculateEntryFee(CurrentDay);
         }
 
-        public int CalculateEntryFee(int day)
+        public int GetDailyFloor(int day)
         {
-            return 10 + (day * 5);
+            if (day <= 2) return 10;
+            if (day <= 4) return 30;
+            if (day <= 6) return 80;
+            return 200;
         }
 
         public void Reset()
@@ -108,6 +120,7 @@ namespace ProjectVagabond
             _isPaused = false;
             IsPausedByConsole = false;
             LastRunKiller = "Unknown";
+            SelectedTier = null;
         }
 
         public void TogglePause()
