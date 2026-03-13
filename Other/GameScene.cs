@@ -21,7 +21,8 @@ namespace ProjectVagabond.Scenes
         Battle,
         Split,
         GameOver,
-        Arena
+        Arena,
+        Payout
     }
 
     /// <summary>

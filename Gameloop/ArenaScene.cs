@@ -554,11 +554,20 @@ namespace ProjectVagabond.Scenes
 
                     int currentAliveCount = _wizards.Count(w => w.Data.Combat.State != WizardState.Dead);
 
+                    foreach (var w in _wizards)
+                    {
+                        if (w.Data.Combat.State == WizardState.Dead && w.Data.Metrics.Placement == 0)
+                        {
+                            w.Data.Metrics.Placement = currentAliveCount + 1;
+                            w.Data.Metrics.TimeSurvived = _phaseTimer;
+                        }
+                    }
+
                     var playerWizard = _wizards.FirstOrDefault(w => w.Data.Stats.IsPlayer);
                     if (playerWizard != null && !_playerTicketPrinted && playerWizard.Data.Combat.State == WizardState.Dead)
                     {
                         _playerTicketPrinted = true;
-                        _ticketManager.PrintTicket(_wizards.IndexOf(playerWizard) + 1, currentAliveCount + 1);
+                        _ticketManager.PrintTicket(_wizards.IndexOf(playerWizard) + 1, playerWizard.Data.Metrics.Placement);
                     }
 
                     if (currentAliveCount <= 1)
@@ -569,6 +578,9 @@ namespace ProjectVagabond.Scenes
                         var winner = _wizards.FirstOrDefault(w => w.Data.Combat.State != WizardState.Dead);
                         if (winner != null)
                         {
+                            winner.Data.Metrics.Placement = 1;
+                            winner.Data.Metrics.TimeSurvived = _phaseTimer;
+
                             _matchResultText = $"{winner.Data.Stats.Name.ToUpper()} WINS!";
                             if (winner.Data.Stats.IsPlayer && !_playerTicketPrinted)
                             {
@@ -583,11 +595,11 @@ namespace ProjectVagabond.Scenes
                             if (playerWizard != null && !_playerTicketPrinted)
                             {
                                 _playerTicketPrinted = true;
-                                _ticketManager.PrintTicket(_wizards.IndexOf(playerWizard) + 1, 2);
+                                _ticketManager.PrintTicket(_wizards.IndexOf(playerWizard) + 1, playerWizard.Data.Metrics.Placement > 0 ? playerWizard.Data.Metrics.Placement : 2);
                             }
                         }
 
-                        _gameState.AdvanceDay();
+                        _gameState.LastMatchWizards = _wizards.ToList();
                     }
                 }
                 else if (_arenaState == ArenaState.MatchOver)
@@ -595,7 +607,7 @@ namespace ProjectVagabond.Scenes
                     _matchOverTimer -= dt;
                     if (_matchOverTimer <= 0 && !_transitionManager.IsTransitioning)
                     {
-                        _sceneManager.ChangeScene(GameSceneState.DayPrep, TransitionType.FadeOff, TransitionType.FadeOff);
+                        _sceneManager.ChangeScene(GameSceneState.Payout, TransitionType.FadeOff, TransitionType.FadeOff);
                     }
                 }
             }

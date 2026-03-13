@@ -47,6 +47,7 @@ namespace ProjectVagabond
                 sb.AppendLine("    debug_text_anims                   - Shows all text animations.");
                 sb.AppendLine("    debug_colors                       - Lists all colors.");
                 sb.AppendLine("    debug_ticket                       - Spawns a blank ticket in the arena.");
+                sb.AppendLine("    simulate_economy <days> <win_rate> - Simulates the economy headless.");
                 sb.AppendLine("    clear                              - Clears console.");
                 sb.AppendLine("    exit                               - Exits game.");
                 sb.AppendLine("    fps                                - Toggles FPS counter.");
@@ -60,7 +61,6 @@ namespace ProjectVagabond
 
             _commands["clear"] = new Command("clear", (args) => ServiceLocator.Get<Utils.DebugConsole>().ClearHistory(), "clear - Clears history.");
 
-            // --- TEXT ANIMATION DEBUG ---
             _commands["debug_text_anims"] = new Command("debug_text_anims", (args) =>
             {
                 Log("--- Text Animation Showcase ---");
@@ -82,7 +82,6 @@ namespace ProjectVagabond
                 Log("[flickerwave]FlickerWave: The quick brown fox jumps over the lazy dog.[/]");
             }, "debug_text_anims - Displays all available text animations.");
 
-            // --- COLORS COMMAND ---
             _commands["debug_colors"] = new Command("debug_colors", (args) =>
             {
                 var colorType = typeof(Color);
@@ -97,7 +96,6 @@ namespace ProjectVagabond
                     }
                 }
 
-                // Helper to get Hue (0-360)
                 float GetHue(Color c)
                 {
                     float r = c.R / 255f;
@@ -113,7 +111,6 @@ namespace ProjectVagabond
                     return 60 * (((r - g) / delta) + 4);
                 }
 
-                // Helper to get Saturation (0-1)
                 float GetSaturation(Color c)
                 {
                     float r = c.R / 255f;
@@ -125,13 +122,11 @@ namespace ProjectVagabond
                     return (max - min) / max;
                 }
 
-                // Helper to get Brightness/Value
                 float GetBrightness(Color c)
                 {
                     return Math.Max(c.R, Math.Max(c.G, c.B)) / 255f;
                 }
 
-                // Sort: Rainbow (Hue) first, Grayscale last
                 colorList.Sort((a, b) =>
                 {
                     float satA = GetSaturation(a.Color);
@@ -188,6 +183,61 @@ namespace ProjectVagabond
                 }
             }, "debug_ticket - Spawns a blank ticket in the arena for physics testing.");
 
+            _commands["simulate_economy"] = new Command("simulate_economy", (args) =>
+            {
+                int days = 8;
+                float winRate = 0.5f;
+
+                if (args.Length > 1 && int.TryParse(args[1], out int parsedDays)) days = parsedDays;
+                if (args.Length > 2 && float.TryParse(args[2], out float parsedRate)) winRate = parsedRate;
+
+                Log($"--- Simulating Economy for {days} Days (Win Rate: {winRate:P0}) ---");
+
+                int currentGold = ServiceLocator.Get<Global>().StartingGold;
+                int currentDay = 1;
+                Random rng = new Random();
+
+                for (int i = 0; i < days; i++)
+                {
+                    int entryFee = 10 + (currentDay * 5);
+                    currentGold -= entryFee;
+
+                    if (currentGold < 0)
+                    {
+                        Log($"[Palette_Rust]BANKRUPT on Day {currentDay}! Short by {Math.Abs(currentGold)}G.[/]");
+                        break;
+                    }
+
+                    bool isWin = rng.NextDouble() <= winRate;
+                    int payout = 0;
+
+                    if (isWin)
+                    {
+                        payout += (int)(entryFee * 1.2f);
+                        payout += (int)(entryFee * 0.4f);
+                        payout += (int)(entryFee * 0.4f);
+                        payout += (int)(60f * (entryFee * 0.01f));
+                    }
+                    else
+                    {
+                        payout += (int)(entryFee * 0.2f);
+                        payout += (int)(entryFee * 0.2f);
+                        payout += (int)(30f * (entryFee * 0.01f));
+                    }
+
+                    currentGold += payout;
+                    Log($"Day {currentDay} | Fee: {entryFee}G | Payout: {payout}G | Bank: {currentGold}G");
+
+                    currentDay++;
+                }
+
+                if (currentGold >= 0)
+                {
+                    Log($"[Palette_Leaf]Simulation Complete. Final Bankroll: {currentGold}G[/]");
+                }
+
+            }, "simulate_economy <days> <win_rate> - Simulates the economy headless.");
+
             _commands["fps"] = new Command("fps", (args) =>
             {
                 Global.Instance.ShowFPS = !Global.Instance.ShowFPS;
@@ -196,8 +246,6 @@ namespace ProjectVagabond
 
             _commands["exit"] = new Command("exit", (args) => ServiceLocator.Get<Core>().ExitApplication(), "exit");
         }
-
-        // --- HANDLERS ---
 
         public void ProcessCommand(string input)
         {

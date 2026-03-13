@@ -13,7 +13,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 
-
 namespace ProjectVagabond
 {
     public class GameState
@@ -26,6 +25,7 @@ namespace ProjectVagabond
 
         public PlayerState PlayerState { get; private set; }
         public Dictionary<string, WizardCat> RunWizards { get; private set; }
+        public List<ArenaWizard> LastMatchWizards { get; set; }
 
         public bool IsPausedByConsole { get; set; } = false;
         public bool IsPaused => _isPaused || IsPausedByConsole;
@@ -46,7 +46,6 @@ namespace ProjectVagabond
             int roll = _random.Next(100);
             int offset = 0;
 
-            // Weighted variance
             if (roll < 40) offset = 0;
             else if (roll < 60) offset = 1;
             else if (roll < 80) offset = -1;
@@ -60,7 +59,6 @@ namespace ProjectVagabond
         {
             RunWizards = new Dictionary<string, WizardCat>();
 
-            // Roll stats for every wizard cat for this run
             foreach (var kvp in GameDataCache.WizardCats)
             {
                 var data = kvp.Value;
@@ -88,19 +86,25 @@ namespace ProjectVagabond
             PlayerState.Gold = _global.StartingGold;
 
             CurrentDay = 1;
-            CurrentEntryFee = 5;
+            CurrentEntryFee = CalculateEntryFee(CurrentDay);
         }
 
         public void AdvanceDay()
         {
             CurrentDay++;
-            CurrentEntryFee += 5 + (CurrentDay * 2);
+            CurrentEntryFee = CalculateEntryFee(CurrentDay);
+        }
+
+        public int CalculateEntryFee(int day)
+        {
+            return 10 + (day * 5);
         }
 
         public void Reset()
         {
             PlayerState = null;
             RunWizards = null;
+            LastMatchWizards = null;
             _isPaused = false;
             IsPausedByConsole = false;
             LastRunKiller = "Unknown";

@@ -169,15 +169,17 @@ namespace ProjectVagabond.Battle
             );
         }
 
-        public bool TakeDamage(int amount, bool isCrit = false)
+        public bool TakeDamage(int amount, bool isCrit = false, ArenaWizard attacker = null)
         {
             var combat = _wizard.Data.Combat;
             var stats = _wizard.Data.Stats;
             var ui = _wizard.Data.UI;
+            var metrics = _wizard.Data.Metrics;
 
             if (combat.WardTimer > 0)
             {
                 combat.WardHitTimer = WARD_HIT_DURATION;
+                metrics.DamageBlocked += amount;
                 return false;
             }
 
@@ -185,7 +187,7 @@ namespace ProjectVagabond.Battle
 
             if (combat.IsSuspended)
             {
-                combat.SuspendedActions.Enqueue(() => TakeDamage(amount, isCrit));
+                combat.SuspendedActions.Enqueue(() => TakeDamage(amount, isCrit, attacker));
                 return false;
             }
 
@@ -195,6 +197,15 @@ namespace ProjectVagabond.Battle
 
             if (actualDamage > 0)
             {
+                if (attacker != null)
+                {
+                    attacker.Data.Metrics.DamageDealt += actualDamage;
+                    if (stats.CurrentHP <= 0)
+                    {
+                        attacker.Data.Metrics.Kills++;
+                    }
+                }
+
                 TriggerHeartFlash(oldHP, stats.CurrentHP);
                 combat.InvincibilityTimer = combat.InvincibilityDuration;
                 ui.HudShakeTimer = HUD_SHAKE_DURATION;

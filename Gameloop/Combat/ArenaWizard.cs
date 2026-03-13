@@ -143,11 +143,26 @@ namespace ProjectVagabond.Battle
     }
     #endregion
 
+    #region Metrics
+    /// <summary>
+    /// Tracks performance metrics during a match for payout calculation.
+    /// </summary>
+    public class MatchMetrics
+    {
+        public int DamageDealt;
+        public int Kills;
+        public int DamageBlocked;
+        public float TimeSurvived;
+        public int Placement;
+    }
+    #endregion
+
     public class WizardData
     {
         public BaseStats Stats = new BaseStats();
         public CombatState Combat = new CombatState();
         public UIState UI = new UIState();
+        public MatchMetrics Metrics = new MatchMetrics();
     }
 
     public class ArenaWizard

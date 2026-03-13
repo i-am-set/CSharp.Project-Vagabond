@@ -22,7 +22,6 @@ namespace ProjectVagabond.Battle
         public bool IsDragging;
         public Vector2 DragOffset;
         public bool IsDispensed;
-        public bool IsHanging;
         public float Scale = 1.0f;
         public bool IsBlank;
 
@@ -164,7 +163,12 @@ namespace ProjectVagabond.Battle
                 if (!ticket.IsDispensed)
                 {
                     ticket.IsDispensed = true;
-                    ticket.IsHanging = true;
+                    ticket.Velocity = new Vector2((float)(_random.NextDouble() * 60 - 30), 0f);
+                    ticket.VelRotX = (float)(_random.NextDouble() * 4.0 - 2.0);
+                    ticket.VelRotY = (float)(_random.NextDouble() * 4.0 - 2.0);
+                    ticket.VelRotZ = (float)(_random.NextDouble() * 2.0 - 1.0);
+                    ticket.FlutterPhase = (float)(_random.NextDouble() * MathHelper.TwoPi);
+                    ticket.FlutterSpeed = (float)(_random.NextDouble() * 2.0 + 1.5);
                 }
             }
 
@@ -179,19 +183,6 @@ namespace ProjectVagabond.Battle
             bool isPrinting = _tickets.Any(t => !t.IsDispensed);
             if (!isPrinting && _pendingTickets.Count > 0)
             {
-                foreach (var t in _tickets)
-                {
-                    if (t.IsHanging)
-                    {
-                        t.IsHanging = false;
-                        t.Velocity = new Vector2((float)(_random.NextDouble() * 60 - 30), 0f);
-                        t.VelRotX = (float)(_random.NextDouble() * 4.0 - 2.0);
-                        t.VelRotY = (float)(_random.NextDouble() * 4.0 - 2.0);
-                        t.VelRotZ = (float)(_random.NextDouble() * 2.0 - 1.0);
-                        t.FlutterPhase = (float)(_random.NextDouble() * MathHelper.TwoPi);
-                        t.FlutterSpeed = (float)(_random.NextDouble() * 2.0 + 1.5);
-                    }
-                }
                 _tickets.Add(_pendingTickets.Dequeue());
             }
 
@@ -220,7 +211,6 @@ namespace ProjectVagabond.Battle
                     if (localBounds.Contains(localMouse))
                     {
                         t.IsDragging = true;
-                        t.IsHanging = false;
                         t.DragOffset = t.Position - virtualMousePos;
                         t.Velocity = Vector2.Zero;
                         t.VelRotX = 0f;
@@ -288,7 +278,7 @@ namespace ProjectVagabond.Battle
                 }
                 else
                 {
-                    if (!t.IsDragging && !t.IsHanging)
+                    if (!t.IsDragging)
                     {
                         float ny = MathF.Sin(t.RotX) * MathF.Cos(t.RotZ) - MathF.Cos(t.RotX) * MathF.Sin(t.RotY) * MathF.Sin(t.RotZ);
                         float flatProfile = Math.Abs(ny);
