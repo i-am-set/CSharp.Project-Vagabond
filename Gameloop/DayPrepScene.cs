@@ -29,6 +29,7 @@ namespace ProjectVagabond.Scenes
             var pixel = ServiceLocator.Get<Texture2D>();
             var core = ServiceLocator.Get<Core>();
             var secondaryFont = core.SecondaryFont;
+            var tertiaryFont = core.TertiaryFont;
             var global = ServiceLocator.Get<Global>();
 
             bool isHovered = IsHovered || IsSelected || forceHover;
@@ -38,11 +39,12 @@ namespace ProjectVagabond.Scenes
             float scale = _currentScale;
             if (scale < 0.01f) return;
 
-            int width = (int)(Bounds.Width * scale);
-            int height = (int)(Bounds.Height * scale);
+            // Hardcode visual size to 144x24 so the extended hitbox doesn't stretch the rendering
+            int width = (int)(144 * scale);
+            int height = (int)(24 * scale);
 
-            float totalX = Bounds.Center.X + (horizontalOffset ?? 0f) + shakeOffset.X;
-            float totalY = Bounds.Center.Y + (verticalOffset ?? 0f) + shakeOffset.Y;
+            float totalX = Bounds.Center.X + (horizontalOffset ?? 0f);
+            float totalY = Bounds.Center.Y + (verticalOffset ?? 0f);
 
             Rectangle scaledBounds = new Rectangle(
                 (int)(totalX - width / 2f),
@@ -54,7 +56,7 @@ namespace ProjectVagabond.Scenes
             if (IsClosed)
             {
                 DrawBeveledCornersRect(spriteBatch, pixel, scaledBounds, global.Palette_DarkestPale * 0.25f);
-                DrawNormalText(spriteBatch, defaultFont, secondaryFont, global, 0.25f, scaledBounds, scale);
+                DrawNormalText(spriteBatch, defaultFont, secondaryFont, tertiaryFont, global, 0.25f, scaledBounds, scale);
 
                 spriteBatch.DrawLineSnapped(new Vector2(scaledBounds.Left + 2, scaledBounds.Center.Y), new Vector2(scaledBounds.Right - 2, scaledBounds.Center.Y), global.Palette_Black * 0.5f, 2f);
             }
@@ -63,25 +65,27 @@ namespace ProjectVagabond.Scenes
                 if (isHovered)
                 {
                     spriteBatch.DrawAnimatedDottedRectangle(pixel, scaledBounds, global.Palette_DarkestPale * 0.25f, 1f, 1f, 1f, 0f);
-                    DrawNormalText(spriteBatch, defaultFont, secondaryFont, global, 0.25f, scaledBounds, scale);
+                    DrawNormalText(spriteBatch, defaultFont, secondaryFont, tertiaryFont, global, 0.25f, scaledBounds, scale);
 
                     string text = "CANNOT AFFORD";
                     Color textColor = _isPressed ? global.Palette_Rust : global.Palette_DarkRust;
                     Vector2 size = defaultFont.MeasureString(text) * scale;
-                    Vector2 pos = new Vector2(scaledBounds.Center.X - size.X / 2f, scaledBounds.Center.Y - size.Y / 2f);
+
+                    float textShakeX = shakeOffset.X * 2.5f;
+                    Vector2 pos = new Vector2(scaledBounds.Center.X - size.X / 2f + textShakeX, scaledBounds.Center.Y - size.Y / 2f);
 
                     spriteBatch.DrawStringOutlinedSnapped(defaultFont, text, pos, textColor, global.Palette_Off, 0f, Vector2.Zero, scale, SpriteEffects.None, 0f);
                 }
                 else
                 {
                     spriteBatch.DrawAnimatedDottedRectangle(pixel, scaledBounds, global.Palette_DarkestPale, 1f, 1f, 1f, 0f);
-                    DrawNormalText(spriteBatch, defaultFont, secondaryFont, global, 1f, scaledBounds, scale);
+                    DrawNormalText(spriteBatch, defaultFont, secondaryFont, tertiaryFont, global, 1f, scaledBounds, scale);
                 }
             }
             else
             {
                 DrawBeveledCornersRect(spriteBatch, pixel, scaledBounds, global.Palette_DarkestPale);
-                DrawNormalText(spriteBatch, defaultFont, secondaryFont, global, 1f, scaledBounds, scale);
+                DrawNormalText(spriteBatch, defaultFont, secondaryFont, tertiaryFont, global, 1f, scaledBounds, scale);
 
                 if (isHovered)
                 {
@@ -102,7 +106,7 @@ namespace ProjectVagabond.Scenes
             spriteBatch.Draw(pixel, new Rectangle(rect.X, rect.Y + 1, rect.Width, rect.Height - 2), color);
         }
 
-        private void DrawNormalText(SpriteBatch spriteBatch, BitmapFont defaultFont, BitmapFont secondaryFont, Global global, float alpha, Rectangle bounds, float scale)
+        private void DrawNormalText(SpriteBatch spriteBatch, BitmapFont defaultFont, BitmapFont secondaryFont, BitmapFont tertiaryFont, Global global, float alpha, Rectangle bounds, float scale)
         {
             Color nameColor = GetLeagueColor(Tier.Name, global) * alpha;
             Color offOutline = global.Palette_Off * alpha;
@@ -121,8 +125,9 @@ namespace ProjectVagabond.Scenes
 
             float valWidth = secondaryFont.MeasureString(valText).Width * scale;
 
-            Vector2 gPos = new Vector2(valPos.X + valWidth + 1 * scale, feePos.Y);
-            spriteBatch.DrawStringOutlinedSnapped(secondaryFont, "G", gPos, global.Palette_DarkSun * alpha, offOutline, 0f, Vector2.Zero, scale, SpriteEffects.None, 0f);
+            float gYOffset = MathF.Round(MathF.Max(0, (secondaryFont.LineHeight - tertiaryFont.LineHeight) / 2f)) + 1f;
+            Vector2 gPos = new Vector2(valPos.X + valWidth + 1 * scale, feePos.Y + gYOffset * scale);
+            spriteBatch.DrawStringOutlinedSnapped(tertiaryFont, "G", gPos, global.Palette_DarkSun * alpha, offOutline, 0f, Vector2.Zero, scale, SpriteEffects.None, 0f);
         }
 
         private Color GetLeagueColor(string name, Global global)
@@ -184,14 +189,21 @@ namespace ProjectVagabond.Scenes
             {
                 var tier = GameState.ArenaTiers[i];
                 var btn = new LeagueButton(
-                    new Rectangle(Global.VIRTUAL_WIDTH / 2 - 72, startY + i * spacingY, 144, 24),
+                    new Rectangle(Global.VIRTUAL_WIDTH / 2 - 72, startY + i * spacingY - 1, 144, 26),
                     tier
                 );
 
                 btn.OnClick += () =>
                 {
                     if (_transitionManager.IsTransitioning) return;
-                    if (btn.IsClosed || !btn.IsAffordable) return;
+                    if (btn.IsClosed) return;
+
+                    if (!btn.IsAffordable)
+                    {
+                        btn.TriggerShake();
+                        _hapticsManager.TriggerUICompoundShake(_global.ButtonHapticStrength);
+                        return;
+                    }
 
                     _gameState.SelectedTier = tier;
                     _gameState.PlayerState.Gold -= tier.EntryFee;
@@ -278,6 +290,7 @@ namespace ProjectVagabond.Scenes
             spriteBatch.Draw(pixel, new Rectangle(0, 0, Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT), _global.GameBg);
 
             var defaultFont = ServiceLocator.Get<Core>().DefaultFont;
+            var tertiaryFont = ServiceLocator.Get<Core>().TertiaryFont;
 
             string dayText = $"DAY {_gameState.CurrentDay}";
             Vector2 daySize = defaultFont.MeasureString(dayText);
@@ -298,6 +311,64 @@ namespace ProjectVagabond.Scenes
             foreach (var btn in _tierButtons)
             {
                 btn.Draw(spriteBatch, defaultFont, effectiveGameTime, transform);
+            }
+
+            if (_timer > 1.0f)
+            {
+                int currentGold = _gameState.PlayerState.Gold;
+                int displayGold = currentGold;
+                bool isPreviewing = false;
+                bool isNegativeOrZero = false;
+
+                LeagueButton hoveredBtn = null;
+                foreach (var btn in _tierButtons)
+                {
+                    if (btn.IsHovered || btn.IsSelected)
+                    {
+                        hoveredBtn = btn;
+                        break;
+                    }
+                }
+
+                if (hoveredBtn != null)
+                {
+                    isPreviewing = true;
+                    displayGold = currentGold - hoveredBtn.Tier.EntryFee;
+                    if (displayGold <= 0)
+                    {
+                        isNegativeOrZero = true;
+                    }
+                }
+
+                string amountText = displayGold.ToString();
+                string gText = "G";
+
+                Color amountColor = _global.Palette_Sun;
+                Color gColor = _global.Palette_DarkSun;
+
+                if (isPreviewing)
+                {
+                    float flash = (float)(Math.Sin(effectiveGameTime.TotalGameTime.TotalSeconds * 15f) + 1f) / 2f;
+                    if (isNegativeOrZero)
+                    {
+                        amountColor = Color.Lerp(_global.Palette_Rust, _global.Palette_DarkRust, flash);
+                        gColor = amountColor;
+                    }
+                    else
+                    {
+                        amountColor = Color.Lerp(_global.Palette_Sun, _global.Palette_DarkSun, flash);
+                        gColor = amountColor;
+                    }
+                }
+
+                Vector2 amountPos = new Vector2(10, 10);
+                spriteBatch.DrawStringSnapped(defaultFont, amountText, amountPos, amountColor);
+
+                float amountWidth = MathF.Round(defaultFont.MeasureString(amountText).Width);
+                float gYOffset = MathF.Round(MathF.Max(0, defaultFont.LineHeight - tertiaryFont.LineHeight));
+
+                Vector2 gPos = new Vector2(amountPos.X + amountWidth + 2, 10 + gYOffset);
+                spriteBatch.DrawStringSnapped(tertiaryFont, gText, gPos, gColor);
             }
         }
     }
