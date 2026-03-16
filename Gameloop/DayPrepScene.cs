@@ -64,8 +64,9 @@ namespace ProjectVagabond.Scenes
             {
                 if (isHovered)
                 {
-                    spriteBatch.DrawAnimatedDottedRectangle(pixel, scaledBounds, global.Palette_DarkestPale * 0.25f, 1f, 1f, 1f, 0f);
-                    DrawNormalText(spriteBatch, defaultFont, secondaryFont, tertiaryFont, global, 0.25f, scaledBounds, scale);
+                    // Even more transparent when hovered
+                    spriteBatch.DrawAnimatedDottedRectangle(pixel, scaledBounds, global.Palette_DarkestPale * 0.22f, 1f, 1f, 1f, 0f);
+                    DrawNormalText(spriteBatch, defaultFont, secondaryFont, tertiaryFont, global, 0.1f, scaledBounds, scale);
 
                     string text = "CANNOT AFFORD";
                     Color textColor = _isPressed ? global.Palette_Rust : global.Palette_DarkRust;
@@ -78,8 +79,9 @@ namespace ProjectVagabond.Scenes
                 }
                 else
                 {
-                    spriteBatch.DrawAnimatedDottedRectangle(pixel, scaledBounds, global.Palette_DarkestPale, 1f, 1f, 1f, 0f);
-                    DrawNormalText(spriteBatch, defaultFont, secondaryFont, tertiaryFont, global, 1f, scaledBounds, scale);
+                    // Same transparency as the old hovered state
+                    spriteBatch.DrawAnimatedDottedRectangle(pixel, scaledBounds, global.Palette_DarkestPale * 0.25f, 1f, 1f, 1f, 0f);
+                    DrawNormalText(spriteBatch, defaultFont, secondaryFont, tertiaryFont, global, 0.25f, scaledBounds, scale);
                 }
             }
             else
