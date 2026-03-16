@@ -39,7 +39,7 @@ namespace ProjectVagabond.Battle
     public class TicketManager
     {
         public float DispenseTargetX { get; set; } = 108f;
-        public float DispenseStartY { get; set; } = -16f;
+        public float DispenseStartY { get; set; } = -20f;
         public float DispenseEndY { get; set; } = 14.5f;
 
         private const float GRAVITY_ACCELERATION = 200f;

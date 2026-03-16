@@ -91,6 +91,8 @@ namespace ProjectVagabond.Scenes
         private PlinkAnimator _plinkSuddenDeath;
         private float _suddenDeathTimer;
 
+        private readonly HashSet<ArenaWizard> _printedTickets = new HashSet<ArenaWizard>();
+
         public ArenaScene()
         {
             _global = ServiceLocator.Get<Global>();
@@ -185,6 +187,7 @@ namespace ProjectVagabond.Scenes
             _probSteps.Clear();
             _probPlinks.Clear();
             _winProbabilities.Clear();
+            _printedTickets.Clear();
 
             _battleContext = new BattleContext
             {
@@ -200,7 +203,6 @@ namespace ProjectVagabond.Scenes
             _arenaState = ArenaState.Countdown;
             _phaseTimer = 5.0f;
             _lastCountdownSecond = 5;
-            _playerTicketPrinted = false;
 
             IsOvertime = false;
             _matchTimer = 60f;
@@ -551,6 +553,12 @@ namespace ProjectVagabond.Scenes
                         {
                             w.Data.Metrics.Placement = currentAliveCount + 1;
                             w.Data.Metrics.TimeSurvived = _phaseTimer;
+
+                            if (!_printedTickets.Contains(w))
+                            {
+                                _printedTickets.Add(w);
+                                _ticketManager.PrintTicket(_wizards.IndexOf(w) + 1, w.Data.Metrics.Placement);
+                            }
                         }
                     }
 
@@ -566,9 +574,10 @@ namespace ProjectVagabond.Scenes
                             winner.Data.Metrics.TimeSurvived = _phaseTimer;
 
                             _matchResultText = $"{winner.Data.Stats.Name.ToUpper()} WINS!";
-                            if (!_playerTicketPrinted)
+
+                            if (!_printedTickets.Contains(winner))
                             {
-                                _playerTicketPrinted = true;
+                                _printedTickets.Add(winner);
                                 _ticketManager.PrintTicket(_wizards.IndexOf(winner) + 1, 1);
                             }
                         }
