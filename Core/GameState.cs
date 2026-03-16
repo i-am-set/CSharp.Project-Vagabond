@@ -1,17 +1,7 @@
 ﻿using Microsoft.Xna.Framework;
-using Microsoft.Xna.Framework.Graphics;
-using Microsoft.Xna.Framework.Input;
-using MonoGame.Extended.BitmapFonts;
-using ProjectVagabond;
 using ProjectVagabond.Battle;
-using ProjectVagabond.Scenes;
-using ProjectVagabond.Transitions;
-using ProjectVagabond.UI;
-using ProjectVagabond.Utils;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
 
 namespace ProjectVagabond
 {
@@ -27,23 +17,13 @@ namespace ProjectVagabond
         public Dictionary<string, WizardCat> RunWizards { get; private set; }
         public List<ArenaWizard> LastMatchWizards { get; set; }
 
+        public List<string> SelectedRoster { get; private set; } = new List<string>();
+        public string PlayerControlledId { get; set; } = null;
+
         public bool IsPausedByConsole { get; set; } = false;
         public bool IsPaused => _isPaused || IsPausedByConsole;
 
         public string LastRunKiller { get; set; } = "Unknown";
-
-        public int CurrentDay { get; private set; }
-
-        public static readonly List<ArenaTier> ArenaTiers = new List<ArenaTier>
-        {
-            new ArenaTier { Name = "Iron", EntryFee = 10, FirstPlace = 20, SecondPlace = 10, ThirdPlace = 5, BonusDamage = 2, BonusKills = 2 },
-            new ArenaTier { Name = "Silver", EntryFee = 30, FirstPlace = 75, SecondPlace = 30, ThirdPlace = 10, BonusDamage = 5, BonusKills = 5 },
-            new ArenaTier { Name = "Gold", EntryFee = 80, FirstPlace = 240, SecondPlace = 80, ThirdPlace = 20, BonusDamage = 15, BonusKills = 15 },
-            new ArenaTier { Name = "Platinum", EntryFee = 200, FirstPlace = 700, SecondPlace = 200, ThirdPlace = 40, BonusDamage = 40, BonusKills = 40 },
-            new ArenaTier { Name = "Diamond", EntryFee = 500, FirstPlace = 2000, SecondPlace = 500, ThirdPlace = 0, BonusDamage = 100, BonusKills = 100 }
-        };
-
-        public ArenaTier SelectedTier { get; set; }
 
         public GameState(Global global, SpriteManager spriteManager)
         {
@@ -65,7 +45,7 @@ namespace ProjectVagabond
             return Math.Clamp(baseStat + offset, 1, 10);
         }
 
-        public void InitializeWorld(string startingMemberId)
+        public void InitializeWorld(List<string> selectedIds)
         {
             RunWizards = new Dictionary<string, WizardCat>();
 
@@ -86,30 +66,14 @@ namespace ProjectVagabond
                 RunWizards[kvp.Key] = cat;
             }
 
+            SelectedRoster = selectedIds;
             PlayerState = new PlayerState();
             PlayerState.Party.Clear();
 
-            if (!RunWizards.TryGetValue(startingMemberId, out var member))
-                throw new Exception($"CRITICAL: Could not load starting member (ID: {startingMemberId})");
-
-            PlayerState.Party.Add(member.Clone());
-            PlayerState.Gold = _global.StartingGold;
-
-            CurrentDay = 1;
-            SelectedTier = ArenaTiers[0];
-        }
-
-        public void AdvanceDay()
-        {
-            CurrentDay++;
-        }
-
-        public int GetDailyFloor(int day)
-        {
-            if (day <= 2) return 10;
-            if (day <= 4) return 30;
-            if (day <= 6) return 80;
-            return 200;
+            if (selectedIds.Count > 0 && RunWizards.TryGetValue(selectedIds[0], out var member))
+            {
+                PlayerState.Party.Add(member.Clone());
+            }
         }
 
         public void Reset()
@@ -117,10 +81,11 @@ namespace ProjectVagabond
             PlayerState = null;
             RunWizards = null;
             LastMatchWizards = null;
+            SelectedRoster.Clear();
+            PlayerControlledId = null;
             _isPaused = false;
             IsPausedByConsole = false;
             LastRunKiller = "Unknown";
-            SelectedTier = null;
         }
 
         public void TogglePause()

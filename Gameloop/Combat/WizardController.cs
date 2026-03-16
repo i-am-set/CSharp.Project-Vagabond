@@ -110,9 +110,10 @@ namespace ProjectVagabond.Battle
             ui.HealthBarAlpha = 0f;
             combat.ActionTimer = GetRandomActionTime();
 
-            if (!string.IsNullOrEmpty(data.ActiveSpell) && GameDataCache.ActiveSpells.TryGetValue(data.ActiveSpell, out var spellData))
+            if (GameDataCache.ActiveSpells.Count > 0)
             {
-                combat.EquippedActiveSpell = spellData;
+                var spellList = GameDataCache.ActiveSpells.Values.ToList();
+                combat.EquippedActiveSpell = spellList[_random.Next(spellList.Count)];
             }
 
             if (!isPlayer)

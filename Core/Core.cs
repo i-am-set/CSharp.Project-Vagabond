@@ -227,11 +227,8 @@ namespace ProjectVagabond
             _sceneManager.AddScene(GameSceneState.Startup, new StartupScene());
             _sceneManager.AddScene(GameSceneState.MainMenu, new MainMenuScene());
             _sceneManager.AddScene(GameSceneState.NewGameIntro, new NewGameIntroScene());
-            _sceneManager.AddScene(GameSceneState.DayPrep, new DayPrepScene());
             _sceneManager.AddScene(GameSceneState.Settings, new SettingsScene());
             _sceneManager.AddScene(GameSceneState.Arena, new ArenaScene());
-            _sceneManager.AddScene(GameSceneState.GameOver, new GameOverScene());
-            _sceneManager.AddScene(GameSceneState.Payout, new PayoutScene());
 
             _previousResolution = new Point(Window.ClientBounds.Width, Window.ClientBounds.Height);
             OnResize(null, null);

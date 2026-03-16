@@ -13,16 +13,13 @@ namespace ProjectVagabond.Scenes
         Startup,
         MainMenu,
         NewGameIntro,
-        DayPrep,
         TerminalMap,
         Settings,
         Transition,
         AnimationEditor,
         Battle,
         Split,
-        GameOver,
-        Arena,
-        Payout
+        Arena
     }
 
     /// <summary>

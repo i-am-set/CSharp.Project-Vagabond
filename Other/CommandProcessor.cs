@@ -47,7 +47,6 @@ namespace ProjectVagabond
                 sb.AppendLine("    debug_text_anims                   - Shows all text animations.");
                 sb.AppendLine("    debug_colors                       - Lists all colors.");
                 sb.AppendLine("    debug_ticket                       - Spawns a blank ticket in the arena.");
-                sb.AppendLine("    simulate_economy <days> <win_rate> - Simulates the economy headless.");
                 sb.AppendLine("    clear                              - Clears console.");
                 sb.AppendLine("    exit                               - Exits game.");
                 sb.AppendLine("    fps                                - Toggles FPS counter.");
@@ -182,68 +181,6 @@ namespace ProjectVagabond
                     Log("[error]Must be in the Arena scene to spawn a ticket.[/]");
                 }
             }, "debug_ticket - Spawns a blank ticket in the arena for physics testing.");
-
-            _commands["simulate_economy"] = new Command("simulate_economy", (args) =>
-            {
-                int days = 8;
-                float winRate = 0.5f;
-
-                if (args.Length > 1 && int.TryParse(args[1], out int parsedDays)) days = parsedDays;
-                if (args.Length > 2 && float.TryParse(args[2], out float parsedRate)) winRate = parsedRate;
-
-                Log($"--- Simulating Economy for {days} Days (Win Rate: {winRate:P0}) ---");
-
-                int currentGold = ServiceLocator.Get<Global>().StartingGold;
-                int currentDay = 1;
-                Random rng = new Random();
-                var gameState = ServiceLocator.Get<GameState>();
-
-                for (int i = 0; i < days; i++)
-                {
-                    int floor = gameState.GetDailyFloor(currentDay);
-
-                    if (currentGold < floor)
-                    {
-                        Log($"[Palette_Rust]BANKRUPT on Day {currentDay}! Required {floor}G but only had {currentGold}G.[/]");
-                        break;
-                    }
-
-                    ArenaTier selectedTier = GameState.ArenaTiers[0];
-                    for (int t = GameState.ArenaTiers.Count - 1; t >= 0; t--)
-                    {
-                        if (GameState.ArenaTiers[t].EntryFee <= currentGold)
-                        {
-                            selectedTier = GameState.ArenaTiers[t];
-                            break;
-                        }
-                    }
-
-                    currentGold -= selectedTier.EntryFee;
-
-                    bool isWin = rng.NextDouble() <= winRate;
-                    int payout = 0;
-
-                    if (isWin)
-                    {
-                        payout = selectedTier.FirstPlace + selectedTier.BonusDamage + selectedTier.BonusKills;
-                    }
-                    else
-                    {
-                        payout = selectedTier.ThirdPlace;
-                    }
-
-                    currentGold += payout;
-                    Log($"Day {currentDay} | Tier: {selectedTier.Name} | Fee: {selectedTier.EntryFee}G | Payout: {payout}G | Bank: {currentGold}G");
-
-                    currentDay++;
-                }
-
-                if (currentGold >= 0 && currentDay > days)
-                {
-                    Log($"[Palette_Leaf]Simulation Complete. Final Bankroll: {currentGold}G[/]");
-                }
-
-            }, "simulate_economy <days> <win_rate> - Simulates the economy headless.");
 
             _commands["fps"] = new Command("fps", (args) =>
             {
