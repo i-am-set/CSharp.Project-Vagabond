@@ -1,19 +1,20 @@
-﻿using Microsoft.Xna.Framework;
+﻿#nullable enable
+using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
-using ProjectVagabond.Animations;
 using ProjectVagabond.Battle;
-using ProjectVagabond.Deliveries;
 using ProjectVagabond.Particles;
-using ProjectVagabond.Scenes;
 using ProjectVagabond.Transitions;
 using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
+using System.Text;
+using System.Text.RegularExpressions;
 
 namespace ProjectVagabond.Scenes
 {
@@ -21,6 +22,7 @@ namespace ProjectVagabond.Scenes
     {
         private enum ArenaState
         {
+            Betting,
             Countdown,
             Fighting,
             MatchOver
@@ -51,16 +53,16 @@ namespace ProjectVagabond.Scenes
         private float _phaseTimer = 0f;
         private int _lastCountdownSecond = 0;
 
-        private PlinkAnimator _plinkBetCountdown;
-        private PlinkAnimator _plinkFight;
+        private PlinkAnimator _plinkBetCountdown = null!;
+        private PlinkAnimator _plinkFight = null!;
 
         private MouseState _lastMouseState;
 
         private const float ARENA_RADIUS = 85f;
         private int _arenaEdges = 8;
         private Vector2 _arenaCenter;
-        private Texture2D _arenaTexture;
-        private Texture2D _arenaOutlineTexture;
+        private Texture2D? _arenaTexture;
+        private Texture2D? _arenaOutlineTexture;
 
         private float _matchOverTimer = 0f;
         private string _matchResultText = "";
@@ -69,7 +71,7 @@ namespace ProjectVagabond.Scenes
         private float _hudBaseX;
         private float _hudNameX;
         private float _hudMultCenterX;
-        private ArenaWizard _hoveredHudWizard;
+        private ArenaWizard? _hoveredHudWizard;
 
         private bool _playerTicketPrinted = false;
 
@@ -87,8 +89,8 @@ namespace ProjectVagabond.Scenes
         public bool IsOvertime { get; private set; }
         private float _matchTimer;
         private int _lastMatchSecond;
-        private PlinkAnimator _plinkTimerText;
-        private PlinkAnimator _plinkSuddenDeath;
+        private PlinkAnimator _plinkTimerText = null!;
+        private PlinkAnimator _plinkSuddenDeath = null!;
         private float _suddenDeathTimer;
 
         private readonly HashSet<ArenaWizard> _printedTickets = new HashSet<ArenaWizard>();
@@ -200,9 +202,9 @@ namespace ProjectVagabond.Scenes
                 Pixel = _pixel
             };
 
-            _arenaState = ArenaState.Countdown;
-            _phaseTimer = 5.0f;
-            _lastCountdownSecond = 5;
+            _arenaState = ArenaState.Betting;
+            _phaseTimer = 10.0f;
+            _lastCountdownSecond = 10;
 
             IsOvertime = false;
             _matchTimer = 60f;
@@ -276,7 +278,7 @@ namespace ProjectVagabond.Scenes
             int totalWizards = _wizards.Count;
             if (totalWizards == 0) return;
 
-            int spacingY = 20;
+            int spacingY = 17;
             int itemHeight = (int)secondaryFont.LineHeight + 7;
 
             int totalBlockHeight = (totalWizards - 1) * spacingY + itemHeight;
@@ -371,7 +373,7 @@ namespace ProjectVagabond.Scenes
             int aliveCount = _wizards.Count(w => w.Data.Combat.State != WizardState.Dead);
 
             _hoveredHudWizard = null;
-            bool canHover = _arenaState == ArenaState.Countdown || (_arenaState == ArenaState.Fighting && aliveCount > 1);
+            bool canHover = _arenaState == ArenaState.Betting || _arenaState == ArenaState.Countdown || (_arenaState == ArenaState.Fighting && aliveCount > 1);
 
             if (canHover)
             {
@@ -383,7 +385,7 @@ namespace ProjectVagabond.Scenes
                     var w = _wizardsByHudOrder[i];
                     if (w.Data.Combat.State == WizardState.Dead) continue;
 
-                    Rectangle hudRect = new Rectangle((int)(_hudBaseX - maxProbWidth / 2f - 2), (int)w.Data.UI.HudNamePos.Y - 2, (int)(_hudMultCenterX - (_hudBaseX - maxProbWidth / 2f) + 16), 20);
+                    Rectangle hudRect = new Rectangle((int)(_hudBaseX - maxProbWidth / 2f - 2), (int)w.Data.UI.HudNamePos.Y - 2, (int)(_hudMultCenterX - (_hudBaseX - maxProbWidth / 2f) + 16), 17);
 
                     if (hudRect.Contains(virtualMousePos))
                     {
@@ -399,7 +401,25 @@ namespace ProjectVagabond.Scenes
                 _cursorManager.SetState(_ticketManager.IsDraggingTicket ? CursorState.Dragging : CursorState.HoverDraggable);
             }
 
-            if (_arenaState == ArenaState.Countdown)
+            if (_arenaState == ArenaState.Betting)
+            {
+                _phaseTimer -= dt;
+                int currentSecond = (int)Math.Ceiling(_phaseTimer);
+                if (currentSecond != _lastCountdownSecond && currentSecond > 0)
+                {
+                    _lastCountdownSecond = currentSecond;
+                    _plinkBetCountdown.Start(0f, 0.2f);
+                }
+
+                if (_phaseTimer <= 0)
+                {
+                    _arenaState = ArenaState.Countdown;
+                    _phaseTimer = 3.0f;
+                    _lastCountdownSecond = 3;
+                    _plinkBetCountdown.Start(0f, 0.2f);
+                }
+            }
+            else if (_arenaState == ArenaState.Countdown)
             {
                 _phaseTimer -= dt;
                 int currentSecond = (int)Math.Ceiling(_phaseTimer);
@@ -764,7 +784,7 @@ namespace ProjectVagabond.Scenes
                 spriteBatch.DrawStringOutlinedSnapped(mainFont, sdText, sdPos, _global.Palette_Rust * sdAlpha, _global.Palette_Off * sdAlpha, sdRot, sdOrigin, sdScale, SpriteEffects.None, 0f);
             }
 
-            if (_arenaState == ArenaState.Countdown)
+            if (_arenaState == ArenaState.Betting || _arenaState == ArenaState.Countdown)
             {
                 int currentSecond = (int)Math.Ceiling(_phaseTimer);
                 if (currentSecond > 0)
@@ -778,6 +798,27 @@ namespace ProjectVagabond.Scenes
                     Color countColor = currentSecond <= 3 ? _global.Palette_Rust : _global.Palette_Sun;
 
                     spriteBatch.DrawStringOutlinedSnapped(mainFont, countText, countPos + countOrigin, countColor, _global.Palette_Off, countRot, countOrigin, countScale, SpriteEffects.None, 0f);
+
+                    if (_arenaState == ArenaState.Betting)
+                    {
+                        string betText = "PLACE YOUR BETS";
+                        Vector2 betSize = mainFont.MeasureString(betText);
+                        Vector2 betPos = new Vector2(MathF.Round(_arenaCenter.X - betSize.X / 2f), MathF.Round(countPos.Y - betSize.Y - 10));
+
+                        TextAnimator.DrawTextWithEffectOutlined(
+                            spriteBatch,
+                            mainFont,
+                            betText,
+                            betPos,
+                            _global.Palette_White,
+                            _global.Palette_Off,
+                            TextEffectType.RainbowWave,
+                            (float)effectiveGameTime.TotalGameTime.TotalSeconds,
+                            Vector2.One,
+                            null,
+                            0f
+                        );
+                    }
                 }
             }
             else if (_arenaState == ArenaState.Fighting && _phaseTimer < 1.0f)
@@ -835,7 +876,7 @@ namespace ProjectVagabond.Scenes
             int heartSpacing = 1;
 
             int aliveCount = _wizards.Count(wiz => wiz.Data.Combat.State != WizardState.Dead);
-            bool showProbabilities = _arenaState == ArenaState.Countdown || (_arenaState == ArenaState.Fighting && aliveCount > 1);
+            bool showProbabilities = _arenaState == ArenaState.Betting || _arenaState == ArenaState.Countdown || (_arenaState == ArenaState.Fighting && aliveCount > 1);
 
             float maxProbWidth = defaultFont.MeasureString("100%").Width;
 
@@ -850,7 +891,7 @@ namespace ProjectVagabond.Scenes
                     shakeY = (float)(_random.NextDouble() * 2 - 1) * shakeMag;
                 }
 
-                Rectangle hudRect = new Rectangle((int)(_hudBaseX - maxProbWidth / 2f - 2), (int)w.Data.UI.HudNamePos.Y - 2, (int)(_hudMultCenterX - (_hudBaseX - maxProbWidth / 2f) + 16), 20);
+                Rectangle hudRect = new Rectangle((int)(_hudBaseX - maxProbWidth / 2f - 2), (int)w.Data.UI.HudNamePos.Y - 1, (int)(_hudMultCenterX - (_hudBaseX - maxProbWidth / 2f) + 16), 16);
                 if (_hoveredHudWizard == w)
                 {
                     spriteBatch.Draw(_pixel, hudRect, _global.Palette_DarkShadow * 0.5f);

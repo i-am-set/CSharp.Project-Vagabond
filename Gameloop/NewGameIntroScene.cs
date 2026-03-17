@@ -1,4 +1,5 @@
-﻿using Microsoft.Xna.Framework;
+﻿#nullable enable
+using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
@@ -59,14 +60,16 @@ namespace ProjectVagabond.Scenes
         private const float TOTAL_AUTO_SELECT_DURATION = 2.0f;
 
         // UI Elements
-        private Button _leftArrow;
-        private Button _rightArrow;
-        private Button _btnDecreaseCount;
-        private Button _btnIncreaseCount;
-        private Button _startButton;
+        private Button _leftArrow = null!;
+        private Button _rightArrow = null!;
+        private Button _btnMode1v1 = null!;
+        private Button _btnMode4ffa = null!;
+        private Button _btnMode6ffa = null!;
+        private Button _btnMode8ffa = null!;
+        private Button _startButton = null!;
         private readonly NavigationGroup _navigationGroup;
 
-        private int _randomCount = 4;
+        private int _randomCount = 6;
 
         // Intro Text
         private const string INTRO_LINE_1 = "CHOOSE A";
@@ -74,10 +77,9 @@ namespace ProjectVagabond.Scenes
 
         // --- Plink Animation State ---
         private bool _isPlinkingIn = true;
-        private PlinkAnimator _plinkTitle1;
-        private PlinkAnimator _plinkTitle2;
-        private PlinkAnimator _plinkStats;
-        private PlinkAnimator _plinkCount;
+        private PlinkAnimator _plinkTitle1 = null!;
+        private PlinkAnimator _plinkTitle2 = null!;
+        private PlinkAnimator _plinkStats = null!;
         private PlinkAnimator[] _plinkCarousel = new PlinkAnimator[7];
         private List<PlinkAnimator> _allPlinks = new List<PlinkAnimator>();
 
@@ -90,7 +92,6 @@ namespace ProjectVagabond.Scenes
         private float _titleWaveTimer = 0f;
         private float _introHeartWaveTimer = 0f;
         private float _introHeartWaveInterval = 3f;
-        private float _countRedFlashTimer = 0f;
 
         // Arrow Simulation State
         private float _leftArrowSimTimer = 0f;
@@ -139,7 +140,6 @@ namespace ProjectVagabond.Scenes
             _idleTimer = 0f;
             _leftArrowSimTimer = 0f;
             _rightArrowSimTimer = 0f;
-            _countRedFlashTimer = 0f;
             _introHeartWaveTimer = 0f;
             _introHeartWaveInterval = 2f + (float)_random.NextDouble() * 4f;
 
@@ -161,7 +161,6 @@ namespace ProjectVagabond.Scenes
             _plinkTitle1 = new PlinkAnimator(); _allPlinks.Add(_plinkTitle1);
             _plinkTitle2 = new PlinkAnimator(); _allPlinks.Add(_plinkTitle2);
             _plinkStats = new PlinkAnimator(); _allPlinks.Add(_plinkStats);
-            _plinkCount = new PlinkAnimator(); _allPlinks.Add(_plinkCount);
 
             for (int i = 0; i < 7; i++)
             {
@@ -173,22 +172,25 @@ namespace ProjectVagabond.Scenes
 
             _leftArrow.SetHiddenForEntrance();
             _rightArrow.SetHiddenForEntrance();
-            _btnDecreaseCount.SetHiddenForEntrance();
-            _btnIncreaseCount.SetHiddenForEntrance();
+            _btnMode1v1.SetHiddenForEntrance();
+            _btnMode4ffa.SetHiddenForEntrance();
+            _btnMode6ffa.SetHiddenForEntrance();
+            _btnMode8ffa.SetHiddenForEntrance();
             _startButton.SetHiddenForEntrance();
 
             _allPlinks.Add(_leftArrow.Plink);
             _allPlinks.Add(_rightArrow.Plink);
-            _allPlinks.Add(_btnDecreaseCount.Plink);
-            _allPlinks.Add(_btnIncreaseCount.Plink);
+            _allPlinks.Add(_btnMode1v1.Plink);
+            _allPlinks.Add(_btnMode4ffa.Plink);
+            _allPlinks.Add(_btnMode6ffa.Plink);
+            _allPlinks.Add(_btnMode8ffa.Plink);
             _allPlinks.Add(_startButton.Plink);
 
             var randomActions = new List<Action>
             {
                 () => _plinkTitle1.Start(0f, 0.25f),
                 () => _plinkTitle2.Start(0f, 0.25f),
-                () => _plinkStats.Start(0f, 0.25f),
-                () => _plinkCount.Start(0f, 0.25f)
+                () => _plinkStats.Start(0f, 0.25f)
             };
 
             for (int i = 0; i < 7; i++)
@@ -203,8 +205,10 @@ namespace ProjectVagabond.Scenes
 
             _plinkQueue.Enqueue(() => _leftArrow.PlayEntrance(0f));
             _plinkQueue.Enqueue(() => _rightArrow.PlayEntrance(0f));
-            _plinkQueue.Enqueue(() => _btnDecreaseCount.PlayEntrance(0f));
-            _plinkQueue.Enqueue(() => _btnIncreaseCount.PlayEntrance(0f));
+            _plinkQueue.Enqueue(() => _btnMode1v1.PlayEntrance(0f));
+            _plinkQueue.Enqueue(() => _btnMode4ffa.PlayEntrance(0f));
+            _plinkQueue.Enqueue(() => _btnMode6ffa.PlayEntrance(0f));
+            _plinkQueue.Enqueue(() => _btnMode8ffa.PlayEntrance(0f));
             _plinkQueue.Enqueue(() => _startButton.PlayEntrance(0f));
 
             _plinkTimer = 0f;
@@ -236,7 +240,7 @@ namespace ProjectVagabond.Scenes
 
             int arrowY = centerY;
             int halfWidth = Global.VIRTUAL_WIDTH / 2;
-            int buttonHeight = 32;
+            int buttonHeight = 128;
             int buttonY = arrowY - (buttonHeight / 2);
 
             float leftButtonCenterX = halfWidth / 2f;
@@ -273,39 +277,69 @@ namespace ProjectVagabond.Scenes
                 TextRenderOffset = new Vector2(rightOffset, 0)
             };
 
-            int selectButtonY = 150;
+            int btnW = 50;
+            int btnH = 16;
+            int gridStartX = centerX - 51;
+            int gridStartY = 132;
+            int gridSpacingX = 52;
+            int gridSpacingY = 18;
 
-            _btnDecreaseCount = new Button(
-                new Rectangle(centerX - 38, selectButtonY, 38, 20),
-                "<",
-                font: secondaryFont
-            )
+            _btnMode1v1 = new Button(new Rectangle(gridStartX, gridStartY, btnW, btnH), "1v1", font: secondaryFont)
             {
                 TriggerHapticOnHover = true,
-                HoverAnimation = HoverAnimationType.Hop
+                HoverAnimation = HoverAnimationType.Hop,
+                CustomDefaultTextColor = _global.Palette_Off,
+                CustomHoverTextColor = _global.Palette_Off,
+                CustomSelectedTextColor = _global.Palette_Off,
+                CustomDisabledTextColor = _global.Palette_Off
             };
-            _btnDecreaseCount.OnClick += () => ChangeRandomCount(-1);
-            _navigationGroup.Add(_btnDecreaseCount);
+            _btnMode1v1.OnClick += () => SetMode(2);
+            _navigationGroup.Add(_btnMode1v1);
 
-            _btnIncreaseCount = new Button(
-                new Rectangle(centerX, selectButtonY, 38, 20),
-                ">",
-                font: secondaryFont
-            )
+            _btnMode4ffa = new Button(new Rectangle(gridStartX + gridSpacingX, gridStartY, btnW, btnH), "4 FFA", font: secondaryFont)
             {
                 TriggerHapticOnHover = true,
-                HoverAnimation = HoverAnimationType.Hop
+                HoverAnimation = HoverAnimationType.Hop,
+                CustomDefaultTextColor = _global.Palette_Off,
+                CustomHoverTextColor = _global.Palette_Off,
+                CustomSelectedTextColor = _global.Palette_Off,
+                CustomDisabledTextColor = _global.Palette_Off
             };
-            _btnIncreaseCount.OnClick += () => ChangeRandomCount(1);
-            _navigationGroup.Add(_btnIncreaseCount);
+            _btnMode4ffa.OnClick += () => SetMode(4);
+            _navigationGroup.Add(_btnMode4ffa);
+
+            _btnMode6ffa = new Button(new Rectangle(gridStartX, gridStartY + gridSpacingY, btnW, btnH), "6 FFA", font: secondaryFont)
+            {
+                TriggerHapticOnHover = true,
+                HoverAnimation = HoverAnimationType.Hop,
+                CustomDefaultTextColor = _global.Palette_Off,
+                CustomHoverTextColor = _global.Palette_Off,
+                CustomSelectedTextColor = _global.Palette_Off,
+                CustomDisabledTextColor = _global.Palette_Off
+            };
+            _btnMode6ffa.OnClick += () => SetMode(6);
+            _navigationGroup.Add(_btnMode6ffa);
+
+            _btnMode8ffa = new Button(new Rectangle(gridStartX + gridSpacingX, gridStartY + gridSpacingY, btnW, btnH), "8 FFA", font: secondaryFont)
+            {
+                TriggerHapticOnHover = true,
+                HoverAnimation = HoverAnimationType.Hop,
+                CustomDefaultTextColor = _global.Palette_Off,
+                CustomHoverTextColor = _global.Palette_Off,
+                CustomSelectedTextColor = _global.Palette_Off,
+                CustomDisabledTextColor = _global.Palette_Off
+            };
+            _btnMode8ffa.OnClick += () => SetMode(8);
+            _navigationGroup.Add(_btnMode8ffa);
 
             string startText = "START";
             Vector2 startSize = core.DefaultFont.MeasureString(startText);
             int startW = (int)startSize.X + 10;
             int startH = (int)startSize.Y + 6;
+            int startButtonY = 146;
 
             _startButton = new Button(
-                new Rectangle(Global.VIRTUAL_WIDTH - startW - 20, selectButtonY, startW, startH),
+                new Rectangle(Global.VIRTUAL_WIDTH - startW - 20, startButtonY, startW, startH),
                 startText,
                 font: core.DefaultFont
             )
@@ -317,22 +351,18 @@ namespace ProjectVagabond.Scenes
             _navigationGroup.Add(_startButton);
         }
 
-        private void ChangeRandomCount(int delta)
+        private void SetMode(int count)
         {
             if (_isPlinkingIn || _isAutoSelecting) return;
+            if (_randomCount != count)
+            {
+                _randomCount = count;
+                _hapticsManager.TriggerUICompoundShake(_global.ButtonHapticStrength);
 
-            int newCount = Math.Clamp(_randomCount + delta, 2, 8);
-            if (newCount != _randomCount)
-            {
-                _randomCount = newCount;
-                _plinkCount.Start(0f, 0.2f);
-                _hapticsManager.TriggerUICompoundShake(_global.ButtonHapticStrength);
-            }
-            else
-            {
-                _plinkCount.Start(0f, 0.2f);
-                _countRedFlashTimer = 0.3f;
-                _hapticsManager.TriggerUICompoundShake(_global.ButtonHapticStrength);
+                if (count == 2) _btnMode1v1.Plink.Start(0f, 0.15f);
+                else if (count == 4) _btnMode4ffa.Plink.Start(0f, 0.15f);
+                else if (count == 6) _btnMode6ffa.Plink.Start(0f, 0.15f);
+                else if (count == 8) _btnMode8ffa.Plink.Start(0f, 0.15f);
             }
         }
 
@@ -432,11 +462,6 @@ namespace ProjectVagabond.Scenes
                 _selectedWizards[key] = (data.Timer + dt, data.TargetRotation);
             }
 
-            if (_countRedFlashTimer > 0f)
-            {
-                _countRedFlashTimer -= dt;
-            }
-
             _introHeartWaveTimer += dt;
             if (_introHeartWaveTimer > _introHeartWaveInterval + 1.0f)
             {
@@ -474,7 +499,6 @@ namespace ProjectVagabond.Scenes
                 _plinkTitle1.Update(effectiveGameTime, new Vector2(centerX, 14));
                 _plinkTitle2.Update(effectiveGameTime, new Vector2(centerX, 14 + secondaryFont.LineHeight + 2));
                 _plinkStats.Update(effectiveGameTime, new Vector2(centerX, BASE_CENTER_Y + 70));
-                _plinkCount.Update(effectiveGameTime, new Vector2(centerX, 150 + 10));
 
                 int count = _characterIds.Count;
                 float carouselSlideOffset = MathF.Floor(_virtualIndex + 0.5f) - _virtualIndex;
@@ -497,16 +521,22 @@ namespace ProjectVagabond.Scenes
             }
             else
             {
-                int centerX = Global.VIRTUAL_WIDTH / 2;
-                _plinkCount.Update(effectiveGameTime, new Vector2(centerX, 150 + 10));
-
                 if (!_isAutoSelecting)
                 {
-                    _btnDecreaseCount.Update(currentMouseState);
-                    _btnIncreaseCount.Update(currentMouseState);
+                    _btnMode1v1.HoverAnimation = _randomCount == 2 ? HoverAnimationType.None : HoverAnimationType.Hop;
+                    _btnMode4ffa.HoverAnimation = _randomCount == 4 ? HoverAnimationType.None : HoverAnimationType.Hop;
+                    _btnMode6ffa.HoverAnimation = _randomCount == 6 ? HoverAnimationType.None : HoverAnimationType.Hop;
+                    _btnMode8ffa.HoverAnimation = _randomCount == 8 ? HoverAnimationType.None : HoverAnimationType.Hop;
+
+                    _btnMode1v1.Update(currentMouseState);
+                    _btnMode4ffa.Update(currentMouseState);
+                    _btnMode6ffa.Update(currentMouseState);
+                    _btnMode8ffa.Update(currentMouseState);
                     _startButton.Update(currentMouseState);
 
-                    if (!_btnDecreaseCount.IsHovered && !_btnIncreaseCount.IsHovered && !_startButton.IsHovered)
+                    bool hoverCount = _btnMode1v1.IsHovered || _btnMode4ffa.IsHovered || _btnMode6ffa.IsHovered || _btnMode8ffa.IsHovered;
+
+                    if (!hoverCount && !_startButton.IsHovered)
                     {
                         _leftArrow.Update(currentMouseState);
                         _rightArrow.Update(currentMouseState);
@@ -518,7 +548,6 @@ namespace ProjectVagabond.Scenes
                     }
 
                     bool hoverCarousel = _leftArrow.IsHovered || _rightArrow.IsHovered;
-                    bool hoverCount = _btnDecreaseCount.IsHovered || _btnIncreaseCount.IsHovered;
 
                     int currentScroll = currentMouseState.ScrollWheelValue;
                     int scrollDelta = currentScroll - _lastScrollWheelValue;
@@ -532,13 +561,25 @@ namespace ProjectVagabond.Scenes
                         if (_scrollAccumulator >= SCROLL_THRESHOLD)
                         {
                             if (hoverCarousel) CycleCharacter(1);
-                            else if (hoverCount) ChangeRandomCount(1);
+                            else if (hoverCount)
+                            {
+                                int[] modes = { 2, 4, 6, 8 };
+                                int idx = Array.IndexOf(modes, _randomCount);
+                                idx = (idx + 1) % 4;
+                                SetMode(modes[idx]);
+                            }
                             _scrollAccumulator = 0;
                         }
                         else if (_scrollAccumulator <= -SCROLL_THRESHOLD)
                         {
                             if (hoverCarousel) CycleCharacter(-1);
-                            else if (hoverCount) ChangeRandomCount(-1);
+                            else if (hoverCount)
+                            {
+                                int[] modes = { 2, 4, 6, 8 };
+                                int idx = Array.IndexOf(modes, _randomCount);
+                                idx = (idx - 1 + 4) % 4;
+                                SetMode(modes[idx]);
+                            }
                             _scrollAccumulator = 0;
                         }
                     }
@@ -614,7 +655,7 @@ namespace ProjectVagabond.Scenes
                     }
                     else
                     {
-                        if (!_btnDecreaseCount.IsSelected && !_btnIncreaseCount.IsSelected && !_startButton.IsSelected)
+                        if (!_btnMode1v1.IsSelected && !_btnMode4ffa.IsSelected && !_btnMode6ffa.IsSelected && !_btnMode8ffa.IsSelected && !_startButton.IsSelected)
                         {
                             _navigationGroup.Select(0);
                         }
@@ -675,6 +716,38 @@ namespace ProjectVagabond.Scenes
             }
 
             _previousMouseState = currentMouseState;
+        }
+
+        private void DrawModeButtonBackground(SpriteBatch spriteBatch, Button btn, int modeValue, Texture2D pixel)
+        {
+            float scale = btn.Plink.IsActive ? btn.Plink.Scale : 1f;
+            float rotation = btn.Plink.IsActive ? btn.Plink.Rotation : 0f;
+            if (scale < 0.01f) return;
+
+            float yOffset = 0f;
+            Color bgColor;
+
+            if (_randomCount == modeValue)
+            {
+                yOffset = 0f;
+                bgColor = _global.Palette_Sun;
+            }
+            else
+            {
+                yOffset = btn.HoverAnimator.CurrentOffset;
+                if (btn.IsPressed) bgColor = _global.Palette_Fruit;
+                else if (btn.IsHovered) bgColor = _global.ButtonHoverColor;
+                else bgColor = _global.Palette_DarkestPale;
+            }
+
+            Vector2 center = new Vector2(btn.Bounds.Center.X, btn.Bounds.Center.Y + yOffset);
+
+            int w = btn.Bounds.Width;
+            int h = btn.Bounds.Height;
+
+            spriteBatch.Draw(pixel, center, new Rectangle(0, 0, 1, 1), bgColor, rotation, new Vector2(0.5f, 0.5f), new Vector2(w - 4, h) * scale, SpriteEffects.None, 0f);
+            spriteBatch.Draw(pixel, center, new Rectangle(0, 0, 1, 1), bgColor, rotation, new Vector2(0.5f, 0.5f), new Vector2(w - 2, h - 2) * scale, SpriteEffects.None, 0f);
+            spriteBatch.Draw(pixel, center, new Rectangle(0, 0, 1, 1), bgColor, rotation, new Vector2(0.5f, 0.5f), new Vector2(w, h - 4) * scale, SpriteEffects.None, 0f);
         }
 
         protected override void DrawSceneContent(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Matrix transform)
@@ -774,46 +847,20 @@ namespace ProjectVagabond.Scenes
 
             spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp, null, null, null, staticTransform);
 
-            int centerX = Global.VIRTUAL_WIDTH / 2;
-            string countText = _randomCount.ToString();
-            Vector2 countSize = core.DefaultFont.MeasureString(countText);
-            Vector2 countPos = new Vector2(MathF.Round(centerX - countSize.X / 2f), MathF.Round(150 + 10 - countSize.Y / 2f));
-            Vector2 countOrigin = new Vector2(MathF.Round(countSize.X / 2f), MathF.Round(countSize.Y / 2f));
-
-            float cScale = _plinkCount.IsActive ? _plinkCount.Scale : 1f;
-            float cRot = _plinkCount.IsActive ? _plinkCount.Rotation : 0f;
-            Color cColor = _countRedFlashTimer > 0 ? _global.Palette_Rust : _global.Palette_Pale;
-
-            spriteBatch.DrawStringSnapped(core.DefaultFont, countText, countPos + countOrigin, cColor, cRot, countOrigin, cScale, SpriteEffects.None, 0f);
-
             var pixel = ServiceLocator.Get<Texture2D>();
-            for (int i = 0; i < _randomCount; i++)
-            {
-                float localX = -2f;
-                float localY = -countOrigin.Y - 4f - (i * 3f);
-                Vector2 localPos = new Vector2(localX, localY);
+            DrawModeButtonBackground(spriteBatch, _btnMode1v1, 2, pixel);
+            DrawModeButtonBackground(spriteBatch, _btnMode4ffa, 4, pixel);
+            DrawModeButtonBackground(spriteBatch, _btnMode6ffa, 6, pixel);
+            DrawModeButtonBackground(spriteBatch, _btnMode8ffa, 8, pixel);
 
-                float cos = MathF.Cos(cRot);
-                float sin = MathF.Sin(cRot);
-                Vector2 rotatedPos = new Vector2(
-                    localPos.X * cos - localPos.Y * sin,
-                    localPos.X * sin + localPos.Y * cos
-                );
-
-                Vector2 finalPos = countPos + countOrigin + (rotatedPos * cScale);
-                Vector2 rectScale = new Vector2(4f * cScale, 1f * cScale);
-
-                spriteBatch.DrawSnapped(pixel, finalPos, null, _global.Palette_Pale, cRot, Vector2.Zero, rectScale, SpriteEffects.None, 0f);
-            }
-
-            Color decColor = (_btnDecreaseCount.IsHovered || _btnDecreaseCount.IsSelected) ? _global.ButtonHoverColor : _global.GameTextColor;
-            _btnDecreaseCount.Draw(spriteBatch, secondaryFont, effectiveGameTime, Matrix.Identity, false, null, null, decColor);
-
-            Color incColor = (_btnIncreaseCount.IsHovered || _btnIncreaseCount.IsSelected) ? _global.ButtonHoverColor : _global.GameTextColor;
-            _btnIncreaseCount.Draw(spriteBatch, secondaryFont, effectiveGameTime, Matrix.Identity, false, null, null, incColor);
+            _btnMode1v1.Draw(spriteBatch, secondaryFont, effectiveGameTime, Matrix.Identity);
+            _btnMode4ffa.Draw(spriteBatch, secondaryFont, effectiveGameTime, Matrix.Identity);
+            _btnMode6ffa.Draw(spriteBatch, secondaryFont, effectiveGameTime, Matrix.Identity);
+            _btnMode8ffa.Draw(spriteBatch, secondaryFont, effectiveGameTime, Matrix.Identity);
 
             Color startColor = (_startButton.IsHovered || _startButton.IsSelected) ? _global.ButtonHoverColor : _global.GameTextColor;
             _startButton.Draw(spriteBatch, core.DefaultFont, effectiveGameTime, Matrix.Identity, false, null, null, startColor);
+
             spriteBatch.End();
 
             float sScale = _isPlinkingIn ? _plinkStats.Scale : 1f;
