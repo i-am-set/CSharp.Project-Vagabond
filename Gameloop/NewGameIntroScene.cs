@@ -2,15 +2,17 @@
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
+using ProjectVagabond.Animations;
 using ProjectVagabond.Battle;
+using ProjectVagabond.Deliveries;
 using ProjectVagabond.Particles;
 using ProjectVagabond.Scenes;
 using ProjectVagabond.Transitions;
 using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
+using System.Collections;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 
 namespace ProjectVagabond.Scenes
@@ -28,16 +30,42 @@ namespace ProjectVagabond.Scenes
         // Carousel State
         private List<string> _characterIds = new();
         private HashSet<string> _selectedWizards = new HashSet<string>();
-        private int _focusedIndex = 0;
-        private float _carouselSlideOffset = 0f;
+
+        private float _virtualIndex = 0f;
+        private int _targetVirtualIndex = 0;
         private const float CAROUSEL_SLIDE_SPEED = 15f;
+
+        // Drag State
+        private bool _isMouseDownOnCarousel = false;
+        private bool _isDraggingCarousel = false;
+        private Vector2 _dragStartPos;
+        private float _dragStartVirtualIndex;
+        private float _carouselVelocity = 0f;
+        private float _carouselFriction = 2.5f;
+        private int _lastHapticIndex = 0;
+
+        // Auto-Select State
+        private enum AutoSelectState { Spinning, Pausing }
+        private bool _isAutoSelecting = false;
+        private AutoSelectState _autoSelectState;
+        private List<string> _autoSelectQueue = new List<string>();
+        private float _spinStartVirtualIndex;
+        private float _spinTargetVirtualIndex;
+        private float _spinDuration;
+        private float _spinTimer;
+        private float _pauseDuration;
+        private float _timePerSelection;
+        private const float TOTAL_AUTO_SELECT_DURATION = 2.0f;
 
         // UI Elements
         private Button _leftArrow;
         private Button _rightArrow;
-        private Button _selectButton;
+        private Button _btnDecreaseCount;
+        private Button _btnIncreaseCount;
         private Button _startButton;
         private readonly NavigationGroup _navigationGroup;
+
+        private int _randomCount = 4;
 
         // Intro Text
         private const string INTRO_LINE_1 = "CHOOSE A";
@@ -48,6 +76,7 @@ namespace ProjectVagabond.Scenes
         private PlinkAnimator _plinkTitle1;
         private PlinkAnimator _plinkTitle2;
         private PlinkAnimator _plinkStats;
+        private PlinkAnimator _plinkCount;
         private PlinkAnimator[] _plinkCarousel = new PlinkAnimator[7];
         private List<PlinkAnimator> _allPlinks = new List<PlinkAnimator>();
 
@@ -60,6 +89,7 @@ namespace ProjectVagabond.Scenes
         private float _titleWaveTimer = 0f;
         private float _introHeartWaveTimer = 0f;
         private float _introHeartWaveInterval = 3f;
+        private float _countRedFlashTimer = 0f;
 
         // Arrow Simulation State
         private float _leftArrowSimTimer = 0f;
@@ -69,6 +99,7 @@ namespace ProjectVagabond.Scenes
         // Scroll State
         private int _lastScrollWheelValue;
         private int _scrollAccumulator;
+        private MouseState _previousMouseState;
 
         // Layout Constants
         private const int BASE_CENTER_Y = 50;
@@ -102,20 +133,26 @@ namespace ProjectVagabond.Scenes
             InitializeUI();
 
             _selectedWizards.Clear();
-            _carouselSlideOffset = 0f;
+            _isAutoSelecting = false;
             _titleWaveTimer = 0f;
             _idleTimer = 0f;
             _leftArrowSimTimer = 0f;
             _rightArrowSimTimer = 0f;
+            _countRedFlashTimer = 0f;
             _introHeartWaveTimer = 0f;
             _introHeartWaveInterval = 2f + (float)new Random().NextDouble() * 4f;
 
-            _lastScrollWheelValue = _inputManager.GetEffectiveMouseState().ScrollWheelValue;
+            _previousMouseState = _inputManager.GetEffectiveMouseState();
+            _lastScrollWheelValue = _previousMouseState.ScrollWheelValue;
             _scrollAccumulator = 0;
+
+            _isMouseDownOnCarousel = false;
+            _isDraggingCarousel = false;
+            _carouselVelocity = 0f;
+            _lastHapticIndex = _targetVirtualIndex;
 
             _navigationGroup.DeselectAll();
 
-            // --- Setup Randomized Plink Stagger ---
             _isPlinkingIn = true;
             _allPlinks.Clear();
             _plinkQueue.Clear();
@@ -123,6 +160,7 @@ namespace ProjectVagabond.Scenes
             _plinkTitle1 = new PlinkAnimator(); _allPlinks.Add(_plinkTitle1);
             _plinkTitle2 = new PlinkAnimator(); _allPlinks.Add(_plinkTitle2);
             _plinkStats = new PlinkAnimator(); _allPlinks.Add(_plinkStats);
+            _plinkCount = new PlinkAnimator(); _allPlinks.Add(_plinkCount);
 
             for (int i = 0; i < 7; i++)
             {
@@ -130,25 +168,26 @@ namespace ProjectVagabond.Scenes
                 _allPlinks.Add(_plinkCarousel[i]);
             }
 
-            // Hide them initially by starting with a massive delay so they scale to 0
             foreach (var p in _allPlinks) p.Start(9999f, 0.25f);
 
             _leftArrow.SetHiddenForEntrance();
             _rightArrow.SetHiddenForEntrance();
-            _selectButton.SetHiddenForEntrance();
+            _btnDecreaseCount.SetHiddenForEntrance();
+            _btnIncreaseCount.SetHiddenForEntrance();
             _startButton.SetHiddenForEntrance();
 
             _allPlinks.Add(_leftArrow.Plink);
             _allPlinks.Add(_rightArrow.Plink);
-            _allPlinks.Add(_selectButton.Plink);
+            _allPlinks.Add(_btnDecreaseCount.Plink);
+            _allPlinks.Add(_btnIncreaseCount.Plink);
             _allPlinks.Add(_startButton.Plink);
 
-            // Queue up the random elements
             var randomActions = new List<Action>
             {
                 () => _plinkTitle1.Start(0f, 0.25f),
                 () => _plinkTitle2.Start(0f, 0.25f),
-                () => _plinkStats.Start(0f, 0.25f)
+                () => _plinkStats.Start(0f, 0.25f),
+                () => _plinkCount.Start(0f, 0.25f)
             };
 
             for (int i = 0; i < 7; i++)
@@ -162,10 +201,10 @@ namespace ProjectVagabond.Scenes
 
             foreach (var a in randomActions) _plinkQueue.Enqueue(a);
 
-            // Queue the buttons explicitly at the end so they ALWAYS pop last
             _plinkQueue.Enqueue(() => _leftArrow.PlayEntrance(0f));
             _plinkQueue.Enqueue(() => _rightArrow.PlayEntrance(0f));
-            _plinkQueue.Enqueue(() => _selectButton.PlayEntrance(0f));
+            _plinkQueue.Enqueue(() => _btnDecreaseCount.PlayEntrance(0f));
+            _plinkQueue.Enqueue(() => _btnIncreaseCount.PlayEntrance(0f));
             _plinkQueue.Enqueue(() => _startButton.PlayEntrance(0f));
 
             _plinkTimer = 0f;
@@ -182,7 +221,8 @@ namespace ProjectVagabond.Scenes
             });
 
             int oakleyIndex = _characterIds.IndexOf("0");
-            _focusedIndex = oakleyIndex != -1 ? oakleyIndex : 0;
+            _targetVirtualIndex = oakleyIndex != -1 ? oakleyIndex : 0;
+            _virtualIndex = _targetVirtualIndex;
         }
 
         private void InitializeUI()
@@ -190,17 +230,15 @@ namespace ProjectVagabond.Scenes
             _navigationGroup.Clear();
             var core = ServiceLocator.Get<Core>();
             var secondaryFont = core.SecondaryFont;
-            var tertiaryFont = core.TertiaryFont;
 
             int centerX = Global.VIRTUAL_WIDTH / 2;
             int centerY = BASE_CENTER_Y;
 
             int arrowY = centerY;
             int halfWidth = Global.VIRTUAL_WIDTH / 2;
-            int buttonHeight = 16;
+            int buttonHeight = 32;
             int buttonY = arrowY - (buttonHeight / 2);
 
-            // Calculate Text Offsets
             float leftButtonCenterX = halfWidth / 2f;
             float leftTextTargetX = centerX - 24;
             float leftOffset = leftTextTargetX - leftButtonCenterX;
@@ -217,7 +255,6 @@ namespace ProjectVagabond.Scenes
                 EnableTextWave = false,
                 TextRenderOffset = new Vector2(leftOffset, 0)
             };
-            _leftArrow.OnClick += () => CycleCharacter(-1);
 
             float rightButtonCenterX = halfWidth + (halfWidth / 2f);
             float rightTextTargetX = centerX + 24;
@@ -235,29 +272,33 @@ namespace ProjectVagabond.Scenes
                 EnableTextWave = false,
                 TextRenderOffset = new Vector2(rightOffset, 0)
             };
-            _rightArrow.OnClick += () => CycleCharacter(1);
 
-            // --- Select Button ---
             int selectButtonY = 150;
 
-            string selectText = "SELECT";
-            Vector2 selectSize = secondaryFont.MeasureString(selectText);
-            int selectW = (int)selectSize.X + 10;
-            int selectH = (int)selectSize.Y + 6;
-
-            _selectButton = new Button(
-                new Rectangle(centerX - selectW / 2, selectButtonY, selectW, selectH),
-                selectText,
+            _btnDecreaseCount = new Button(
+                new Rectangle(centerX - 38, selectButtonY, 38, 20),
+                "<",
                 font: secondaryFont
             )
             {
                 TriggerHapticOnHover = true,
                 HoverAnimation = HoverAnimationType.Hop
             };
-            _selectButton.OnClick += ToggleSelection;
-            _navigationGroup.Add(_selectButton);
+            _btnDecreaseCount.OnClick += () => ChangeRandomCount(-1);
+            _navigationGroup.Add(_btnDecreaseCount);
 
-            // --- Start Button ---
+            _btnIncreaseCount = new Button(
+                new Rectangle(centerX, selectButtonY, 38, 20),
+                ">",
+                font: secondaryFont
+            )
+            {
+                TriggerHapticOnHover = true,
+                HoverAnimation = HoverAnimationType.Hop
+            };
+            _btnIncreaseCount.OnClick += () => ChangeRandomCount(1);
+            _navigationGroup.Add(_btnIncreaseCount);
+
             string startText = "START";
             Vector2 startSize = core.DefaultFont.MeasureString(startText);
             int startW = (int)startSize.X + 10;
@@ -276,48 +317,86 @@ namespace ProjectVagabond.Scenes
             _navigationGroup.Add(_startButton);
         }
 
+        private void ChangeRandomCount(int delta)
+        {
+            if (_isPlinkingIn || _isAutoSelecting) return;
+
+            int newCount = Math.Clamp(_randomCount + delta, 2, 8);
+            if (newCount != _randomCount)
+            {
+                _randomCount = newCount;
+                _plinkCount.Start(0f, 0.2f);
+                _hapticsManager.TriggerUICompoundShake(_global.ButtonHapticStrength);
+            }
+            else
+            {
+                _plinkCount.Start(0f, 0.2f);
+                _countRedFlashTimer = 0.3f;
+                _hapticsManager.TriggerUICompoundShake(_global.ButtonHapticStrength);
+            }
+        }
+
         private void CycleCharacter(int direction)
         {
-            if (_isPlinkingIn) return;
+            if (_isPlinkingIn || _isAutoSelecting) return;
 
             _hapticsManager.TriggerUICompoundShake(_global.ButtonHapticStrength);
 
-            // Trigger visual simulation only if not using mouse
             if (_inputManager.CurrentInputDevice != InputDeviceType.Mouse)
             {
                 if (direction == -1) _leftArrowSimTimer = ARROW_SIM_DURATION;
                 else _rightArrowSimTimer = ARROW_SIM_DURATION;
             }
 
-            _focusedIndex += direction;
-
-            if (_focusedIndex < 0) _focusedIndex = _characterIds.Count - 1;
-            if (_focusedIndex >= _characterIds.Count) _focusedIndex = 0;
-
-            _carouselSlideOffset = direction;
-        }
-
-        private void ToggleSelection()
-        {
-            if (_isPlinkingIn) return;
-            _hapticsManager.TriggerUICompoundShake(_global.ButtonHapticStrength);
-
-            string selectedId = _characterIds[_focusedIndex];
-            if (_selectedWizards.Contains(selectedId))
-            {
-                _selectedWizards.Remove(selectedId);
-            }
-            else
-            {
-                _selectedWizards.Add(selectedId);
-            }
+            _targetVirtualIndex += direction;
         }
 
         private void StartGame()
         {
-            if (_isPlinkingIn || _transitionManager.IsTransitioning || _selectedWizards.Count < 2) return;
+            if (_isPlinkingIn || _transitionManager.IsTransitioning || _isAutoSelecting) return;
             _hapticsManager.TriggerUICompoundShake(_global.ButtonHapticStrength);
 
+            var rng = new Random();
+            var shuffled = _characterIds.OrderBy(x => rng.Next()).ToList();
+            _autoSelectQueue = shuffled.Take(_randomCount).ToList();
+            _selectedWizards.Clear();
+
+            _timePerSelection = TOTAL_AUTO_SELECT_DURATION / _randomCount;
+
+            _isAutoSelecting = true;
+            SetupNextSpin();
+        }
+
+        private void SetupNextSpin()
+        {
+            if (_autoSelectQueue.Count == 0)
+            {
+                StartGameActual();
+                return;
+            }
+
+            string targetId = _autoSelectQueue[0];
+            int targetIndex = _characterIds.IndexOf(targetId);
+            int count = _characterIds.Count;
+
+            int currentIndex = ((int)MathF.Floor(_virtualIndex + 0.5f) % count + count) % count;
+            int diff = targetIndex - currentIndex;
+
+            if (diff > count / 2) diff -= count;
+            else if (diff < -count / 2) diff += count;
+
+            if (diff == 0) diff = count;
+
+            _spinStartVirtualIndex = _virtualIndex;
+            _spinTargetVirtualIndex = MathF.Floor(_virtualIndex + 0.5f) + diff;
+            _spinDuration = _timePerSelection * 0.7f;
+            _pauseDuration = _timePerSelection * 0.3f;
+            _spinTimer = 0f;
+            _autoSelectState = AutoSelectState.Spinning;
+        }
+
+        private void StartGameActual()
+        {
             var core = ServiceLocator.Get<Core>();
             var gameState = ServiceLocator.Get<GameState>();
 
@@ -345,11 +424,13 @@ namespace ProjectVagabond.Scenes
 
             if (_transitionManager.IsTransitioning) return;
 
-            _carouselSlideOffset = MathHelper.Lerp(_carouselSlideOffset, 0f, dt * CAROUSEL_SLIDE_SPEED);
-            if (Math.Abs(_carouselSlideOffset) < 0.01f) _carouselSlideOffset = 0f;
-
             _idleTimer += dt;
             _titleWaveTimer += dt;
+
+            if (_countRedFlashTimer > 0f)
+            {
+                _countRedFlashTimer -= dt;
+            }
 
             _introHeartWaveTimer += dt;
             if (_introHeartWaveTimer > _introHeartWaveInterval + 1.0f)
@@ -371,6 +452,7 @@ namespace ProjectVagabond.Scenes
             }
 
             var currentMouseState = _inputManager.GetEffectiveMouseState();
+            Vector2 virtualMousePos = Core.TransformMouse(currentMouseState.Position);
 
             if (_isPlinkingIn)
             {
@@ -387,11 +469,15 @@ namespace ProjectVagabond.Scenes
                 _plinkTitle1.Update(effectiveGameTime, new Vector2(centerX, 14));
                 _plinkTitle2.Update(effectiveGameTime, new Vector2(centerX, 14 + secondaryFont.LineHeight + 2));
                 _plinkStats.Update(effectiveGameTime, new Vector2(centerX, BASE_CENTER_Y + 70));
+                _plinkCount.Update(effectiveGameTime, new Vector2(centerX, 150 + 10));
+
+                int count = _characterIds.Count;
+                float carouselSlideOffset = MathF.Floor(_virtualIndex + 0.5f) - _virtualIndex;
 
                 for (int i = 0; i < 7; i++)
                 {
                     int offset = i - 3;
-                    float visualOffset = offset + _carouselSlideOffset;
+                    float visualOffset = offset + carouselSlideOffset;
                     float xOffset = MathF.Sin(visualOffset * 0.5f) * 100f;
                     float xPos = centerX + xOffset;
                     float curveY = MathF.Pow(Math.Abs(visualOffset), 1.5f) * 2.0f;
@@ -406,80 +492,182 @@ namespace ProjectVagabond.Scenes
             }
             else
             {
-                // --- Normal Selection Logic ---
-                int currentScroll = currentMouseState.ScrollWheelValue;
-                int scrollDelta = currentScroll - _lastScrollWheelValue;
-                _lastScrollWheelValue = currentScroll;
-                _scrollAccumulator += scrollDelta;
+                int centerX = Global.VIRTUAL_WIDTH / 2;
+                _plinkCount.Update(effectiveGameTime, new Vector2(centerX, 150 + 10));
 
-                const int SCROLL_THRESHOLD = 120;
-                if (_scrollAccumulator >= SCROLL_THRESHOLD)
+                if (!_isAutoSelecting)
                 {
-                    CycleCharacter(-1); // Scroll Up -> Left
-                    _scrollAccumulator = 0;
-                }
-                else if (_scrollAccumulator <= -SCROLL_THRESHOLD)
-                {
-                    CycleCharacter(1); // Scroll Down -> Right
-                    _scrollAccumulator = 0;
-                }
+                    _btnDecreaseCount.Update(currentMouseState);
+                    _btnIncreaseCount.Update(currentMouseState);
+                    _startButton.Update(currentMouseState);
 
-                // Update Button States
-                string currentId = _characterIds[_focusedIndex];
-                bool isSelected = _selectedWizards.Contains(currentId);
-                if (isSelected)
-                {
-                    _selectButton.Text = "DESELECT";
-                    _selectButton.CustomDefaultTextColor = _global.Palette_Fruit;
-                    _selectButton.CustomHoverTextColor = _global.Palette_Rust;
-                }
-                else
-                {
-                    _selectButton.Text = "SELECT";
-                    _selectButton.CustomDefaultTextColor = null;
-                    _selectButton.CustomHoverTextColor = null;
-                }
-
-                _startButton.IsEnabled = _selectedWizards.Count >= 2;
-
-                // Mouse Updates
-                _selectButton.Update(currentMouseState);
-                _startButton.Update(currentMouseState);
-
-                if (!_selectButton.IsHovered && !_startButton.IsHovered)
-                {
-                    _leftArrow.Update(currentMouseState);
-                    _rightArrow.Update(currentMouseState);
-                }
-                else
-                {
-                    _leftArrow.IsHovered = false;
-                    _rightArrow.IsHovered = false;
-                }
-
-                // Input Handling
-                if (_inputManager.CurrentInputDevice == InputDeviceType.Mouse)
-                {
-                    _navigationGroup.DeselectAll();
-                }
-                else
-                {
-                    if (!_selectButton.IsSelected && !_startButton.IsSelected)
+                    if (!_btnDecreaseCount.IsHovered && !_btnIncreaseCount.IsHovered && !_startButton.IsHovered)
                     {
-                        _navigationGroup.Select(0);
+                        _leftArrow.Update(currentMouseState);
+                        _rightArrow.Update(currentMouseState);
+                    }
+                    else
+                    {
+                        _leftArrow.IsHovered = false;
+                        _rightArrow.IsHovered = false;
                     }
 
-                    if (_inputManager.NavigateLeft) CycleCharacter(-1);
-                    else if (_inputManager.NavigateRight) CycleCharacter(1);
+                    bool hoverCarousel = _leftArrow.IsHovered || _rightArrow.IsHovered;
+                    bool hoverCount = _btnDecreaseCount.IsHovered || _btnIncreaseCount.IsHovered;
 
-                    _navigationGroup.UpdateInput(_inputManager);
+                    int currentScroll = currentMouseState.ScrollWheelValue;
+                    int scrollDelta = currentScroll - _lastScrollWheelValue;
+                    _lastScrollWheelValue = currentScroll;
+
+                    if (scrollDelta != 0)
+                    {
+                        _scrollAccumulator += scrollDelta;
+                        const int SCROLL_THRESHOLD = 120;
+
+                        if (_scrollAccumulator >= SCROLL_THRESHOLD)
+                        {
+                            if (hoverCarousel) CycleCharacter(1);
+                            else if (hoverCount) ChangeRandomCount(1);
+                            _scrollAccumulator = 0;
+                        }
+                        else if (_scrollAccumulator <= -SCROLL_THRESHOLD)
+                        {
+                            if (hoverCarousel) CycleCharacter(-1);
+                            else if (hoverCount) ChangeRandomCount(-1);
+                            _scrollAccumulator = 0;
+                        }
+                    }
+
+                    bool justPressed = currentMouseState.LeftButton == ButtonState.Pressed && _previousMouseState.LeftButton == ButtonState.Released;
+                    bool justReleased = currentMouseState.LeftButton == ButtonState.Released && _previousMouseState.LeftButton == ButtonState.Pressed;
+                    bool isPressed = currentMouseState.LeftButton == ButtonState.Pressed;
+
+                    if (justPressed && hoverCarousel)
+                    {
+                        _isMouseDownOnCarousel = true;
+                        _isDraggingCarousel = false;
+                        _dragStartPos = virtualMousePos;
+                    }
+
+                    if (isPressed && _isMouseDownOnCarousel)
+                    {
+                        float deltaX = _dragStartPos.X - virtualMousePos.X;
+                        if (!_isDraggingCarousel && Math.Abs(deltaX) > 2f)
+                        {
+                            _isDraggingCarousel = true;
+                            _dragStartPos = virtualMousePos;
+                            _dragStartVirtualIndex = _virtualIndex;
+                            _carouselVelocity = 0f;
+                        }
+
+                        if (_isDraggingCarousel)
+                        {
+                            float prevIndex = _virtualIndex;
+                            float activeDeltaX = _dragStartPos.X - virtualMousePos.X;
+                            _virtualIndex = _dragStartVirtualIndex + (activeDeltaX / 40f);
+                            if (dt > 0) _carouselVelocity = (_virtualIndex - prevIndex) / dt;
+                            _targetVirtualIndex = (int)MathF.Round(_virtualIndex);
+                        }
+                    }
+
+                    if (justReleased && _isMouseDownOnCarousel)
+                    {
+                        _isMouseDownOnCarousel = false;
+                        if (!_isDraggingCarousel)
+                        {
+                            if (_leftArrow.IsHovered) CycleCharacter(-1);
+                            else if (_rightArrow.IsHovered) CycleCharacter(1);
+                        }
+                        _isDraggingCarousel = false;
+                    }
+
+                    if (!_isDraggingCarousel)
+                    {
+                        if (Math.Abs(_carouselVelocity) > 0.1f)
+                        {
+                            _virtualIndex += _carouselVelocity * dt;
+                            _carouselVelocity *= MathF.Max(0f, 1f - _carouselFriction * dt);
+                            _targetVirtualIndex = (int)MathF.Round(_virtualIndex);
+                        }
+                        else
+                        {
+                            _carouselVelocity = 0f;
+                            _virtualIndex = MathHelper.Lerp(_virtualIndex, _targetVirtualIndex, dt * CAROUSEL_SLIDE_SPEED);
+                        }
+                    }
+
+                    int currentIndex = (int)MathF.Round(_virtualIndex);
+                    if (currentIndex != _lastHapticIndex)
+                    {
+                        _lastHapticIndex = currentIndex;
+                        _hapticsManager.TriggerUICompoundShake(_global.HoverHapticStrength);
+                    }
+
+                    if (_inputManager.CurrentInputDevice == InputDeviceType.Mouse)
+                    {
+                        _navigationGroup.DeselectAll();
+                    }
+                    else
+                    {
+                        if (!_btnDecreaseCount.IsSelected && !_btnIncreaseCount.IsSelected && !_startButton.IsSelected)
+                        {
+                            _navigationGroup.Select(0);
+                        }
+
+                        if (_inputManager.NavigateLeft) CycleCharacter(-1);
+                        else if (_inputManager.NavigateRight) CycleCharacter(1);
+
+                        _navigationGroup.UpdateInput(_inputManager);
+                    }
+
+                    if (_inputManager.Back)
+                    {
+                        _sceneManager.ChangeScene(GameSceneState.MainMenu, TransitionType.None, TransitionType.None);
+                    }
                 }
-
-                if (_inputManager.Back)
+                else
                 {
-                    _sceneManager.ChangeScene(GameSceneState.MainMenu, TransitionType.None, TransitionType.None);
+                    _lastScrollWheelValue = currentMouseState.ScrollWheelValue;
+
+                    if (_autoSelectState == AutoSelectState.Spinning)
+                    {
+                        _spinTimer += dt;
+                        float p = Math.Clamp(_spinTimer / _spinDuration, 0f, 1f);
+                        _virtualIndex = MathHelper.Lerp(_spinStartVirtualIndex, _spinTargetVirtualIndex, Easing.EaseInOutCubic(p));
+
+                        int currentIndex = (int)MathF.Round(_virtualIndex);
+                        if (currentIndex != _lastHapticIndex)
+                        {
+                            _lastHapticIndex = currentIndex;
+                            _hapticsManager.TriggerUICompoundShake(_global.HoverHapticStrength);
+                        }
+
+                        if (p >= 1f)
+                        {
+                            _virtualIndex = _spinTargetVirtualIndex;
+                            _selectedWizards.Add(_autoSelectQueue[0]);
+                            _autoSelectQueue.RemoveAt(0);
+                            _autoSelectState = AutoSelectState.Pausing;
+                            _spinTimer = 0f;
+                            _hapticsManager.TriggerUICompoundShake(_global.ButtonHapticStrength * 2f);
+
+                            var emitter = _particleSystemManager.CreateEmitter(ParticleEffects.CreateUIPlink());
+                            emitter.Position = new Vector2(Global.VIRTUAL_WIDTH / 2f, BASE_CENTER_Y);
+                            emitter.EmitBurst(15);
+                        }
+                    }
+                    else if (_autoSelectState == AutoSelectState.Pausing)
+                    {
+                        _spinTimer += dt;
+                        if (_spinTimer >= _pauseDuration)
+                        {
+                            SetupNextSpin();
+                        }
+                    }
                 }
             }
+
+            _previousMouseState = currentMouseState;
         }
 
         protected override void DrawSceneContent(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Matrix transform)
@@ -494,12 +682,10 @@ namespace ProjectVagabond.Scenes
 
             spriteBatch.End();
 
-            // Background
             spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.Opaque, SamplerState.PointClamp, null, null, null, staticTransform);
             spriteBatch.Draw(_spriteManager.EmptySprite, new Rectangle(0, 0, Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT), _global.Palette_Off);
             spriteBatch.End();
 
-            // --- Title ---
             spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp, null, null, null, staticTransform);
 
             float titleY = 14f;
@@ -536,7 +722,6 @@ namespace ProjectVagabond.Scenes
 
             spriteBatch.End();
 
-            // --- Carousel ---
             spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp, null, null, null, transform);
             if (_characterIds.Count > 0)
             {
@@ -544,8 +729,6 @@ namespace ProjectVagabond.Scenes
             }
             spriteBatch.End();
 
-            // --- UI Elements ---
-            // Left Arrow
             float leftY = 0f;
             Color leftColor = (_leftArrow.IsHovered || _leftArrow.IsSelected) ? _global.ButtonHoverColor : _global.GameTextColor;
 
@@ -564,7 +747,6 @@ namespace ProjectVagabond.Scenes
             _leftArrow.Draw(spriteBatch, font, effectiveGameTime, Matrix.Identity, false, null, null, leftColor);
             spriteBatch.End();
 
-            // Right Arrow
             float rightY = 0f;
             Color rightColor = (_rightArrow.IsHovered || _rightArrow.IsSelected) ? _global.ButtonHoverColor : _global.GameTextColor;
 
@@ -583,17 +765,50 @@ namespace ProjectVagabond.Scenes
             _rightArrow.Draw(spriteBatch, font, effectiveGameTime, Matrix.Identity, false, null, null, rightColor);
             spriteBatch.End();
 
-            // Select Button
             spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp, null, null, null, staticTransform);
-            Color selectColor = (_selectButton.IsHovered || _selectButton.IsSelected) ? _global.ButtonHoverColor : _global.GameTextColor;
-            _selectButton.Draw(spriteBatch, font, effectiveGameTime, Matrix.Identity, false, null, null, selectColor);
 
-            // Start Button
+            int centerX = Global.VIRTUAL_WIDTH / 2;
+            string countText = _randomCount.ToString();
+            Vector2 countSize = core.DefaultFont.MeasureString(countText);
+            Vector2 countPos = new Vector2(MathF.Round(centerX - countSize.X / 2f), MathF.Round(150 + 10 - countSize.Y / 2f));
+            Vector2 countOrigin = new Vector2(MathF.Round(countSize.X / 2f), MathF.Round(countSize.Y / 2f));
+
+            float cScale = _plinkCount.IsActive ? _plinkCount.Scale : 1f;
+            float cRot = _plinkCount.IsActive ? _plinkCount.Rotation : 0f;
+            Color cColor = _countRedFlashTimer > 0 ? _global.Palette_Rust : _global.Palette_Pale;
+
+            spriteBatch.DrawStringSnapped(core.DefaultFont, countText, countPos + countOrigin, cColor, cRot, countOrigin, cScale, SpriteEffects.None, 0f);
+
+            var pixel = ServiceLocator.Get<Texture2D>();
+            for (int i = 0; i < _randomCount; i++)
+            {
+                float localX = -2f;
+                float localY = -countOrigin.Y - 4f - (i * 3f);
+                Vector2 localPos = new Vector2(localX, localY);
+
+                float cos = MathF.Cos(cRot);
+                float sin = MathF.Sin(cRot);
+                Vector2 rotatedPos = new Vector2(
+                    localPos.X * cos - localPos.Y * sin,
+                    localPos.X * sin + localPos.Y * cos
+                );
+
+                Vector2 finalPos = countPos + countOrigin + (rotatedPos * cScale);
+                Vector2 rectScale = new Vector2(4f * cScale, 1f * cScale);
+
+                spriteBatch.DrawSnapped(pixel, finalPos, null, _global.Palette_Pale, cRot, Vector2.Zero, rectScale, SpriteEffects.None, 0f);
+            }
+
+            Color decColor = (_btnDecreaseCount.IsHovered || _btnDecreaseCount.IsSelected) ? _global.ButtonHoverColor : _global.GameTextColor;
+            _btnDecreaseCount.Draw(spriteBatch, secondaryFont, effectiveGameTime, Matrix.Identity, false, null, null, decColor);
+
+            Color incColor = (_btnIncreaseCount.IsHovered || _btnIncreaseCount.IsSelected) ? _global.ButtonHoverColor : _global.GameTextColor;
+            _btnIncreaseCount.Draw(spriteBatch, secondaryFont, effectiveGameTime, Matrix.Identity, false, null, null, incColor);
+
             Color startColor = (_startButton.IsHovered || _startButton.IsSelected) ? _global.ButtonHoverColor : _global.GameTextColor;
             _startButton.Draw(spriteBatch, core.DefaultFont, effectiveGameTime, Matrix.Identity, false, null, null, startColor);
             spriteBatch.End();
 
-            // --- Stats ---
             float sScale = _isPlinkingIn ? _plinkStats.Scale : 1f;
             float sRot = _isPlinkingIn ? _plinkStats.Rotation : 0f;
 
@@ -630,14 +845,15 @@ namespace ProjectVagabond.Scenes
         private void DrawStats(SpriteBatch spriteBatch, BitmapFont secondaryFont, BitmapFont tertiaryFont)
         {
             if (_characterIds.Count == 0) return;
-            string charId = _characterIds[_focusedIndex];
+            int count = _characterIds.Count;
+            int centerIndex = ((int)MathF.Floor(_virtualIndex + 0.5f) % count + count) % count;
+            string charId = _characterIds[centerIndex];
             if (!GameDataCache.WizardCats.TryGetValue(charId, out var data)) return;
 
             int centerX = Global.VIRTUAL_WIDTH / 2;
             int startY = BASE_CENTER_Y + 38;
             int currentY = startY;
 
-            // --- Draw Hearts ---
             var heartSheet = _spriteManager.HealthHeartsSpriteSheet;
             if (heartSheet != null)
             {
@@ -656,13 +872,12 @@ namespace ProjectVagabond.Scenes
                         yOffset = -1;
                     }
 
-                    var sourceRect = new Rectangle(0, 0, heartWidth, 5); // Frame 0 is full heart
+                    var sourceRect = new Rectangle(0, 0, heartWidth, 5);
                     spriteBatch.DrawSnapped(heartSheet, new Vector2(heartsStartX + i * (heartWidth + heartSpacing), currentY + yOffset), sourceRect, Color.White);
                 }
-                currentY += 5 + 1; // Heart height + padding before stats
+                currentY += 5 + 1;
             }
 
-            // --- Stats Block ---
             string[] labels = { "POW", "TEN", "AGI" };
             int[] values = { data.Power, data.Tenacity, data.Agility };
 
@@ -737,6 +952,9 @@ namespace ProjectVagabond.Scenes
             const float SPREAD_FACTOR = 0.5f;
             const float RADIUS = 100f;
 
+            int centerIndex = ((int)MathF.Floor(_virtualIndex + 0.5f) % count + count) % count;
+            float carouselSlideOffset = MathF.Floor(_virtualIndex + 0.5f) - _virtualIndex;
+
             foreach (int offset in drawOrder)
             {
                 int plinkIndex = offset + 3;
@@ -747,7 +965,7 @@ namespace ProjectVagabond.Scenes
 
                 if (_isPlinkingIn && pScale < 0.01f) continue;
 
-                int charIndex = (_focusedIndex + offset) % count;
+                int charIndex = (centerIndex + offset) % count;
                 if (charIndex < 0) charIndex += count;
 
                 string charId = _characterIds[charIndex];
@@ -756,7 +974,7 @@ namespace ProjectVagabond.Scenes
                 float finalOpacity = isCenter ? 1.0f : 0.6f;
                 if (Math.Abs(offset) >= 2) finalOpacity = 0.3f;
 
-                float visualOffset = offset + _carouselSlideOffset;
+                float visualOffset = offset + carouselSlideOffset;
 
                 float xOffset = MathF.Sin(visualOffset * SPREAD_FACTOR) * RADIUS;
                 float xPos = centerX + xOffset;
@@ -783,7 +1001,6 @@ namespace ProjectVagabond.Scenes
                 Vector2 bodyPosition = new Vector2(MathF.Round(xPos), MathF.Round(baseYPos));
                 Vector2 headPosition = new Vector2(MathF.Round(xPos), MathF.Round(headYPos));
 
-                // Draw Selection Marker
                 if (_selectedWizards.Contains(charId))
                 {
                     var ring = _spriteManager.RingTextureSprite;
@@ -796,7 +1013,6 @@ namespace ProjectVagabond.Scenes
                     }
                 }
 
-                // Draw Body
                 if (Math.Abs(offset) < 1)
                 {
                     PlayerSpriteType bodyType = (spriteType == PlayerSpriteType.Alt) ? PlayerSpriteType.BodyAlt : PlayerSpriteType.BodyNormal;
@@ -810,7 +1026,6 @@ namespace ProjectVagabond.Scenes
                     }
                 }
 
-                // Draw Head
                 var sourceRect = _spriteManager.GetPlayerSourceRect(spriteIndex, spriteType);
                 spriteBatch.Draw(sheet, headPosition, sourceRect, Color.White * finalOpacity, pRot, origin, pScale, SpriteEffects.None, 0f);
 
@@ -819,7 +1034,6 @@ namespace ProjectVagabond.Scenes
                     spriteBatch.Draw(silhouette, headPosition, sourceRect, plink.FlashTint.Value, pRot, origin, pScale, SpriteEffects.None, 0f);
                 }
 
-                // Draw Text (Only for center, uses the same plink scale)
                 if (isCenter && GameDataCache.WizardCats.TryGetValue(charId, out var data))
                 {
                     string name = data.Name.ToUpper();
