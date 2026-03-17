@@ -26,10 +26,11 @@ namespace ProjectVagabond.Scenes
         private readonly TransitionManager _transitionManager;
         private readonly HapticsManager _hapticsManager;
         private readonly ParticleSystemManager _particleSystemManager;
+        private readonly Random _random = new Random();
 
         // Carousel State
         private List<string> _characterIds = new();
-        private HashSet<string> _selectedWizards = new HashSet<string>();
+        private Dictionary<string, (float Timer, float TargetRotation)> _selectedWizards = new();
 
         private float _virtualIndex = 0f;
         private int _targetVirtualIndex = 0;
@@ -140,7 +141,7 @@ namespace ProjectVagabond.Scenes
             _rightArrowSimTimer = 0f;
             _countRedFlashTimer = 0f;
             _introHeartWaveTimer = 0f;
-            _introHeartWaveInterval = 2f + (float)new Random().NextDouble() * 4f;
+            _introHeartWaveInterval = 2f + (float)_random.NextDouble() * 4f;
 
             _previousMouseState = _inputManager.GetEffectiveMouseState();
             _lastScrollWheelValue = _previousMouseState.ScrollWheelValue;
@@ -196,8 +197,7 @@ namespace ProjectVagabond.Scenes
                 randomActions.Add(() => _plinkCarousel[index].Start(0f, 0.25f));
             }
 
-            var rng = new Random();
-            randomActions = randomActions.OrderBy(x => rng.Next()).ToList();
+            randomActions = randomActions.OrderBy(x => _random.Next()).ToList();
 
             foreach (var a in randomActions) _plinkQueue.Enqueue(a);
 
@@ -356,8 +356,7 @@ namespace ProjectVagabond.Scenes
             if (_isPlinkingIn || _transitionManager.IsTransitioning || _isAutoSelecting) return;
             _hapticsManager.TriggerUICompoundShake(_global.ButtonHapticStrength);
 
-            var rng = new Random();
-            var shuffled = _characterIds.OrderBy(x => rng.Next()).ToList();
+            var shuffled = _characterIds.OrderBy(x => _random.Next()).ToList();
             _autoSelectQueue = shuffled.Take(_randomCount).ToList();
             _selectedWizards.Clear();
 
@@ -404,7 +403,7 @@ namespace ProjectVagabond.Scenes
             {
                 new GenericTask("Initializing arena...", () =>
                 {
-                    gameState.InitializeWorld(_selectedWizards.ToList());
+                    gameState.InitializeWorld(_selectedWizards.Keys.ToList());
                 })
             };
 
@@ -427,6 +426,12 @@ namespace ProjectVagabond.Scenes
             _idleTimer += dt;
             _titleWaveTimer += dt;
 
+            foreach (var key in _selectedWizards.Keys.ToList())
+            {
+                var data = _selectedWizards[key];
+                _selectedWizards[key] = (data.Timer + dt, data.TargetRotation);
+            }
+
             if (_countRedFlashTimer > 0f)
             {
                 _countRedFlashTimer -= dt;
@@ -436,7 +441,7 @@ namespace ProjectVagabond.Scenes
             if (_introHeartWaveTimer > _introHeartWaveInterval + 1.0f)
             {
                 _introHeartWaveTimer = 0f;
-                _introHeartWaveInterval = 2f + (float)new Random().NextDouble() * 4f;
+                _introHeartWaveInterval = 2f + (float)_random.NextDouble() * 4f;
             }
 
             if (_leftArrowSimTimer > 0f)
@@ -645,7 +650,9 @@ namespace ProjectVagabond.Scenes
                         if (p >= 1f)
                         {
                             _virtualIndex = _spinTargetVirtualIndex;
-                            _selectedWizards.Add(_autoSelectQueue[0]);
+                            float sign = _random.Next(2) == 0 ? 1f : -1f;
+                            float rotRad = MathHelper.ToRadians(_random.Next(4, 11)) * sign;
+                            _selectedWizards[_autoSelectQueue[0]] = (0f, rotRad);
                             _autoSelectQueue.RemoveAt(0);
                             _autoSelectState = AutoSelectState.Pausing;
                             _spinTimer = 0f;
@@ -1001,17 +1008,44 @@ namespace ProjectVagabond.Scenes
                 Vector2 bodyPosition = new Vector2(MathF.Round(xPos), MathF.Round(baseYPos));
                 Vector2 headPosition = new Vector2(MathF.Round(xPos), MathF.Round(headYPos));
 
-                if (_selectedWizards.Contains(charId))
+                float selectionScaleMult = 1f;
+                float selectionRotOffset = 0f;
+                float selectionFlashAlpha = 0f;
+
+                if (_selectedWizards.TryGetValue(charId, out var selData))
                 {
-                    var ring = _spriteManager.RingTextureSprite;
-                    if (ring != null)
+                    float selTimer = selData.Timer;
+                    float targetRot = selData.TargetRotation;
+
+                    float flashCycle = selTimer % 1.5f;
+                    float flashIn = 0.03f;
+                    float flashOut = 0.3f;
+                    if (flashCycle < flashIn)
+                        selectionFlashAlpha = Easing.EaseOutCubic(flashCycle / flashIn) * 0.8f;
+                    else if (flashCycle < flashIn + flashOut)
+                        selectionFlashAlpha = (1f - Easing.EaseOutCubic((flashCycle - flashIn) / flashOut)) * 0.8f;
+
+                    float popDuration = 0.15f;
+                    if (selTimer < popDuration)
                     {
-                        float markerScale = (Math.Abs(offset) == 0) ? 1f : (Math.Abs(offset) <= 2 ? 0.5f : 0.25f);
-                        Vector2 ringOrigin = new Vector2(ring.Width / 2f, ring.Height / 2f);
-                        float baseRingScale = 48f / ring.Width;
-                        spriteBatch.Draw(ring, bodyPosition, null, _global.Palette_Red * finalOpacity, pRot, ringOrigin, pScale * markerScale * baseRingScale, SpriteEffects.None, 0f);
+                        float p = selTimer / popDuration;
+                        if (p < 0.2f)
+                        {
+                            float inP = p / 0.2f;
+                            selectionScaleMult = MathHelper.Lerp(1f, 1.4f, Easing.EaseOutCubic(inP));
+                            selectionRotOffset = MathHelper.Lerp(0f, targetRot, Easing.EaseOutCubic(inP));
+                        }
+                        else
+                        {
+                            float outP = (p - 0.2f) / 0.8f;
+                            selectionScaleMult = MathHelper.Lerp(1.4f, 1f, Easing.EaseOutBack(outP));
+                            selectionRotOffset = MathHelper.Lerp(targetRot, 0f, Easing.EaseOutBack(outP));
+                        }
                     }
                 }
+
+                pScale *= selectionScaleMult;
+                pRot += selectionRotOffset;
 
                 if (Math.Abs(offset) < 1)
                 {
@@ -1024,6 +1058,11 @@ namespace ProjectVagabond.Scenes
                     {
                         spriteBatch.Draw(silhouette, bodyPosition, bodySourceRect, plink.FlashTint.Value, pRot, origin, pScale, SpriteEffects.None, 0f);
                     }
+
+                    if (selectionFlashAlpha > 0f && silhouette != null)
+                    {
+                        spriteBatch.Draw(silhouette, bodyPosition, bodySourceRect, Color.White * selectionFlashAlpha * finalOpacity, pRot, origin, pScale, SpriteEffects.None, 0f);
+                    }
                 }
 
                 var sourceRect = _spriteManager.GetPlayerSourceRect(spriteIndex, spriteType);
@@ -1032,6 +1071,11 @@ namespace ProjectVagabond.Scenes
                 if (_isPlinkingIn && plink.FlashTint.HasValue && silhouette != null)
                 {
                     spriteBatch.Draw(silhouette, headPosition, sourceRect, plink.FlashTint.Value, pRot, origin, pScale, SpriteEffects.None, 0f);
+                }
+
+                if (selectionFlashAlpha > 0f && silhouette != null)
+                {
+                    spriteBatch.Draw(silhouette, headPosition, sourceRect, Color.White * selectionFlashAlpha * finalOpacity, pRot, origin, pScale, SpriteEffects.None, 0f);
                 }
 
                 if (isCenter && GameDataCache.WizardCats.TryGetValue(charId, out var data))
