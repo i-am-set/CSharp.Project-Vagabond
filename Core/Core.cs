@@ -459,20 +459,10 @@ namespace ProjectVagabond
             Color letterboxColor = forceBlackBg ? Color.Black : _global.GameBg;
             GraphicsDevice.Clear(letterboxColor);
 
-            var (shakeOffset, shakeRotation, shakeScale) = _hapticsManager.GetTotalShakeParams();
-            Vector2 screenCenter = _finalRenderRectangle.Center.ToVector2();
-
             Matrix baseTransform = Matrix.CreateScale(_finalScale, _finalScale, 1.0f) *
                                    Matrix.CreateTranslation(_finalRenderRectangle.X, _finalRenderRectangle.Y, 0);
 
-            Matrix shakeMatrix =
-                Matrix.CreateTranslation(-screenCenter.X, -screenCenter.Y, 0) *
-                Matrix.CreateScale(shakeScale, shakeScale, 1.0f) *
-                Matrix.CreateRotationZ(shakeRotation) *
-                Matrix.CreateTranslation(screenCenter.X, screenCenter.Y, 0) *
-                Matrix.CreateTranslation(shakeOffset.X * _finalScale, shakeOffset.Y * _finalScale, 0);
-
-            Matrix finalSceneTransform = baseTransform * shakeMatrix;
+            Matrix finalSceneTransform = baseTransform;
 
             finalSceneTransform.M41 = MathF.Round(finalSceneTransform.M41);
             finalSceneTransform.M42 = MathF.Round(finalSceneTransform.M42);
@@ -570,7 +560,17 @@ namespace ProjectVagabond
             GraphicsDevice.SetRenderTarget(null);
             GraphicsDevice.Clear(letterboxColor);
 
-            _spriteBatch.Begin(SpriteSortMode.Immediate, BlendState.Opaque, SamplerState.PointClamp, null, null, null, Matrix.Identity);
+            var (shakeOffset, shakeRotation, shakeScale) = _hapticsManager.GetTotalShakeParams();
+            Vector2 realScreenCenter = new Vector2(GraphicsDevice.PresentationParameters.BackBufferWidth / 2f, GraphicsDevice.PresentationParameters.BackBufferHeight / 2f);
+
+            Matrix finalShakeMatrix =
+                Matrix.CreateTranslation(-realScreenCenter.X, -realScreenCenter.Y, 0) *
+                Matrix.CreateScale(shakeScale, shakeScale, 1.0f) *
+                Matrix.CreateRotationZ(shakeRotation) *
+                Matrix.CreateTranslation(realScreenCenter.X, realScreenCenter.Y, 0) *
+                Matrix.CreateTranslation(shakeOffset.X * _finalScale, shakeOffset.Y * _finalScale, 0);
+
+            _spriteBatch.Begin(SpriteSortMode.Immediate, BlendState.Opaque, SamplerState.PointClamp, null, null, null, finalShakeMatrix);
 
             if (_retroEffect != null)
             {

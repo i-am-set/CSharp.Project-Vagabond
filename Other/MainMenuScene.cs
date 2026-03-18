@@ -125,7 +125,7 @@ namespace ProjectVagabond.Scenes
             };
             newGameButton.OnClick += () =>
             {
-                _hapticsManager.TriggerUICompoundShake(_global.ButtonHapticStrength);
+                _hapticsManager.TriggerZoomPulse(_global.LightHapticZoomPulseStrength, _global.HapticZoomPulseDuration);
                 newGameButton.ResetAnimationState();
                 _sceneManager.ChangeScene(GameSceneState.NewGameIntro, _transitionManager.GetRandomTransition(), _transitionManager.GetRandomTransition());
             };
@@ -155,7 +155,7 @@ namespace ProjectVagabond.Scenes
             };
             catyButton.OnClick += () =>
             {
-                _hapticsManager.TriggerUICompoundShake(_global.ButtonHapticStrength);
+                _hapticsManager.TriggerZoomPulse(_global.LightHapticZoomPulseStrength, _global.HapticZoomPulseDuration);
                 catyButton.ResetAnimationState();
                 _sceneManager.ChangeScene(GameSceneState.Catyclopaedia, _transitionManager.GetRandomTransition(), _transitionManager.GetRandomTransition());
             };
@@ -184,7 +184,7 @@ namespace ProjectVagabond.Scenes
             };
             settingsButton.OnClick += () =>
             {
-                _hapticsManager.TriggerUICompoundShake(_global.ButtonHapticStrength);
+                _hapticsManager.TriggerZoomPulse(_global.LightHapticZoomPulseStrength, _global.HapticZoomPulseDuration);
                 settingsButton.ResetAnimationState();
                 _sceneManager.ShowModal(GameSceneState.Settings);
             };
@@ -220,13 +220,13 @@ namespace ProjectVagabond.Scenes
 
         private void ConfirmExit()
         {
-            _hapticsManager.TriggerUICompoundShake(_global.ButtonHapticStrength);
+            _hapticsManager.TriggerZoomPulse(_global.HapticZoomPulseStrength, _global.HapticZoomPulseDuration);
             _confirmationDialog.Show(
                 "Are you sure you want to exit?",
                 new List<Tuple<string, Action>>
                 {
-                Tuple.Create("YES", new Action(() => { _hapticsManager.TriggerUICompoundShake(_global.ButtonHapticStrength); ServiceLocator.Get<Core>().ExitApplication(); })),
-                Tuple.Create("[chighlight]NO", new Action(() => { _hapticsManager.TriggerUICompoundShake(_global.ButtonHapticStrength); _confirmationDialog.Hide(); }))
+                Tuple.Create("YES", new Action(() => { _hapticsManager.TriggerZoomPulse(_global.LightHapticZoomPulseStrength, _global.HapticZoomPulseDuration); ServiceLocator.Get<Core>().ExitApplication(); })),
+                Tuple.Create("[chighlight]NO", new Action(() => { _hapticsManager.TriggerZoomPulse(_global.LightHapticZoomPulseStrength, _global.HapticZoomPulseDuration); _confirmationDialog.Hide(); }))
                 }
             );
         }

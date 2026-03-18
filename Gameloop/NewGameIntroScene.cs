@@ -184,7 +184,7 @@ namespace ProjectVagabond.Scenes
 
             _btnMode1v1 = new Button(new Rectangle(gridStartX, gridStartY, btnW, btnH), "1v1", font: secondaryFont)
             {
-                TriggerHapticOnHover = true,
+                TriggerHapticOnHover = false,
                 HoverAnimation = HoverAnimationType.Hop,
                 CustomDefaultTextColor = _global.Palette_Off,
                 CustomHoverTextColor = _global.Palette_Off,
@@ -196,7 +196,7 @@ namespace ProjectVagabond.Scenes
 
             _btnMode4ffa = new Button(new Rectangle(gridStartX + gridSpacingX, gridStartY, btnW, btnH), "4 FFA", font: secondaryFont)
             {
-                TriggerHapticOnHover = true,
+                TriggerHapticOnHover = false,
                 HoverAnimation = HoverAnimationType.Hop,
                 CustomDefaultTextColor = _global.Palette_Off,
                 CustomHoverTextColor = _global.Palette_Off,
@@ -208,7 +208,7 @@ namespace ProjectVagabond.Scenes
 
             _btnMode6ffa = new Button(new Rectangle(gridStartX, gridStartY + gridSpacingY, btnW, btnH), "6 FFA", font: secondaryFont)
             {
-                TriggerHapticOnHover = true,
+                TriggerHapticOnHover = false,
                 HoverAnimation = HoverAnimationType.Hop,
                 CustomDefaultTextColor = _global.Palette_Off,
                 CustomHoverTextColor = _global.Palette_Off,
@@ -220,7 +220,7 @@ namespace ProjectVagabond.Scenes
 
             _btnMode8ffa = new Button(new Rectangle(gridStartX + gridSpacingX, gridStartY + gridSpacingY, btnW, btnH), "8 FFA", font: secondaryFont)
             {
-                TriggerHapticOnHover = true,
+                TriggerHapticOnHover = false,
                 HoverAnimation = HoverAnimationType.Hop,
                 CustomDefaultTextColor = _global.Palette_Off,
                 CustomHoverTextColor = _global.Palette_Off,
@@ -242,7 +242,7 @@ namespace ProjectVagabond.Scenes
                 font: core.DefaultFont
             )
             {
-                TriggerHapticOnHover = true,
+                TriggerHapticOnHover = false,
                 HoverAnimation = HoverAnimationType.Hop
             };
             _startButton.OnClick += StartGame;
@@ -255,7 +255,7 @@ namespace ProjectVagabond.Scenes
             if (_randomCount != count)
             {
                 _randomCount = count;
-                _hapticsManager.TriggerUICompoundShake(_global.ButtonHapticStrength);
+                _hapticsManager.TriggerZoomPulse(_global.LightHapticZoomPulseStrength, _global.HapticZoomPulseDuration);
 
                 if (count == 2) _btnMode1v1.Plink.Start(0f, 0.15f);
                 else if (count == 4) _btnMode4ffa.Plink.Start(0f, 0.15f);
@@ -267,7 +267,7 @@ namespace ProjectVagabond.Scenes
         private void StartGame()
         {
             if (_isPlinkingIn || _transitionManager.IsTransitioning || _state != IntroState.SelectingMode) return;
-            _hapticsManager.TriggerUICompoundShake(_global.ButtonHapticStrength);
+            _hapticsManager.TriggerZoomPulse(_global.HapticZoomPulseStrength, _global.HapticZoomPulseDuration);
 
             _state = IntroState.Spinning;
             _slots.Clear();
@@ -394,8 +394,15 @@ namespace ProjectVagabond.Scenes
                 else if (_state == IntroState.Spinning)
                 {
                     _spinTimer += dt;
-                    float stopInterval = 0.8f; // Increased to keep total time similar despite faster settle
-                    int shouldBeStopping = Math.Min(_randomCount, (int)(_spinTimer / stopInterval));
+
+                    float baseSpinDuration = 1.5f;
+                    float stopInterval = 0.4f;
+
+                    int shouldBeStopping = 0;
+                    if (_spinTimer >= baseSpinDuration)
+                    {
+                        shouldBeStopping = Math.Min(_randomCount, (int)((_spinTimer - baseSpinDuration) / stopInterval) + 1);
+                    }
 
                     for (int i = 0; i < _slots.Count; i++)
                     {
@@ -434,28 +441,9 @@ namespace ProjectVagabond.Scenes
                                 float diff = slot.TargetIdIndex - currentMod;
                                 if (diff < 0) diff += _characterIds.Count;
 
-                                float baseSettleDuration = 1.1f;
-                                float derivative = 4.70158f; // Derivative of EaseOutBack at t=0
-                                float targetDistance = slot.Speed * baseSettleDuration / derivative;
+                                diff += _characterIds.Count;
 
-                                // Find the optimal number of rotations to match the current speed smoothly
-                                float diff1 = diff;
-                                while (diff1 < targetDistance) diff1 += _characterIds.Count;
-                                float diff2 = diff1 - _characterIds.Count;
-
-                                if (diff2 > 0 && Math.Abs(diff2 - targetDistance) < Math.Abs(diff1 - targetDistance))
-                                {
-                                    diff = diff2;
-                                }
-                                else
-                                {
-                                    diff = diff1;
-                                }
-
-                                // Adjust the settle duration slightly to make the math perfectly continuous
-                                slot.SettleDuration = diff * derivative / slot.Speed;
-                                slot.SettleDuration = Math.Clamp(slot.SettleDuration, 0.7f, 1.5f);
-
+                                slot.SettleDuration = 0.35f;
                                 slot.StartIndex = slot.VirtualIndex;
                                 slot.AbsoluteTargetIndex = slot.VirtualIndex + diff;
                                 slot.State = SlotState.Settling;
@@ -467,7 +455,7 @@ namespace ProjectVagabond.Scenes
                             float p = Math.Clamp(slot.StateTimer / slot.SettleDuration, 0f, 1f);
 
                             float prevIndex = slot.VirtualIndex;
-                            float ease = Easing.EaseOutBack(p); // Changed to a tighter, snappier spring
+                            float ease = Easing.EaseOutBackBig(p);
                             slot.VirtualIndex = MathHelper.Lerp(slot.StartIndex, slot.AbsoluteTargetIndex, ease);
 
                             if (dt > 0) slot.Speed = (slot.VirtualIndex - prevIndex) / dt;
@@ -479,7 +467,7 @@ namespace ProjectVagabond.Scenes
                                 slot.State = SlotState.Stopped;
                                 _slotsStopped++;
 
-                                _hapticsManager.TriggerUICompoundShake(_global.ButtonHapticStrength * 2f);
+                                _hapticsManager.TriggerZoomPulse(_global.HapticZoomPulseStrength, _global.HapticZoomPulseDuration);
                                 slot.Plink.Start(0f, 0.3f);
                                 _selectedWizards[slot.TargetId] = (0f, 0f);
 
@@ -489,16 +477,12 @@ namespace ProjectVagabond.Scenes
                                 int centerX = startX + (slotWidth / 2);
                                 emitter.Position = new Vector2(centerX, Global.VIRTUAL_HEIGHT / 2f + 10);
                                 emitter.EmitBurst(15);
-                            }
-                        }
 
-                        int currentIndex = (int)MathF.Floor(slot.VirtualIndex);
-                        if (currentIndex != slot.LastPassedIndex && slot.State != SlotState.Stopped)
-                        {
-                            slot.LastPassedIndex = currentIndex;
-                            if (Math.Abs(slot.Speed) > 5f)
-                            {
-                                _hapticsManager.TriggerUICompoundShake(0.1f);
+                                if (_slotsStopped == _randomCount)
+                                {
+                                    _hapticsManager.TriggerShake(1.5f, 1.5f);
+                                    ServiceLocator.Get<Core>().TriggerFullscreenFlash(Color.White, 0.05f);
+                                }
                             }
                         }
                     }
@@ -564,16 +548,14 @@ namespace ProjectVagabond.Scenes
             var core = ServiceLocator.Get<Core>();
             var secondaryFont = core.SecondaryFont;
             var tertiaryFont = core.TertiaryFont;
-            Matrix staticTransform = Matrix.CreateScale(core.FinalScale, core.FinalScale, 1.0f) *
-                                     Matrix.CreateTranslation(core.FinalRenderRectangle.X, core.FinalRenderRectangle.Y, 0);
 
             spriteBatch.End();
 
-            spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.Opaque, SamplerState.PointClamp, null, null, null, staticTransform);
+            spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.Opaque, SamplerState.PointClamp, null, null, null, transform);
             spriteBatch.Draw(_spriteManager.EmptySprite, new Rectangle(0, 0, Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT), _global.Palette_Off);
             spriteBatch.End();
 
-            spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp, null, null, null, staticTransform);
+            spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp, null, null, null, transform);
 
             float titleY = 14f;
 
@@ -639,17 +621,21 @@ namespace ProjectVagabond.Scenes
                 var pixel = ServiceLocator.Get<Texture2D>();
 
                 var graphics = ServiceLocator.Get<GraphicsDeviceManager>();
+                
+                Vector2 topLeft = Vector2.Transform(new Vector2(startX, clipY), transform);
+                Vector2 bottomRight = Vector2.Transform(new Vector2(startX + (slotWidth * _randomCount), clipY + clipHeight), transform);
+                
                 Rectangle screenScissor = new Rectangle(
-                    (int)(startX * core.FinalScale) + core.FinalRenderRectangle.X,
-                    (int)(clipY * core.FinalScale) + core.FinalRenderRectangle.Y,
-                    (int)((slotWidth * _randomCount) * core.FinalScale),
-                    (int)(clipHeight * core.FinalScale)
+                    (int)Math.Min(topLeft.X, bottomRight.X),
+                    (int)Math.Min(topLeft.Y, bottomRight.Y),
+                    (int)Math.Abs(bottomRight.X - topLeft.X),
+                    (int)Math.Abs(bottomRight.Y - topLeft.Y)
                 );
 
                 var originalRasterizerState = new RasterizerState { ScissorTestEnable = true };
                 graphics.GraphicsDevice.ScissorRectangle = screenScissor;
 
-                spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp, null, originalRasterizerState, null, staticTransform);
+                spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp, null, originalRasterizerState, null, transform);
 
                 for (int i = 0; i < _slots.Count; i++)
                 {
@@ -679,8 +665,9 @@ namespace ProjectVagabond.Scenes
                         }
 
                         float speedStretch = 1f + (Math.Abs(slot.Speed) * 0.015f);
-                        float blurAlpha = Math.Clamp(1f - (Math.Abs(slot.Speed) * 0.01f), 0.4f, 1f);
-                        Vector2 pScaleVec = new Vector2(pScale, pScale * speedStretch);
+                        float blurAlpha = Math.Clamp(1f - (Math.Abs(slot.Speed) * 0.01f), 0.7f, 1f);
+                        float squashX = 1f / (1f + (speedStretch - 1f) * 0.5f);
+                        Vector2 pScaleVec = new Vector2(pScale * squashX, pScale * speedStretch);
 
                         var sourceRect = _spriteManager.GetPlayerSourceRect(spriteIndex, PlayerSpriteType.Normal);
                         Vector2 origin = new Vector2(16, 16);
@@ -700,7 +687,7 @@ namespace ProjectVagabond.Scenes
                 }
 
                 spriteBatch.End();
-                spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp, null, null, null, staticTransform);
+                spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp, null, null, null, transform);
             }
 
             spriteBatch.End();

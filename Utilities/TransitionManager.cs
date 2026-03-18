@@ -134,7 +134,6 @@ namespace ProjectVagabond.Transitions
                         _currentState = TransitionState.Hold;
                         _holdTimer = 0f;
                         _midpointExecuted = false;
-                        ServiceLocator.Get<HapticsManager>().TriggerCompoundShake(1.5f);
                     }
                 }
             }

@@ -215,7 +215,7 @@ namespace ProjectVagabond.Scenes
                 font: secondaryFont
             )
             {
-                TriggerHapticOnHover = true,
+                TriggerHapticOnHover = false,
                 EnableHoverSway = true,
                 HoverAnimation = HoverAnimationType.None,
                 EnableTextWave = false
@@ -227,7 +227,7 @@ namespace ProjectVagabond.Scenes
                 font: secondaryFont
             )
             {
-                TriggerHapticOnHover = true,
+                TriggerHapticOnHover = false,
                 EnableHoverSway = true,
                 HoverAnimation = HoverAnimationType.None,
                 EnableTextWave = false
@@ -245,13 +245,13 @@ namespace ProjectVagabond.Scenes
                 font: core.DefaultFont
             )
             {
-                TriggerHapticOnHover = true,
+                TriggerHapticOnHover = false,
                 HoverAnimation = HoverAnimationType.Hop
             };
             _backButton.OnClick += () =>
             {
                 if (_isPlinkingIn || _transitionManager.IsTransitioning) return;
-                _hapticsManager.TriggerUICompoundShake(_global.ButtonHapticStrength);
+                _hapticsManager.TriggerZoomPulse(_global.HapticZoomPulseStrength, _global.HapticZoomPulseDuration);
                 _sceneManager.ChangeScene(GameSceneState.MainMenu, TransitionType.FadeOff, TransitionType.FadeOff);
             };
             _navigationGroup.Add(_backButton);
@@ -261,7 +261,7 @@ namespace ProjectVagabond.Scenes
         {
             if (_isPlinkingIn) return;
 
-            _hapticsManager.TriggerUICompoundShake(_global.ButtonHapticStrength);
+            _hapticsManager.TriggerHop(_global.ButtonHapticStrength, _global.ButtonHapticDuration);
 
             if (_inputManager.CurrentInputDevice != InputDeviceType.Mouse)
             {
@@ -439,7 +439,7 @@ namespace ProjectVagabond.Scenes
                 if (currentIndex != _lastHapticIndex)
                 {
                     _lastHapticIndex = currentIndex;
-                    _hapticsManager.TriggerUICompoundShake(_global.HoverHapticStrength);
+                    _hapticsManager.TriggerZoomPulse(_global.HapticZoomPulseStrength, _global.HapticZoomPulseDuration);
                 }
 
                 if (_inputManager.CurrentInputDevice == InputDeviceType.Mouse)

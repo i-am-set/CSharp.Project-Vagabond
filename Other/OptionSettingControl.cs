@@ -105,13 +105,13 @@ namespace ProjectVagabond.UI
             if (!IsEnabled) return false;
             if (input.NavigateLeft)
             {
-                _hapticsManager.TriggerCompoundShake(0.5f);
+                _hapticsManager.TriggerZoomPulse(_global.LightHapticZoomPulseStrength, _global.HapticZoomPulseDuration); ;
                 Decrement();
                 return true;
             }
             if (input.NavigateRight || input.Confirm)
             {
-                _hapticsManager.TriggerCompoundShake(0.5f);
+                _hapticsManager.TriggerZoomPulse(_global.LightHapticZoomPulseStrength, _global.HapticZoomPulseDuration); ;
                 Increment();
                 return true;
             }
@@ -166,13 +166,13 @@ namespace ProjectVagabond.UI
                 bool consumed = false;
                 if (_isLeftArrowHovered)
                 {
-                    _hapticsManager.TriggerCompoundShake(0.5f);
+                    _hapticsManager.TriggerZoomPulse(_global.LightHapticZoomPulseStrength, _global.HapticZoomPulseDuration); ;
                     Decrement();
                     consumed = true;
                 }
                 else if (_isRightArrowHovered)
                 {
-                    _hapticsManager.TriggerCompoundShake(0.5f);
+                    _hapticsManager.TriggerZoomPulse(_global.LightHapticZoomPulseStrength, _global.HapticZoomPulseDuration); ;
                     Increment();
                     consumed = true;
                 }

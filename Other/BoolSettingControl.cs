@@ -82,7 +82,7 @@ namespace ProjectVagabond.UI
             if (!IsEnabled) return false;
             if (input.NavigateLeft || input.NavigateRight || input.Confirm)
             {
-                _hapticsManager.TriggerUICompoundShake(_global.ButtonHapticStrength);
+                _hapticsManager.TriggerZoomPulse(_global.LightHapticZoomPulseStrength, _global.HapticZoomPulseDuration);
                 ToggleValue();
                 return true;
             }
@@ -137,7 +137,7 @@ namespace ProjectVagabond.UI
             {
                 if (_isLeftArrowHovered || _isRightArrowHovered)
                 {
-                    _hapticsManager.TriggerUICompoundShake(_global.ButtonHapticStrength);
+                    _hapticsManager.TriggerZoomPulse(_global.LightHapticZoomPulseStrength, _global.HapticZoomPulseDuration);
                     ToggleValue();
                     inputManager.ConsumeMouseClick();
                 }

@@ -236,17 +236,17 @@ namespace ProjectVagabond.Scenes
 
             // --- Footer Buttons ---
             var applyButton = new Button(new Rectangle(0, 0, 125, 12), "APPLY") { TextRenderOffset = new Vector2(0, 1) };
-            applyButton.OnClick += () => { _hapticsManager.TriggerUICompoundShake(_global.ButtonHapticStrength); ApplySettings(); };
+            applyButton.OnClick += () => { _hapticsManager.TriggerZoomPulse(_global.LightHapticZoomPulseStrength, _global.HapticZoomPulseDuration); ApplySettings(); };
             _footerButtons.Add(applyButton);
             _navigationGroup.Add(applyButton);
 
             var backButton = new Button(new Rectangle(0, 0, 125, 12), "BACK") { TextRenderOffset = new Vector2(0, 1) };
-            backButton.OnClick += () => { _hapticsManager.TriggerUICompoundShake(_global.ButtonHapticStrength); AttemptToGoBack(); };
+            backButton.OnClick += () => { _hapticsManager.TriggerZoomPulse(_global.LightHapticZoomPulseStrength, _global.HapticZoomPulseDuration); AttemptToGoBack(); };
             _footerButtons.Add(backButton);
             _navigationGroup.Add(backButton);
 
             var resetButton = new Button(new Rectangle(0, 0, 125, 12), "RESTORE DEFAULTS") { CustomDefaultTextColor = _global.HighlightTextColor, TextRenderOffset = new Vector2(0, 1) };
-            resetButton.OnClick += () => { _hapticsManager.TriggerUICompoundShake(_global.ButtonHapticStrength); ConfirmResetSettings(); };
+            resetButton.OnClick += () => { _hapticsManager.TriggerZoomPulse(_global.LightHapticZoomPulseStrength, _global.HapticZoomPulseDuration); ConfirmResetSettings(); };
             _footerButtons.Add(resetButton);
             _navigationGroup.Add(resetButton);
 
@@ -321,12 +321,12 @@ namespace ProjectVagabond.Scenes
                     "Keep these display settings?",
                     onConfirm: () =>
                     {
-                        _hapticsManager.TriggerUICompoundShake(_global.ButtonHapticStrength);
+                        _hapticsManager.TriggerZoomPulse(_global.LightHapticZoomPulseStrength, _global.HapticZoomPulseDuration);
                         FinalizeAndSaveAllSettings();
                     },
                     onRevert: () =>
                     {
-                        _hapticsManager.TriggerUICompoundShake(_global.ButtonHapticStrength);
+                        _hapticsManager.TriggerZoomPulse(_global.LightHapticZoomPulseStrength, _global.HapticZoomPulseDuration);
                         revertState.ApplyGraphicsSettings(_graphics, _core);
                         RevertChanges();
                     },
@@ -384,7 +384,7 @@ namespace ProjectVagabond.Scenes
 
         private void ConfirmResetSettings()
         {
-            _confirmationDialog.Show("Reset all settings to default?\n\n[cemphasis]This cannot be undone.[/]", new List<Tuple<string, Action>> { Tuple.Create("YES", new Action(() => { _hapticsManager.TriggerUICompoundShake(_global.ButtonHapticStrength); ; ExecuteResetSettings(); _confirmationDialog.Hide(); })), Tuple.Create("[chighlight]NO", new Action(() => { _hapticsManager.TriggerUICompoundShake(_global.ButtonHapticStrength); _confirmationDialog.Hide(); })) });
+            _confirmationDialog.Show("Reset all settings to default?\n\n[cemphasis]This cannot be undone.[/]", new List<Tuple<string, Action>> { Tuple.Create("YES", new Action(() => { _hapticsManager.TriggerShake(_global.ButtonHapticStrength, _global.ButtonHapticDuration); ExecuteResetSettings(); _confirmationDialog.Hide(); })), Tuple.Create("[chighlight]NO", new Action(() => { _hapticsManager.TriggerShake(_global.ButtonHapticStrength, _global.ButtonHapticDuration); _confirmationDialog.Hide(); })) });
         }
 
         private void ExecuteResetSettings()
@@ -408,15 +408,15 @@ namespace ProjectVagabond.Scenes
                 _confirmationDialog.Show(
                     "You have unsaved changes.",
                     new List<Tuple<string, Action>> {
-                        Tuple.Create("APPLY", new Action(() => { _hapticsManager.TriggerUICompoundShake(_global.ButtonHapticStrength); ApplySettings(); _sceneManager.HideModal(); })),
-                        Tuple.Create("DISCARD", new Action(() => { _hapticsManager.TriggerUICompoundShake(_global.ButtonHapticStrength); RevertChanges(); _sceneManager.HideModal(); })),
-                        Tuple.Create("[chighlight]CANCEL", new Action(() => { _hapticsManager.TriggerUICompoundShake(_global.ButtonHapticStrength); _confirmationDialog.Hide(); }))
+                        Tuple.Create("APPLY", new Action(() => { _hapticsManager.TriggerZoomPulse(_global.LightHapticZoomPulseStrength, _global.HapticZoomPulseDuration); ApplySettings(); _sceneManager.HideModal(); })),
+                        Tuple.Create("DISCARD", new Action(() => { _hapticsManager.TriggerZoomPulse(_global.LightHapticZoomPulseStrength, _global.HapticZoomPulseDuration); RevertChanges(); _sceneManager.HideModal(); })),
+                        Tuple.Create("[chighlight]CANCEL", new Action(() => { _hapticsManager.TriggerZoomPulse(_global.LightHapticZoomPulseStrength, _global.HapticZoomPulseDuration); _confirmationDialog.Hide(); }))
                     }
                 );
             }
             else
             {
-                _hapticsManager.TriggerUICompoundShake(_global.ButtonHapticStrength);
+                _hapticsManager.TriggerZoomPulse(_global.LightHapticZoomPulseStrength, _global.HapticZoomPulseDuration);
                 _sceneManager.HideModal();
             }
         }

@@ -47,13 +47,13 @@ namespace ProjectVagabond.Scenes
             )
             {
                 HoverAnimation = HoverAnimationType.Hop,
-                TriggerHapticOnHover = true
+                TriggerHapticOnHover = false
             };
 
             _mainMenuButton.OnClick += () =>
             {
                 if (_transitionManager.IsTransitioning) return;
-                _hapticsManager.TriggerUICompoundShake(_global.ButtonHapticStrength);
+                _hapticsManager.TriggerZoomPulse(_global.HapticZoomPulseStrength, _global.HapticZoomPulseDuration);
                 _sceneManager.ChangeScene(GameSceneState.MainMenu, TransitionType.FadeOff, TransitionType.FadeOff);
             };
 

@@ -161,7 +161,6 @@ namespace ProjectVagabond.UI
         public void OnSelect()
         {
             IsSelected = true;
-            if (TriggerHapticOnHover) ServiceLocator.Get<HapticsManager>().TriggerUICompoundShake(_global.HoverHapticStrength);
             if (EnableHoverRotation) _hoverRotationTimer = HOVER_ROTATION_DURATION;
         }
 
@@ -233,7 +232,7 @@ namespace ProjectVagabond.UI
 
             if (!wasHovered && IsHovered)
             {
-                if (TriggerHapticOnHover) ServiceLocator.Get<HapticsManager>().TriggerUICompoundShake(_global.HoverHapticStrength);
+                if (TriggerHapticOnHover) ServiceLocator.Get<HapticsManager>().TriggerZoomPulse(_global.LightHapticZoomPulseStrength, _global.HapticZoomPulseDuration);
                 if (EnableHoverRotation) _hoverRotationTimer = HOVER_ROTATION_DURATION;
             }
 

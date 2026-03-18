@@ -440,7 +440,7 @@ namespace ProjectVagabond.UI
                 // Add a snappy haptic kick
                 if (HapticStrength > 0)
                 {
-                    ServiceLocator.Get<HapticsManager>().TriggerUICompoundShake(HapticStrength);
+                    ServiceLocator.Get<HapticsManager>().TriggerShake(HapticStrength * 3f, 0.15f);
                 }
             }
 

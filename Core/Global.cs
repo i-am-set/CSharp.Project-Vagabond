@@ -133,8 +133,12 @@ namespace ProjectVagabond
 
         public const float UniversalSlowFadeDuration = 3.0f;
 
-        public float HoverHapticStrength { get; set; } = 0.75f;
+        public float HoverHapticStrength { get; set; } = 0.25f;
         public float ButtonHapticStrength { get; set; } = 0.5f;
+        public float ButtonHapticDuration { get; set; } = 0.15f;
+        public float LightHapticZoomPulseStrength { get; set; } = 1.01f;
+        public float HapticZoomPulseStrength { get; set; } = 1.02f;
+        public float HapticZoomPulseDuration { get; set; } = 0.05f;
 
         // Mechanics Tuning
         public float PoisonBasePercent { get; set; } = 0.10f;
