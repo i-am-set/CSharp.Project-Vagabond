@@ -584,5 +584,39 @@
         ]
       }
     ]
+  },
+  {
+    "ID": "anim_gravity_well",
+    "Type": "Particle",
+    "Particles": [
+      {
+        "Mode": "Volume",
+        "Duration": 0.0,
+        "Emitter": {
+          "Shape": "Circle",
+          "EmitFrom": "Edge",
+          "EmitterSizeX": 70.0,
+          "EmitterSizeY": 70.0,
+          "EmissionRate": 150.0,
+          "MaxParticles": 300,
+          "VelocityPattern": "Radial",
+          "SpeedMin": -35.0,
+          "SpeedMax": -35.0,
+          "LifetimeMin": 1.0,
+          "LifetimeMax": 1.0,
+          "SizeMin": 1.0,
+          "SizeMax": 1.0,
+          "EndSizeMin": 0.0,
+          "EndSizeMax": 0.0,
+          "InterpolateSize": true,
+          "StartColor": "Palette_Shadow",
+          "EndColor": "Palette_Black",
+          "StartAlpha": 1.0,
+          "EndAlpha": 0.0,
+          "BlendMode": "AlphaBlend",
+          "TexturePath": ""
+        }
+      }
+    ]
   }
 ]

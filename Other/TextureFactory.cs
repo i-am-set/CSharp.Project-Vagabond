@@ -306,7 +306,7 @@ namespace ProjectVagabond
         public Texture2D CreateSoftCircleParticleTexture()
         {
             var graphicsDevice = ServiceLocator.Get<GraphicsDevice>();
-            const int size = 16;
+            const int size = 1;
             var texture = new Texture2D(graphicsDevice, size, size);
             var colorData = new Color[size * size];
             float radius = size / 2f;

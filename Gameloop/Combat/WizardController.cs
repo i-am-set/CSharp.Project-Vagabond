@@ -305,7 +305,7 @@ namespace ProjectVagabond.Battle
 
             combat.KnockbackTargetPos = arena.ClampToArena(desiredTarget, ARENA_CLAMP_MARGIN);
 
-            combat.KnockbackDuration = KNOCKBACK_DURATION_BASE + (distance / KNOCKBACK_DISTANCE_DIVISOR);
+            combat.KnockbackDuration = KNOCKBACK_DURATION_BASE + (Math.Abs(distance) / KNOCKBACK_DISTANCE_DIVISOR);
             combat.KnockbackTimer = combat.KnockbackDuration;
         }
 

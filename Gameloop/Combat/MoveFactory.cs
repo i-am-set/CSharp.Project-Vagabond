@@ -25,7 +25,13 @@ namespace ProjectVagabond.Battle
 
             if (data.DeliveryType == "InstantAOE")
             {
-                move.Delivery = new InstantAOEDelivery { Radius = data.DeliveryRadius };
+                move.Delivery = new InstantAOEDelivery
+                {
+                    Radius = data.DeliveryRadius,
+                    Lifetime = data.DeliveryLifetime,
+                    TickRate = data.DeliveryTickRate,
+                    PullSpeed = data.DeliveryPullSpeed
+                };
             }
             else if (data.DeliveryType == "TickingBeam")
             {

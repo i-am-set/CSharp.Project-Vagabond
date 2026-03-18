@@ -243,7 +243,15 @@ namespace ProjectVagabond.Particles
 
             if (Settings.VelocityPattern == EmissionPattern.Radial)
             {
-                float angle = (float)(_random.NextDouble() * MathHelper.TwoPi);
+                float angle;
+                if (Settings.Shape == EmitterShape.Circle && localOffset.LengthSquared() > 0)
+                {
+                    angle = MathF.Atan2(localOffset.Y, localOffset.X);
+                }
+                else
+                {
+                    angle = (float)(_random.NextDouble() * MathHelper.TwoPi);
+                }
                 float speed = Settings.InitialVelocityX.GetValue(_random); // Use X range as speed
                 p.Velocity = new Vector2(MathF.Cos(angle), MathF.Sin(angle)) * speed;
             }

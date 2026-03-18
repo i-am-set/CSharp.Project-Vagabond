@@ -691,18 +691,40 @@ namespace ProjectVagabond.Animations
                 HasTriggeredImpact = true;
             }
 
-            float maxDuration = _layers.Max(l => l.Duration);
-            if (hasProjectiles)
+            bool allLayersFinished = true;
+
+            for (int i = 0; i < _layers.Count; i++)
             {
-                float travelDuration = attack.Move.ProjectileTravelTime > 0 ? attack.Move.ProjectileTravelTime : (attack.Move.ChargeTime > 0 ? attack.Move.ChargeTime : 1.0f);
-                maxDuration = Math.Max(maxDuration, travelDuration + 0.5f);
+                var layer = _layers[i];
+                bool layerFinished = false;
+
+                if (layer.Mode == "Projectile")
+                {
+                    layerFinished = allProjectilesArrived;
+                }
+                else if (layer.Duration <= 0)
+                {
+                    layerFinished = attack.DeliveryInstance == null || attack.DeliveryInstance.IsFinished;
+                }
+                else
+                {
+                    layerFinished = _timer >= layer.Duration;
+                }
+
+                if (layerFinished)
+                {
+                    _emitters[i].IsActive = false;
+                    if (i < _trailEmitters.Count && _trailEmitters[i] != null) _trailEmitters[i].IsActive = false;
+                }
+                else
+                {
+                    allLayersFinished = false;
+                }
             }
 
-            if (_timer >= maxDuration && (allProjectilesArrived || !hasProjectiles))
+            if (allLayersFinished)
             {
                 IsFinished = true;
-                foreach (var e in _emitters) e.IsActive = false;
-                foreach (var e in _trailEmitters) if (e != null) e.IsActive = false;
             }
         }
 

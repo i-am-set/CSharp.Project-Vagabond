@@ -11,20 +11,31 @@ namespace ProjectVagabond.Deliveries
     {
         public bool IsPooled { get; set; }
         public float Radius { get; set; }
+        public float Lifetime { get; set; }
+        public float TickRate { get; set; }
+        public float PullSpeed { get; set; }
         public bool IsFinished { get; private set; }
         public bool IsAnimationPaused => false;
 
         private float _visualTimer;
+        private float _lifeTimer;
+        private float _tickTimer;
 
         public void Reset()
         {
             _visualTimer = 0f;
+            _lifeTimer = 0f;
+            _tickTimer = 0f;
             IsFinished = false;
         }
 
         public void Setup(IDelivery template)
         {
-            Radius = ((InstantAOEDelivery)template).Radius;
+            var t = (InstantAOEDelivery)template;
+            Radius = t.Radius;
+            Lifetime = t.Lifetime;
+            TickRate = t.TickRate;
+            PullSpeed = t.PullSpeed;
         }
 
         public IDelivery GetInstanceFromPool()
@@ -43,9 +54,16 @@ namespace ProjectVagabond.Deliveries
         {
             IsFinished = false;
             _visualTimer = 0.25f;
+            _lifeTimer = 0f;
+            _tickTimer = 0f;
         }
 
         public void TriggerImpact(BattleContext context, ActiveAttack attack)
+        {
+            ApplyAOE(context, attack);
+        }
+
+        private void ApplyAOE(BattleContext context, ActiveAttack attack)
         {
             foreach (var target in context.Arena.GetWizardsInCircle(attack.TargetPosition, Radius))
             {
@@ -62,8 +80,45 @@ namespace ProjectVagabond.Deliveries
         {
             if (!attack.HasTriggeredImpact) return;
 
-            _visualTimer -= dt;
-            if (_visualTimer <= 0) IsFinished = true;
+            if (Lifetime > 0)
+            {
+                _lifeTimer += dt;
+
+                if (PullSpeed > 0)
+                {
+                    foreach (var target in context.Arena.GetWizardsInCircle(attack.TargetPosition, Radius))
+                    {
+                        if (!attack.Move.CanEffectSelf && target == attack.Caster) continue;
+                        if (target.Data.Combat.State == WizardState.Dead) continue;
+
+                        Vector2 dir = attack.TargetPosition - target.Data.Combat.Position;
+                        float dist = dir.Length();
+                        if (dist > 0)
+                        {
+                            dir.Normalize();
+                            float moveDist = Math.Min(PullSpeed * dt, dist);
+                            target.Data.Combat.Position += dir * moveDist;
+                            target.Data.Combat.Position = context.Arena.ClampToArena(target.Data.Combat.Position, 12f);
+                        }
+                    }
+                }
+
+                if (TickRate > 0)
+                {
+                    _tickTimer += dt;
+                    if (_tickTimer >= TickRate)
+                    {
+                        _tickTimer -= TickRate;
+                        ApplyAOE(context, attack);
+                    }
+                }
+                if (_lifeTimer >= Lifetime) IsFinished = true;
+            }
+            else
+            {
+                _visualTimer -= dt;
+                if (_visualTimer <= 0) IsFinished = true;
+            }
         }
 
         public void Draw(SpriteBatch spriteBatch, ActiveAttack attack)

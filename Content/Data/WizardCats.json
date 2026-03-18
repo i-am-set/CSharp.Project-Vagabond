@@ -131,7 +131,7 @@
     "Move1": "ray_of_frost",
     "Move2": "scratch",
     "Move3": "bite",
-    "Move4": "meteor_shower",
+    "Move4": "gravity_well",
     "ActiveSpell": "force_cast"
   },
   {
@@ -176,7 +176,7 @@
     "Move1": "scratch",
     "Move2": "bite",
     "Move3": "meteor_shower",
-    "Move4": "magic_dart",
+    "Move4": "gravity_well",
     "ActiveSpell": "force_cast"
   },
   {

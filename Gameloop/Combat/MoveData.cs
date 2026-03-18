@@ -17,6 +17,7 @@
         public float DeliveryLifetime { get; set; }
         public float DeliveryTickRate { get; set; }
         public float DeliveryDashDistance { get; set; }
+        public float DeliveryPullSpeed { get; set; }
 
         public float DeliverySeekRadius { get; set; }
         public float DeliverySeekDuration { get; set; }

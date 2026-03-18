@@ -27,7 +27,7 @@ namespace ProjectVagabond.Battle
 
             bool tookDamage = target.Controller.TakeDamage(damage, isCrit, attack.Caster);
 
-            if (tookDamage && attack.Move.Knockback > 0)
+            if (tookDamage && attack.Move.Knockback != 0)
             {
                 Vector2 sourcePos = attack.Caster.Data.Combat.Position;
                 if (attack.DeliveryInstance is InstantAOEDelivery) sourcePos = attack.TargetPosition;
