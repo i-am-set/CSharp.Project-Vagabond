@@ -14,6 +14,7 @@ namespace ProjectVagabond.Deliveries
         public float Lifetime { get; set; }
         public float TickRate { get; set; }
         public float PullSpeed { get; set; }
+        public bool CheckProjectileCollision { get; set; } = true;
         public bool IsFinished { get; private set; }
         public bool IsAnimationPaused => false;
 
@@ -27,6 +28,7 @@ namespace ProjectVagabond.Deliveries
             _lifeTimer = 0f;
             _tickTimer = 0f;
             IsFinished = false;
+            CheckProjectileCollision = true;
         }
 
         public void Setup(IDelivery template)
@@ -36,6 +38,7 @@ namespace ProjectVagabond.Deliveries
             Lifetime = t.Lifetime;
             TickRate = t.TickRate;
             PullSpeed = t.PullSpeed;
+            CheckProjectileCollision = t.CheckProjectileCollision;
         }
 
         public IDelivery GetInstanceFromPool()
@@ -78,7 +81,28 @@ namespace ProjectVagabond.Deliveries
 
         public void Update(float dt, BattleContext context, ActiveAttack attack)
         {
-            if (!attack.HasTriggeredImpact) return;
+            if (!attack.HasTriggeredImpact)
+            {
+                if (CheckProjectileCollision && attack.Animation != null && attack.Animation.CurrentProjectilePosition.HasValue)
+                {
+                    Vector2 projPos = attack.Animation.CurrentProjectilePosition.Value;
+                    float hitRadius = Radius > 0 ? Radius : 8f;
+
+                    foreach (var target in context.Arena.Wizards)
+                    {
+                        if (target == attack.Caster) continue;
+                        if (target.Data.Combat.State == WizardState.Dead) continue;
+
+                        if (CollisionMath.RectangleIntersectsCircle(target.Controller.GetHitbox(context.SpriteManager), projPos, hitRadius))
+                        {
+                            attack.TargetPosition = projPos;
+                            attack.Animation.ForceImpact(projPos);
+                            break;
+                        }
+                    }
+                }
+                return;
+            }
 
             if (Lifetime > 0)
             {

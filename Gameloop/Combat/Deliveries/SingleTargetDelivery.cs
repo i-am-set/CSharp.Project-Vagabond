@@ -10,6 +10,7 @@ namespace ProjectVagabond.Deliveries
     public sealed class SingleTargetDelivery : IDelivery
     {
         public bool IsPooled { get; set; }
+        public bool CheckProjectileCollision { get; set; } = true;
         public bool IsFinished { get; private set; }
         public bool IsAnimationPaused => false;
         private float _visualTimer;
@@ -18,10 +19,13 @@ namespace ProjectVagabond.Deliveries
         {
             _visualTimer = 0f;
             IsFinished = false;
+            CheckProjectileCollision = true;
         }
 
         public void Setup(IDelivery template)
         {
+            var t = (SingleTargetDelivery)template;
+            CheckProjectileCollision = t.CheckProjectileCollision;
         }
 
         public IDelivery GetInstanceFromPool()
@@ -55,7 +59,29 @@ namespace ProjectVagabond.Deliveries
 
         public void Update(float dt, BattleContext context, ActiveAttack attack)
         {
-            if (!attack.HasTriggeredImpact) return;
+            if (!attack.HasTriggeredImpact)
+            {
+                if (CheckProjectileCollision && attack.Animation != null && attack.Animation.CurrentProjectilePosition.HasValue)
+                {
+                    Vector2 projPos = attack.Animation.CurrentProjectilePosition.Value;
+                    float hitRadius = 8f;
+
+                    foreach (var target in context.Arena.Wizards)
+                    {
+                        if (target == attack.Caster) continue;
+                        if (target.Data.Combat.State == WizardState.Dead) continue;
+
+                        if (CollisionMath.RectangleIntersectsCircle(target.Controller.GetHitbox(context.SpriteManager), projPos, hitRadius))
+                        {
+                            attack.TargetWizard = target;
+                            attack.TargetPosition = projPos;
+                            attack.Animation.ForceImpact(projPos);
+                            break;
+                        }
+                    }
+                }
+                return;
+            }
 
             _visualTimer -= dt;
             if (_visualTimer <= 0) IsFinished = true;

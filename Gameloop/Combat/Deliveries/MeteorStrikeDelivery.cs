@@ -79,7 +79,7 @@ namespace ProjectVagabond.Deliveries
                     ExecuteOnChargeStart = true,
                     RequiresFocus = false,
                     ShowProjectileIndicator = true,
-                    Delivery = new InstantAOEDelivery { Radius = ProjectileRadius },
+                    Delivery = new InstantAOEDelivery { Radius = ProjectileRadius, CheckProjectileCollision = false },
                     Effects = attack.Move.Effects.ToList()
                 };
             }

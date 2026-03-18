@@ -86,7 +86,8 @@ namespace ProjectVagabond.Battle
                     ProjectileCount = data.DeliveryProjectileCount,
                     Duration = data.DeliveryLifetime,
                     ProjectileAnimationID = data.DeliveryProjectileAnimation,
-                    ProjectileTravelTime = data.DeliveryProjectileTravelTime
+                    ProjectileTravelTime = data.DeliveryProjectileTravelTime,
+                    SpreadAngle = data.DeliverySpreadAngle
                 };
             }
 

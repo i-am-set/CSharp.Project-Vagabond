@@ -9,7 +9,7 @@
     "Tenacity": 3,
     "Agility": 4,
     "Move1": "magic_missile",
-    "Move2": "scratch",
+    "Move2": "arcane_barrage",
     "Move3": "fireball",
     "Move4": "meteor_strike",
     "ActiveSpell": "ward"
@@ -24,7 +24,7 @@
     "Tenacity": 3,
     "Agility": 5,
     "Move1": "magic_missile",
-    "Move2": "scratch",
+    "Move2": "arcane_barrage",
     "Move3": "magic_dart",
     "Move4": "meteor_shower",
     "ActiveSpell": "teleport"
@@ -68,7 +68,7 @@
     "Power": 4,
     "Tenacity": 8,
     "Agility": 3,
-    "Move1": "ray_of_frost",
+    "Move1": "arcane_barrage",
     "Move2": "magic_missile",
     "Move3": "bite",
     "Move4": "meteor_shower",
@@ -130,7 +130,7 @@
     "Agility": 4,
     "Move1": "ray_of_frost",
     "Move2": "scratch",
-    "Move3": "bite",
+    "Move3": "arcane_barrage",
     "Move4": "gravity_well",
     "ActiveSpell": "force_cast"
   },
@@ -191,7 +191,7 @@
     "Move1": "fireball",
     "Move2": "scratch",
     "Move3": "bite",
-    "Move4": "magic_dart",
+    "Move4": "arcane_barrage",
     "ActiveSpell": "ward"
   },
   {
@@ -219,7 +219,7 @@
     "Tenacity": 3,
     "Agility": 5,
     "Move1": "ray_of_frost",
-    "Move2": "scratch",
+    "Move2": "arcane_barrage",
     "Move3": "magic_dart",
     "Move4": "meteor_shower",
     "ActiveSpell": "force_cast"

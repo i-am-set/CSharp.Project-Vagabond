@@ -92,6 +92,8 @@ namespace ProjectVagabond.Animations
     {
         bool IsFinished { get; }
         bool HasTriggeredImpact { get; }
+        Vector2? CurrentProjectilePosition { get; }
+        void ForceImpact(Vector2 position);
         void Start(ActiveAttack attack, BattleContext context);
         void Update(float dt, BattleContext context, ActiveAttack attack);
         void Draw(SpriteBatch spriteBatch, ActiveAttack attack);
@@ -251,12 +253,21 @@ namespace ProjectVagabond.Animations
 
         public bool IsFinished { get; private set; }
         public bool HasTriggeredImpact { get; private set; }
+        public Vector2? CurrentProjectilePosition => _data != null && _data.IsProjectile && _targetPositions.Count > 0 ? _targetPositions[0] : null;
 
         public SpriteAnimationInstance() { }
 
         public void Setup(SpriteAnimationData data)
         {
             _data = data;
+        }
+
+        public void ForceImpact(Vector2 position)
+        {
+            if (HasTriggeredImpact) return;
+            if (_targetPositions.Count > 0) _targetPositions[0] = position;
+            HasTriggeredImpact = true;
+            IsFinished = true;
         }
 
         public void Reset()
@@ -470,12 +481,21 @@ namespace ProjectVagabond.Animations
 
         public bool IsFinished { get; private set; }
         public bool HasTriggeredImpact { get; private set; }
+        public Vector2? CurrentProjectilePosition => _layers != null && _layers.Any(l => l.Mode == "Projectile") ? _projectilePos : null;
 
         public ParticleAnimationInstance() { }
 
         public void Setup(List<ParticleAnimationData> layers)
         {
             _layers = layers;
+        }
+
+        public void ForceImpact(Vector2 position)
+        {
+            if (HasTriggeredImpact) return;
+            _targetPos = position;
+            _projectilePos = position;
+            _timer = 9999f; // Force completion of travel
         }
 
         public void Reset()

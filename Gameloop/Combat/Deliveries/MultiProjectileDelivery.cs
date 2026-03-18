@@ -17,6 +17,7 @@ namespace ProjectVagabond.Deliveries
         public float Duration { get; set; }
         public string ProjectileAnimationID { get; set; }
         public float ProjectileTravelTime { get; set; }
+        public float SpreadAngle { get; set; }
 
         private float _timer;
         private int _projectilesSpawned;
@@ -39,6 +40,7 @@ namespace ProjectVagabond.Deliveries
             Duration = t.Duration;
             ProjectileAnimationID = t.ProjectileAnimationID;
             ProjectileTravelTime = t.ProjectileTravelTime;
+            SpreadAngle = t.SpreadAngle;
         }
 
         public IDelivery GetInstanceFromPool()
@@ -72,7 +74,7 @@ namespace ProjectVagabond.Deliveries
                     ExecuteOnChargeStart = true,
                     RequiresFocus = false,
                     ShowProjectileIndicator = false,
-                    Delivery = new SingleTargetDelivery(),
+                    Delivery = SpreadAngle > 0 ? new InstantAOEDelivery { Radius = 12f } : new SingleTargetDelivery(),
                     Effects = attack.Move.Effects.ToList()
                 };
             }
@@ -103,24 +105,45 @@ namespace ProjectVagabond.Deliveries
 
         private void SpawnProjectile(BattleContext context, ActiveAttack parentAttack)
         {
-            var validTargets = new List<ArenaWizard>();
-            foreach (var w in context.Arena.Wizards)
-            {
-                if (w != parentAttack.Caster && w.Data.Stats.CurrentHP > 0 && !w.Data.Combat.IsTeleporting) validTargets.Add(w);
-            }
-
             ArenaWizard target = null;
-            if (validTargets.Count > 0)
+            Vector2 targetPos;
+            Vector2 dir;
+
+            if (SpreadAngle > 0)
             {
-                target = validTargets[_random.Next(validTargets.Count)];
+                float baseAngle = MathF.Atan2(parentAttack.Direction.Y, parentAttack.Direction.X);
+                float offset = (float)(_random.NextDouble() * SpreadAngle - SpreadAngle / 2f);
+                float finalAngle = baseAngle + offset;
+                dir = new Vector2(MathF.Cos(finalAngle), MathF.Sin(finalAngle));
+
+                float dist = 40f + (float)_random.NextDouble() * 160f;
+                targetPos = parentAttack.Caster.Data.Combat.Position + dir * dist;
+                targetPos = context.Arena.ClampToArena(targetPos, 4f);
+
+                dir = targetPos - parentAttack.Caster.Data.Combat.Position;
+                if (dir.LengthSquared() > 0) dir.Normalize();
+                else dir = new Vector2(1, 0);
             }
+            else
+            {
+                var validTargets = new List<ArenaWizard>();
+                foreach (var w in context.Arena.Wizards)
+                {
+                    if (w != parentAttack.Caster && w.Data.Stats.CurrentHP > 0 && !w.Data.Combat.IsTeleporting) validTargets.Add(w);
+                }
 
-            Vector2 targetPos = target != null ? target.Data.Combat.Position : parentAttack.Caster.Data.Combat.Position + new Vector2(_random.Next(-50, 50), _random.Next(-50, 50));
-            targetPos = context.Arena.ClampToArena(targetPos, 4f);
+                if (validTargets.Count > 0)
+                {
+                    target = validTargets[_random.Next(validTargets.Count)];
+                }
 
-            Vector2 dir = targetPos - parentAttack.Caster.Data.Combat.Position;
-            if (dir.LengthSquared() > 0) dir.Normalize();
-            else dir = new Vector2(1, 0);
+                targetPos = target != null ? target.Data.Combat.Position : parentAttack.Caster.Data.Combat.Position + new Vector2(_random.Next(-50, 50), _random.Next(-50, 50));
+                targetPos = context.Arena.ClampToArena(targetPos, 4f);
+
+                dir = targetPos - parentAttack.Caster.Data.Combat.Position;
+                if (dir.LengthSquared() > 0) dir.Normalize();
+                else dir = new Vector2(1, 0);
+            }
 
             var childAttack = Pool<ActiveAttack>.Get();
             childAttack.Reset();

@@ -28,6 +28,7 @@
         public float DeliveryFallTime { get; set; }
         public float DeliveryProjectileTravelTime { get; set; }
         public string DeliveryProjectileAnimation { get; set; }
+        public float DeliverySpreadAngle { get; set; }
 
         public string EffectType { get; set; }
         public float EffectArg { get; set; }
