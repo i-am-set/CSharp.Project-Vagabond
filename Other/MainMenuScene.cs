@@ -133,6 +133,36 @@ namespace ProjectVagabond.Scenes
             _navigationGroup.Add(newGameButton);
             currentY += newGameHeight + buttonYSpacing;
 
+            // --- CATYCLOPAEDIA BUTTON ---
+            string catyText = "CATYCLOPAEDIA";
+            Vector2 catySize = secondaryFont.MeasureString(catyText);
+            int catyWidth = (int)catySize.X + horizontalPadding * 2;
+            int catyHeight = (int)catySize.Y + verticalPadding * 2;
+            int catyX = screenCenterX - (catyWidth / 2);
+
+            var catyButton = new Button(
+                new Rectangle(catyX, (int)currentY, catyWidth, catyHeight),
+                catyText,
+                font: secondaryFont,
+                alignLeft: false
+            )
+            {
+                TextRenderOffset = new Vector2(0, -1),
+                EnableTextWave = true,
+                AlwaysAnimateText = true,
+                WaveEffectType = TextEffectType.TypewriterPop,
+                EnableHoverSway = false
+            };
+            catyButton.OnClick += () =>
+            {
+                _hapticsManager.TriggerUICompoundShake(_global.ButtonHapticStrength);
+                catyButton.ResetAnimationState();
+                _sceneManager.ChangeScene(GameSceneState.Catyclopaedia, _transitionManager.GetRandomTransition(), _transitionManager.GetRandomTransition());
+            };
+            _buttons.Add(catyButton);
+            _navigationGroup.Add(catyButton);
+            currentY += catyHeight + buttonYSpacing;
+
             // --- SETTINGS BUTTON ---
             Vector2 settingsSize = secondaryFont.MeasureString(settingsText);
             int settingsWidth = (int)settingsSize.X + horizontalPadding * 2;
