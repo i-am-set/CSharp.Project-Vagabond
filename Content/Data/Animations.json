@@ -618,5 +618,40 @@
         }
       }
     ]
+  },
+  {
+    "ID": "anim_repelling_blast",
+    "Type": "Particle",
+    "Particles": [
+      {
+        "Mode": "Volume",
+        "Duration": 0.2,
+        "Emitter": {
+          "Shape": "Circle",
+          "EmitFrom": "Edge",
+          "EmitterSizeX": 0.0,
+          "EmitterSizeY": 0.0,
+          "EmissionRate": 0.0,
+          "BurstCount": 150,
+          "MaxParticles": 150,
+          "VelocityPattern": "Radial",
+          "SpeedMin": 10.0,
+          "SpeedMax": 30.0,
+          "Drag": 8.0,
+          "LifetimeMin": 0.2,
+          "LifetimeMax": 0.4,
+          "SizeMin": 2.0,
+          "SizeMax": 5.0,
+          "EndSizeMin": 0.0,
+          "EndSizeMax": 0.0,
+          "InterpolateSize": true,
+          "StartColor": "Palette_White",
+          "EndColor": "Palette_Sky",
+          "StartAlpha": 1.0,
+          "EndAlpha": 0.0,
+          "BlendMode": "Additive"
+        }
+      }
+    ]
   }
 ]

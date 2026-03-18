@@ -194,7 +194,7 @@
     "AnimationID": "anim_gravity_well",
     "BasePower": 5,
     "ChargeTime": 1.0,
-    "Weight": 90,
+    "Weight": 20,
     "Knockback": 0.0,
     "DeliveryType": "InstantAOE",
     "DeliveryRadius": 15.0,
@@ -210,6 +210,29 @@
     "CanEffectSelf": false,
     "ExecuteOnChargeStart": false,
     "RequiresFocus": true,
+    "ShowProjectileIndicator": true
+  },
+  {
+    "ID": "repelling_blast",
+    "Name": "Repelling Blast",
+    "AnimationID": "anim_repelling_blast",
+    "BasePower": 0,
+    "ChargeTime": 0,
+    "Weight": 20,
+    "Knockback": 200.0,
+    "DeliveryType": "InstantAOE",
+    "DeliveryRadius": 35.0,
+    "DeliveryWidth": 0.0,
+    "DeliveryLength": 0.0,
+    "DeliveryLifetime": 0.0,
+    "DeliveryTickRate": 0.0,
+    "DeliveryDashDistance": 0.0,
+    "EffectType": "Damage",
+    "EffectArg": 0.0,
+    "TargetSelf": true,
+    "CanEffectSelf": false,
+    "ExecuteOnChargeStart": false,
+    "RequiresFocus": false,
     "ShowProjectileIndicator": true
   }
 ]

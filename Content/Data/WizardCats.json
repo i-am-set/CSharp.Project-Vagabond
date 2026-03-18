@@ -56,7 +56,7 @@
     "Move1": "bite",
     "Move2": "scratch",
     "Move3": "magic_missile",
-    "Move4": "",
+    "Move4": "repelling_blast",
     "ActiveSpell": "ward"
   },
   {
@@ -173,7 +173,7 @@
     "Power": 3,
     "Tenacity": 6,
     "Agility": 2,
-    "Move1": "scratch",
+    "Move1": "repelling_blast",
     "Move2": "bite",
     "Move3": "meteor_shower",
     "Move4": "gravity_well",
@@ -206,7 +206,7 @@
     "Move1": "lick_wounds",
     "Move2": "magic_missile",
     "Move3": "bite",
-    "Move4": "",
+    "Move4": "repelling_blast",
     "ActiveSpell": "teleport"
   },
   {
