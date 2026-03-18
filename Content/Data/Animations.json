@@ -716,5 +716,41 @@
         ]
       }
     ]
+  },
+  {
+    "ID": "anim_healing_aura",
+    "Type": "Particle",
+    "Particles": [
+      {
+        "Mode": "Volume",
+        "Duration": 3.0,
+        "Emitter": {
+          "Shape": "Circle",
+          "EmitFrom": "Volume",
+          "EmitterSizeX": 60.0,
+          "EmitterSizeY": 60.0,
+          "EmissionRate": 30.0,
+          "MaxParticles": 100,
+          "VelocityPattern": "Cartesian",
+          "VelocityXMin": -5.0,
+          "VelocityXMax": 5.0,
+          "VelocityYMin": -20.0,
+          "VelocityYMax": -10.0,
+          "LifetimeMin": 0.5,
+          "LifetimeMax": 1.0,
+          "SizeMin": 1.0,
+          "SizeMax": 2.0,
+          "EndSizeMin": 0.0,
+          "EndSizeMax": 0.0,
+          "InterpolateSize": true,
+          "StartColor": "Palette_Sky",
+          "EndColor": "Palette_Leaf",
+          "StartAlpha": 0.8,
+          "EndAlpha": 0.0,
+          "BlendMode": "Additive",
+          "TexturePath": "HealParticle"
+        }
+      }
+    ]
   }
 ]
