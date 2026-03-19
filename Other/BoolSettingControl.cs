@@ -36,8 +36,6 @@ namespace ProjectVagabond.UI
         private bool _isRightArrowHovered;
         private bool _wasLeftArrowHovered;
         private bool _wasRightArrowHovered;
-        private bool _isLeftArrowPressed;
-        private bool _isRightArrowPressed;
 
         private readonly HoverAnimator _hoverAnimator = new HoverAnimator();
         public HoverAnimator HoverAnimator => _hoverAnimator;
@@ -88,6 +86,7 @@ namespace ProjectVagabond.UI
             if (input.NavigateLeft || input.NavigateRight || input.Confirm)
             {
                 _hapticsManager.TriggerZoomPulse(_global.LightHapticZoomPulseStrength, _global.HapticZoomPulseDuration);
+                ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlayUi("ui_click");
                 ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlayUi("ui_confirm");
                 ToggleValue();
                 return true;
@@ -133,8 +132,6 @@ namespace ProjectVagabond.UI
                 _isRightArrowHovered = false;
                 _wasLeftArrowHovered = false;
                 _wasRightArrowHovered = false;
-                _isLeftArrowPressed = false;
-                _isRightArrowPressed = false;
                 return;
             }
 
@@ -159,44 +156,29 @@ namespace ProjectVagabond.UI
             {
                 if (mouseIsDown && !mouseWasDown)
                 {
+                    bool consumed = false;
                     if (_isLeftArrowHovered)
                     {
-                        _isLeftArrowPressed = true;
+                        _hapticsManager.TriggerZoomPulse(_global.LightHapticZoomPulseStrength, _global.HapticZoomPulseDuration);
                         audio.PlayUi("ui_click");
+                        audio.PlayUi("ui_confirm");
+                        ToggleValue();
+                        consumed = true;
                     }
                     else if (_isRightArrowHovered)
                     {
-                        _isRightArrowPressed = true;
+                        _hapticsManager.TriggerZoomPulse(_global.LightHapticZoomPulseStrength, _global.HapticZoomPulseDuration);
                         audio.PlayUi("ui_click");
+                        audio.PlayUi("ui_confirm");
+                        ToggleValue();
+                        consumed = true;
+                    }
+
+                    if (consumed)
+                    {
+                        inputManager.ConsumeMouseClick();
                     }
                 }
-            }
-
-            if (!mouseIsDown && mouseWasDown)
-            {
-                bool consumed = false;
-                if (_isLeftArrowHovered && _isLeftArrowPressed)
-                {
-                    _hapticsManager.TriggerZoomPulse(_global.LightHapticZoomPulseStrength, _global.HapticZoomPulseDuration);
-                    audio.PlayUi("ui_confirm");
-                    ToggleValue();
-                    consumed = true;
-                }
-                else if (_isRightArrowHovered && _isRightArrowPressed)
-                {
-                    _hapticsManager.TriggerZoomPulse(_global.LightHapticZoomPulseStrength, _global.HapticZoomPulseDuration);
-                    audio.PlayUi("ui_confirm");
-                    ToggleValue();
-                    consumed = true;
-                }
-
-                if (consumed)
-                {
-                    inputManager.ConsumeMouseClick();
-                }
-
-                _isLeftArrowPressed = false;
-                _isRightArrowPressed = false;
             }
         }
 
@@ -223,8 +205,6 @@ namespace ProjectVagabond.UI
             _isRightArrowHovered = false;
             _wasLeftArrowHovered = false;
             _wasRightArrowHovered = false;
-            _isLeftArrowPressed = false;
-            _isRightArrowPressed = false;
             IsSelected = false;
         }
 

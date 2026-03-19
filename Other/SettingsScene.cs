@@ -45,7 +45,10 @@ namespace ProjectVagabond.Scenes
         private int _previousScrollValue;
         private KeyboardState _previousKeyboardState;
         private MouseState _previousMouseState;
-        private const float SCROLL_SMOOTHING = 0.2f;
+
+        private bool _isDraggingScrollbar = false;
+        private float _scrollbarDragOffsetY = 0f;
+        private float _lastAudioScrollOffset = 0f;
 
         private float _inputDelay = 0.1f;
         private float _currentInputDelay = 0f;
@@ -106,6 +109,8 @@ namespace ProjectVagabond.Scenes
             _currentInputDelay = _inputDelay;
             _scrollOffset = 0;
             _targetScrollOffset = 0;
+            _lastAudioScrollOffset = 0;
+            _isDraggingScrollbar = false;
         }
 
         public override void Exit()
@@ -514,10 +519,75 @@ namespace ProjectVagabond.Scenes
             }
             _previousScrollValue = currentMouseState.ScrollWheelValue;
 
-            _scrollOffset = MathHelper.Lerp(_scrollOffset, _targetScrollOffset, SCROLL_SMOOTHING);
-            if (Math.Abs(_scrollOffset - _targetScrollOffset) < 0.5f) _scrollOffset = _targetScrollOffset;
-
             Vector2 virtualMousePos = Core.TransformMouse(currentMouseState.Position);
+
+            // Scrollbar dragging logic
+            float totalContentHeight = _settingControls.Count * ITEM_VERTICAL_SPACING;
+            if (totalContentHeight > SCROLL_VIEW_HEIGHT)
+            {
+                int trackX = SETTINGS_PANEL_X + SETTINGS_PANEL_WIDTH + 6;
+                int trackY = SETTINGS_START_Y;
+                int trackHeight = SCROLL_VIEW_HEIGHT;
+                int trackWidth = 3;
+
+                float viewRatio = (float)SCROLL_VIEW_HEIGHT / totalContentHeight;
+                float thumbHeight = Math.Max(10, trackHeight * viewRatio);
+                float scrollRatio = _scrollOffset / maxScroll;
+                float thumbY = trackY + (scrollRatio * (trackHeight - thumbHeight));
+
+                Rectangle thumbRect = new Rectangle(trackX - 4, (int)thumbY, trackWidth + 8, (int)thumbHeight);
+                Rectangle trackRect = new Rectangle(trackX - 4, trackY, trackWidth + 8, trackHeight);
+
+                bool mouseIsDown = currentMouseState.LeftButton == ButtonState.Pressed;
+                bool mouseWasDown = _previousMouseState.LeftButton == ButtonState.Pressed;
+
+                var cursorManager = ServiceLocator.Get<CursorManager>();
+
+                if (_isDraggingScrollbar)
+                {
+                    cursorManager.SetState(CursorState.Dragging);
+                }
+                else if (thumbRect.Contains(virtualMousePos) || trackRect.Contains(virtualMousePos))
+                {
+                    cursorManager.SetState(CursorState.HoverDraggable);
+                }
+
+                if (mouseIsDown && !mouseWasDown)
+                {
+                    if (thumbRect.Contains(virtualMousePos))
+                    {
+                        _isDraggingScrollbar = true;
+                        _scrollbarDragOffsetY = virtualMousePos.Y - thumbY;
+                    }
+                    else if (trackRect.Contains(virtualMousePos))
+                    {
+                        float newThumbY = virtualMousePos.Y - (thumbHeight / 2f);
+                        float newScrollRatio = Math.Clamp((newThumbY - trackY) / (trackHeight - thumbHeight), 0f, 1f);
+                        _targetScrollOffset = MathF.Round((newScrollRatio * maxScroll) / ITEM_VERTICAL_SPACING) * ITEM_VERTICAL_SPACING;
+                        _isDraggingScrollbar = true;
+                        _scrollbarDragOffsetY = thumbHeight / 2f;
+                    }
+                }
+                else if (!mouseIsDown)
+                {
+                    _isDraggingScrollbar = false;
+                }
+
+                if (_isDraggingScrollbar && mouseIsDown)
+                {
+                    float newThumbY = virtualMousePos.Y - _scrollbarDragOffsetY;
+                    float newScrollRatio = Math.Clamp((newThumbY - trackY) / (trackHeight - thumbHeight), 0f, 1f);
+                    _targetScrollOffset = MathF.Round((newScrollRatio * maxScroll) / ITEM_VERTICAL_SPACING) * ITEM_VERTICAL_SPACING;
+                }
+            }
+
+            if (Math.Abs(_targetScrollOffset - _lastAudioScrollOffset) > 0.1f)
+            {
+                ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlayUi("ui_hover");
+                _lastAudioScrollOffset = _targetScrollOffset;
+            }
+
+            _scrollOffset = _targetScrollOffset;
 
             // --- 1. Update Controls (Position & Bounds) ---
             for (int i = 0; i < _settingControls.Count; i++)
@@ -706,7 +776,7 @@ namespace ProjectVagabond.Scenes
             int trackHeight = SCROLL_VIEW_HEIGHT;
             int trackWidth = 3;
 
-            spriteBatch.Draw(pixel, new Rectangle(trackX, trackY, trackWidth, trackHeight), _global.Palette_DarkShadow);
+            spriteBatch.Draw(pixel, new Rectangle(trackX, trackY, trackWidth, trackHeight), _global.Palette_Black);
 
             float viewRatio = (float)SCROLL_VIEW_HEIGHT / totalContentHeight;
             float thumbHeight = Math.Max(10, trackHeight * viewRatio);
