@@ -247,7 +247,7 @@
     "DeliveryRadius": 0.0,
     "DeliveryWidth": 0.0,
     "DeliveryLength": 0.0,
-    "DeliveryLifetime": 2.5,
+    "DeliveryLifetime": 2.0,
     "DeliveryTickRate": 0.0,
     "DeliveryDashDistance": 0.0,
     "DeliveryProjectileCount": 30,

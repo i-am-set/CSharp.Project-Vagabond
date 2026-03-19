@@ -188,8 +188,8 @@ namespace ProjectVagabond.Scenes
             _lastCountdownSecond = 10;
 
             IsOvertime = false;
-            _matchTimer = 60f;
-            _lastMatchSecond = 60;
+            _matchTimer = 120f;
+            _lastMatchSecond = 120;
             _plinkTimerText = new PlinkAnimator();
             _plinkSuddenDeath = new PlinkAnimator();
             _suddenDeathTimer = 0f;
@@ -439,7 +439,7 @@ namespace ProjectVagabond.Scenes
                         if (currentSec != _lastMatchSecond && currentSec >= 0)
                         {
                             _lastMatchSecond = currentSec;
-                            if (currentSec == 30 || currentSec <= 10)
+                            if (currentSec == 60 || currentSec == 30 || currentSec <= 10)
                             {
                                 _plinkTimerText.Start(0f, 0.3f);
                             }
@@ -759,7 +759,7 @@ namespace ProjectVagabond.Scenes
                 Color timerColor = IsOvertime ? _global.Palette_Rust : (_lastMatchSecond <= 3 ? _global.Palette_Rust : _global.Palette_DarkPale);
 
                 Vector2 tSize = mainFont.MeasureString(timerText);
-                Vector2 tPos = new Vector2(MathF.Round(_arenaCenter.X), 12 + MathF.Round(tSize.Y / 2f));
+                Vector2 tPos = new Vector2(MathF.Round(_arenaCenter.X), 48 + MathF.Round(tSize.Y / 2f));
                 Vector2 tOrigin = new Vector2(MathF.Round(tSize.X / 2f), MathF.Round(tSize.Y / 2f));
 
                 float tScale = _plinkTimerText.IsActive ? _plinkTimerText.Scale : 1f;
