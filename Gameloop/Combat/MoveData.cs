@@ -30,6 +30,10 @@
         public string DeliveryProjectileAnimation { get; set; }
         public float DeliverySpreadAngle { get; set; }
 
+        public int DeliveryBounceCount { get; set; }
+        public float DeliveryBounceRadius { get; set; }
+        public float DeliveryBounceDelay { get; set; }
+
         public string EffectType { get; set; }
         public float EffectArg { get; set; }
 

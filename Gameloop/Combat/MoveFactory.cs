@@ -90,6 +90,16 @@ namespace ProjectVagabond.Battle
                     SpreadAngle = data.DeliverySpreadAngle
                 };
             }
+            else if (data.DeliveryType == "Chain")
+            {
+                move.Delivery = new ChainDelivery
+                {
+                    BounceCount = data.DeliveryBounceCount,
+                    BounceRadius = data.DeliveryBounceRadius,
+                    BounceDelay = data.DeliveryBounceDelay > 0 ? data.DeliveryBounceDelay : 0.1f,
+                    VisualDuration = data.DeliveryLifetime > 0 ? data.DeliveryLifetime : 0.3f
+                };
+            }
 
             if (data.EffectType == "Damage")
             {
