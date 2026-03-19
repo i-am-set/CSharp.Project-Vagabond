@@ -62,7 +62,6 @@ namespace ProjectVagabond.Scenes
             public string TargetId = "";
             public SlotState State;
             public float StateTimer;
-            public int LastPassedIndex;
             public float SettleDuration;
             public PlinkAnimator Plink = new PlinkAnimator();
         }
@@ -72,6 +71,7 @@ namespace ProjectVagabond.Scenes
         private List<SlotColumn> _slots = new();
         private float _spinTimer = 0f;
         private int _slotsStopped = 0;
+        private float _spinSoundTimer = 0f;
 
         public NewGameIntroScene()
         {
@@ -129,21 +129,22 @@ namespace ProjectVagabond.Scenes
             var shuffled = _characterIds.OrderBy(x => _random.Next()).ToList();
             for (int i = 0; i < _randomCount; i++)
             {
+                float vIndex = _random.Next(0, _characterIds.Count);
                 _slots.Add(new SlotColumn
                 {
-                    VirtualIndex = _random.Next(0, _characterIds.Count),
+                    VirtualIndex = vIndex,
                     MaxSpeed = 30f + (float)_random.NextDouble() * 20f,
                     Speed = 0f,
                     TargetId = shuffled[i],
                     TargetIdIndex = _characterIds.IndexOf(shuffled[i]),
                     State = SlotState.WindUp,
-                    StateTimer = 0f,
-                    LastPassedIndex = -1
+                    StateTimer = 0f
                 });
             }
 
             _spinTimer = 0f;
             _slotsStopped = 0;
+            _spinSoundTimer = 0f;
         }
 
         private void InitializeData()
@@ -218,6 +219,16 @@ namespace ProjectVagabond.Scenes
             if (_state == IntroState.Spinning)
             {
                 _spinTimer += dt;
+
+                if (_slotsStopped < _randomCount)
+                {
+                    _spinSoundTimer -= dt;
+                    if (_spinSoundTimer <= 0f)
+                    {
+                        ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlayUi("ui_hover");
+                        _spinSoundTimer = 0.06f;
+                    }
+                }
 
                 float baseSpinDuration = 1.5f;
                 float stopInterval = 0.4f;
@@ -295,6 +306,9 @@ namespace ProjectVagabond.Scenes
                             slot.Plink.Start(0f, 0.3f);
                             _selectedWizards[slot.TargetId] = (0f, 0f);
 
+                            var audio = ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>();
+                            audio.PlayUi("ui_click");
+
                             var emitter = _particleSystemManager.CreateEmitter(ParticleEffects.CreateUIPlink());
                             int slotWidth = (Global.VIRTUAL_WIDTH - 40) / _randomCount;
                             int startX = 20 + (i * slotWidth);
@@ -306,6 +320,7 @@ namespace ProjectVagabond.Scenes
                             {
                                 _hapticsManager.TriggerShake(1.5f, 1.5f);
                                 ServiceLocator.Get<Core>().TriggerFullscreenFlash(Color.White, 0.05f);
+                                audio.PlayUi("ui_confirm");
                             }
                         }
                     }

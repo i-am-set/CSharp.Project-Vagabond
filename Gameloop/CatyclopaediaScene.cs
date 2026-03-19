@@ -5,6 +5,7 @@ using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond.Animations;
 using ProjectVagabond.Battle;
+using ProjectVagabond.Particles;
 using ProjectVagabond.Scenes;
 using ProjectVagabond.Transitions;
 using ProjectVagabond.UI;
@@ -251,7 +252,7 @@ namespace ProjectVagabond.Scenes
             _backButton.OnClick += () =>
             {
                 if (_isPlinkingIn || _transitionManager.IsTransitioning) return;
-                _hapticsManager.TriggerZoomPulse(_global.HapticZoomPulseStrength, _global.HapticZoomPulseDuration);
+                _hapticsManager.TriggerZoomPulse(_global.LightHapticZoomPulseStrength, _global.HapticZoomPulseDuration);
                 _sceneManager.ChangeScene(GameSceneState.MainMenu, TransitionType.FadeOff, TransitionType.FadeOff);
             };
             _navigationGroup.Add(_backButton);
@@ -439,7 +440,8 @@ namespace ProjectVagabond.Scenes
                 if (currentIndex != _lastHapticIndex)
                 {
                     _lastHapticIndex = currentIndex;
-                    _hapticsManager.TriggerZoomPulse(_global.HapticZoomPulseStrength, _global.HapticZoomPulseDuration);
+                    _hapticsManager.TriggerZoomPulse(_global.LightHapticZoomPulseStrength, _global.HapticZoomPulseDuration);
+                    ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlayUi("ui_hover");
                 }
 
                 if (_inputManager.CurrentInputDevice == InputDeviceType.Mouse)
@@ -494,7 +496,7 @@ namespace ProjectVagabond.Scenes
             {
                 Vector2 size1 = secondaryFont.MeasureString(INTRO_LINE_1);
                 var pos1 = new Vector2(MathF.Round((Global.VIRTUAL_WIDTH - size1.X) / 2f), MathF.Round(titleY - 2));
-                TextAnimator.DrawTextWithEffect(spriteBatch, secondaryFont, INTRO_LINE_1, pos1, _global.Palette_White, TextEffectType.RainbowWave, _titleWaveTimer, new Vector2(t1Scale), null, t1Rot);
+                TextAnimator.DrawTextWithEffect(spriteBatch, secondaryFont, INTRO_LINE_1, pos1, _global.Palette_DarkPale, TextEffectType.None, 0f, new Vector2(t1Scale), null, t1Rot);
 
                 if (_isPlinkingIn && _plinkTitle1.FlashTint.HasValue)
                 {
