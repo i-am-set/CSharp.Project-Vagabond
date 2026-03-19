@@ -53,7 +53,7 @@
     "Power": 7,
     "Tenacity": 4,
     "Agility": 8,
-    "Move1": "bite",
+    "Move1": "vampiric_bite",
     "Move2": "scratch",
     "Move3": "magic_missile",
     "Move4": "repelling_blast",
@@ -174,7 +174,7 @@
     "Tenacity": 6,
     "Agility": 2,
     "Move1": "repelling_blast",
-    "Move2": "bite",
+    "Move2": "vampiric_bite",
     "Move3": "meteor_shower",
     "Move4": "gravity_well",
     "ActiveSpell": "force_cast"

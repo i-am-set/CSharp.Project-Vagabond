@@ -99,6 +99,10 @@ namespace ProjectVagabond.Battle
             {
                 move.Effects.Add(new HealEffect { HealPercentage = data.EffectArg });
             }
+            else if (data.EffectType == "Drain")
+            {
+                move.Effects.Add(new DrainEffect { DrainPercentage = data.EffectArg > 0 ? data.EffectArg : 0.5f });
+            }
 
             return move;
         }

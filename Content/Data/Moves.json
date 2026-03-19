@@ -286,5 +286,26 @@
     "ExecuteOnChargeStart": false,
     "RequiresFocus": true,
     "ShowProjectileIndicator": true
+  },
+  {
+    "ID": "vampiric_bite",
+    "Name": "Vampiric Bite",
+    "AnimationID": "anim_vampiric_bite",
+    "BasePower": 25,
+    "ChargeTime": 1.0,
+    "Weight": 40,
+    "Knockback": 5.0,
+    "DeliveryType": "SeekAndDash",
+    "DeliverySeekRadius": 15.0,
+    "DeliverySeekDuration": 2.0,
+    "DeliveryDashDistance": 10.0,
+    "DeliveryDashDuration": 0.7,
+    "EffectType": "Drain",
+    "EffectArg": 0.5,
+    "TargetSelf": false,
+    "CanEffectSelf": false,
+    "ExecuteOnChargeStart": true,
+    "RequiresFocus": true,
+    "ShowProjectileIndicator": false
   }
 ]

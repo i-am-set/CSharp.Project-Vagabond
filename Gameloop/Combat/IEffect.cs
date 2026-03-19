@@ -48,4 +48,45 @@ namespace ProjectVagabond.Battle
             target.Controller.Heal(heal);
         }
     }
+
+    public class DrainEffect : IEffect
+    {
+        public float DrainPercentage { get; set; } = 0.5f;
+        private static readonly Random _random = new Random();
+
+        public void Apply(ActiveAttack attack, ArenaWizard target, BattleContext context)
+        {
+            bool isCrit = _random.Next(24) == 0;
+
+            int targetTenacity = target.Data.Stats.Tenacity;
+            if (isCrit)
+            {
+                targetTenacity = Math.Max(1, targetTenacity / 2);
+            }
+
+            int damage = Math.Max(1, (int)Math.Floor(attack.Move.BasePower * (attack.Caster.Data.Stats.Power + 10) / ((targetTenacity + 10) * 13.33f)));
+
+            int oldHP = target.Data.Stats.CurrentHP;
+            bool tookDamage = target.Controller.TakeDamage(damage, isCrit, attack.Caster);
+            int actualDamage = oldHP - target.Data.Stats.CurrentHP;
+
+            if (tookDamage)
+            {
+                if (actualDamage > 0)
+                {
+                    int healAmount = Math.Max(1, (int)(actualDamage * DrainPercentage));
+                    attack.Caster.Controller.Heal(healAmount);
+                }
+
+                if (attack.Move.Knockback != 0)
+                {
+                    Vector2 sourcePos = attack.Caster.Data.Combat.Position;
+                    if (attack.DeliveryInstance is InstantAOEDelivery) sourcePos = attack.TargetPosition;
+                    else if (attack.DeliveryInstance is TickingBeamDelivery) sourcePos = attack.Origin;
+
+                    target.Controller.ApplyKnockback(sourcePos, attack.Move.Knockback, context.Arena);
+                }
+            }
+        }
+    }
 }
