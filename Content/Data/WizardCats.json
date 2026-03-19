@@ -8,7 +8,7 @@
     "Power": 3,
     "Tenacity": 3,
     "Agility": 4,
-    "Move1": "magic_missile",
+    "Move1": "wall_of_fire",
     "Move2": "chain_lightning",
     "Move3": "fireball",
     "Move4": "meteor_strike",
@@ -40,7 +40,7 @@
     "Agility": 3,
     "Move1": "lick_wounds",
     "Move2": "scratch",
-    "Move3": "bite",
+    "Move3": "brambles",
     "Move4": "magic_dart",
     "ActiveSpell": "force_cast"
   },
@@ -99,7 +99,7 @@
     "Tenacity": 3,
     "Agility": 6,
     "Move1": "chain_lightning",
-    "Move2": "scratch",
+    "Move2": "brambles",
     "Move3": "bite",
     "Move4": "meteor_shower",
     "ActiveSpell": "ward"
@@ -145,7 +145,7 @@
     "Agility": 5,
     "Move1": "healing_aura",
     "Move2": "scratch",
-    "Move3": "bite",
+    "Move3": "wall_of_fire",
     "Move4": "magic_missile",
     "ActiveSpell": "ward"
   },
@@ -158,7 +158,7 @@
     "Power": 2,
     "Tenacity": 4,
     "Agility": 3,
-    "Move1": "lick_wounds",
+    "Move1": "brambles",
     "Move2": "ray_of_frost",
     "Move3": "magic_dart",
     "Move4": "healing_aura",
@@ -189,7 +189,7 @@
     "Tenacity": 4,
     "Agility": 4,
     "Move1": "fireball",
-    "Move2": "scratch",
+    "Move2": "brambles",
     "Move3": "chain_lightning",
     "Move4": "arcane_barrage",
     "ActiveSpell": "ward"

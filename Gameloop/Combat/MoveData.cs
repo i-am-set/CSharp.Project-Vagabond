@@ -34,6 +34,8 @@
         public float DeliveryBounceRadius { get; set; }
         public float DeliveryBounceDelay { get; set; }
 
+        public string DeliveryVisualStyle { get; set; }
+
         public string EffectType { get; set; }
         public float EffectArg { get; set; }
 

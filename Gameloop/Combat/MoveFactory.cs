@@ -100,6 +100,19 @@ namespace ProjectVagabond.Battle
                     VisualDuration = data.DeliveryLifetime > 0 ? data.DeliveryLifetime : 0.3f
                 };
             }
+            else if (data.DeliveryType == "LingeringAOE")
+            {
+                move.Delivery = new LingeringAOEDelivery
+                {
+                    Shape = data.DeliveryRadius > 0 ? LingeringAOEDelivery.AOEShape.Circle : LingeringAOEDelivery.AOEShape.Line,
+                    Radius = data.DeliveryRadius,
+                    Width = data.DeliveryWidth,
+                    Length = data.DeliveryLength,
+                    Lifetime = data.DeliveryLifetime,
+                    TickRate = data.DeliveryTickRate,
+                    VisualStyle = data.DeliveryVisualStyle
+                };
+            }
 
             if (data.EffectType == "Damage")
             {

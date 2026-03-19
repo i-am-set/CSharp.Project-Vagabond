@@ -575,6 +575,27 @@ namespace ProjectVagabond.Battle
                     break;
 
                 case WizardState.Casting:
+                    if (combat.CurrentActiveAttack != null && !combat.CurrentActiveAttack.Move.RequiresFocus)
+                    {
+                        if (combat.QueuedMove.ExecuteOnChargeStart)
+                        {
+                            combat.StateTimer -= dt;
+                            if (combat.StateTimer <= 0)
+                            {
+                                combat.CurrentActiveAttack = null;
+                                combat.State = WizardState.Recovering;
+                                combat.StateTimer = RECOVERING_DURATION;
+                                combat.TargetPosition = combat.Position;
+                            }
+                        }
+                        else
+                        {
+                            combat.CurrentActiveAttack = null;
+                            combat.State = WizardState.Recovering;
+                            combat.StateTimer = RECOVERING_DURATION;
+                            combat.TargetPosition = combat.Position;
+                        }
+                    }
                     break;
 
                 case WizardState.Recovering:
@@ -753,6 +774,14 @@ namespace ProjectVagabond.Battle
             context.Arena.SpawnAttack(attack);
 
             combat.State = WizardState.Casting;
+            if (combat.QueuedMove.ExecuteOnChargeStart)
+            {
+                combat.StateTimer = combat.QueuedMove.ChargeTime;
+            }
+            else
+            {
+                combat.StateTimer = 0f;
+            }
         }
 
         public void NotifyAttackFinished(ActiveAttack attack)
