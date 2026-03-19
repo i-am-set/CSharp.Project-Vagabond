@@ -83,7 +83,7 @@ namespace ProjectVagabond.Deliveries
                 if (attack.Animation != null && attack.Animation.CurrentProjectilePosition.HasValue)
                 {
                     Vector2 projPos = attack.Animation.CurrentProjectilePosition.Value;
-                    float hitRadius = 8f;
+                    float hitRadius = 4f;
 
                     foreach (var target in context.Arena.Wizards)
                     {

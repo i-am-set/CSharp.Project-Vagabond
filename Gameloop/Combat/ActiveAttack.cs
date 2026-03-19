@@ -79,33 +79,49 @@ namespace ProjectVagabond.Battle
             }
             else
             {
-                DeliveryInstance?.Update(dt, context, this);
+                bool isAnimationPaused = DeliveryInstance != null && DeliveryInstance.IsAnimationPaused;
 
-                if (IsCanceled)
-                {
-                    Animation?.Cancel();
-                }
-                else if (DeliveryInstance != null && !DeliveryInstance.IsAnimationPaused)
+                if (!isAnimationPaused)
                 {
                     if (!HasStartedAnimation && Animation != null)
                     {
                         Animation.Start(this, context);
                         HasStartedAnimation = true;
                     }
+                }
 
-                    if (Animation != null)
+                DeliveryInstance?.Update(dt, context, this);
+
+                if (IsCanceled)
+                {
+                    Animation?.Cancel();
+                }
+                else
+                {
+                    isAnimationPaused = DeliveryInstance != null && DeliveryInstance.IsAnimationPaused;
+
+                    if (!isAnimationPaused)
                     {
-                        Animation.Update(dt, context, this);
-                        if (Animation.HasTriggeredImpact && !HasTriggeredImpact)
+                        if (!HasStartedAnimation && Animation != null)
+                        {
+                            Animation.Start(this, context);
+                            HasStartedAnimation = true;
+                        }
+
+                        if (Animation != null)
+                        {
+                            Animation.Update(dt, context, this);
+                            if (Animation.HasTriggeredImpact && !HasTriggeredImpact)
+                            {
+                                HasTriggeredImpact = true;
+                                DeliveryInstance?.TriggerImpact(context, this);
+                            }
+                        }
+                        else if (!HasTriggeredImpact)
                         {
                             HasTriggeredImpact = true;
-                            DeliveryInstance.TriggerImpact(context, this);
+                            DeliveryInstance?.TriggerImpact(context, this);
                         }
-                    }
-                    else if (!HasTriggeredImpact)
-                    {
-                        HasTriggeredImpact = true;
-                        DeliveryInstance.TriggerImpact(context, this);
                     }
                 }
             }

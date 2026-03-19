@@ -476,12 +476,13 @@ namespace ProjectVagabond.Animations
         private Vector2 _startPos;
         private Vector2 _targetPos;
         private float _totalDist;
+        private bool _hasStarted;
 
         private ParticleSystemManager _psm;
 
         public bool IsFinished { get; private set; }
         public bool HasTriggeredImpact { get; private set; }
-        public Vector2? CurrentProjectilePosition => _layers != null && _layers.Any(l => l.Mode == "Projectile") ? _projectilePos : null;
+        public Vector2? CurrentProjectilePosition => _hasStarted && _layers != null && _layers.Any(l => l.Mode == "Projectile") ? _projectilePos : null;
 
         public ParticleAnimationInstance() { }
 
@@ -506,6 +507,10 @@ namespace ProjectVagabond.Animations
             HasTriggeredImpact = false;
             _layers = null;
             _psm = null;
+            _hasStarted = false;
+            _projectilePos = Vector2.Zero;
+            _startPos = Vector2.Zero;
+            _targetPos = Vector2.Zero;
 
             foreach (var e in _emitters) if (e != null) e.IsActive = false;
             foreach (var e in _trailEmitters) if (e != null) e.IsActive = false;
@@ -530,6 +535,7 @@ namespace ProjectVagabond.Animations
 
         public void Start(ActiveAttack attack, BattleContext context)
         {
+            _hasStarted = true;
             _psm = context.ParticleSystemManager;
             _startPos = attack.Origin;
             _targetPos = attack.TargetPosition;
