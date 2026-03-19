@@ -18,6 +18,7 @@ namespace ProjectVagabond.Battle
         public bool ExecuteOnChargeStart { get; set; }
         public bool RequiresFocus { get; set; }
         public bool ShowProjectileIndicator { get; set; }
+        public bool DeliveryImpactMidFlight { get; set; } = true;
         public IDelivery Delivery { get; set; }
         public List<IEffect> Effects { get; set; } = new List<IEffect>();
     }

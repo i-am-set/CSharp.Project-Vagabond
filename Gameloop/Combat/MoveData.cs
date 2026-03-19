@@ -35,6 +35,7 @@
         public float DeliveryBounceDelay { get; set; }
 
         public string DeliveryVisualStyle { get; set; }
+        public bool DeliveryImpactMidFlight { get; set; } = true;
 
         public string EffectType { get; set; }
         public float EffectArg { get; set; }

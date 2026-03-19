@@ -20,7 +20,8 @@ namespace ProjectVagabond.Battle
                 AnimationID = data.AnimationID,
                 ExecuteOnChargeStart = data.ExecuteOnChargeStart,
                 RequiresFocus = data.RequiresFocus,
-                ShowProjectileIndicator = data.ShowProjectileIndicator
+                ShowProjectileIndicator = data.ShowProjectileIndicator,
+                DeliveryImpactMidFlight = data.DeliveryImpactMidFlight
             };
 
             if (data.DeliveryType == "InstantAOE")
@@ -30,7 +31,8 @@ namespace ProjectVagabond.Battle
                     Radius = data.DeliveryRadius,
                     Lifetime = data.DeliveryLifetime,
                     TickRate = data.DeliveryTickRate,
-                    PullSpeed = data.DeliveryPullSpeed
+                    PullSpeed = data.DeliveryPullSpeed,
+                    CheckProjectileCollision = data.DeliveryImpactMidFlight
                 };
             }
             else if (data.DeliveryType == "TickingBeam")
@@ -45,7 +47,10 @@ namespace ProjectVagabond.Battle
             }
             else if (data.DeliveryType == "SingleTarget" || data.DeliveryType == "Self")
             {
-                move.Delivery = new SingleTargetDelivery();
+                move.Delivery = new SingleTargetDelivery
+                {
+                    CheckProjectileCollision = data.DeliveryImpactMidFlight
+                };
             }
             else if (data.DeliveryType == "DashMelee")
             {

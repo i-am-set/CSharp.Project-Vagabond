@@ -30,19 +30,11 @@ namespace ProjectVagabond.Scenes
         private List<string> _characterIds = new();
         private Dictionary<string, (float Timer, float TargetRotation)> _selectedWizards = new();
 
-        // UI Elements
-        private Button _btnMode1v1 = null!;
-        private Button _btnMode4ffa = null!;
-        private Button _btnMode6ffa = null!;
-        private Button _btnMode8ffa = null!;
-        private Button _startButton = null!;
-        private readonly NavigationGroup _navigationGroup;
-
         private int _randomCount = 6;
 
         // Intro Text
-        private const string INTRO_LINE_1 = "CHOOSE A";
-        private const string INTRO_LINE_2 = "GAME MODE";
+        private const string INTRO_LINE_1 = "SELECTING";
+        private const string INTRO_LINE_2 = "COMBATANTS...";
 
         // --- Plink Animation State ---
         private bool _isPlinkingIn = true;
@@ -75,8 +67,8 @@ namespace ProjectVagabond.Scenes
             public PlinkAnimator Plink = new PlinkAnimator();
         }
 
-        private enum IntroState { SelectingMode, Spinning, Transitioning }
-        private IntroState _state = IntroState.SelectingMode;
+        private enum IntroState { Spinning, Transitioning }
+        private IntroState _state = IntroState.Spinning;
         private List<SlotColumn> _slots = new();
         private float _spinTimer = 0f;
         private int _slotsStopped = 0;
@@ -90,7 +82,6 @@ namespace ProjectVagabond.Scenes
             _transitionManager = ServiceLocator.Get<TransitionManager>();
             _hapticsManager = ServiceLocator.Get<HapticsManager>();
             _particleSystemManager = ServiceLocator.Get<ParticleSystemManager>();
-            _navigationGroup = new NavigationGroup(wrapNavigation: true);
         }
 
         public override void Initialize()
@@ -107,14 +98,11 @@ namespace ProjectVagabond.Scenes
         {
             base.Enter();
             InitializeData();
-            InitializeUI();
 
             _selectedWizards.Clear();
             _titleWaveTimer = 0f;
-            _state = IntroState.SelectingMode;
+            _state = IntroState.Spinning;
             _slots.Clear();
-
-            _navigationGroup.DeselectAll();
 
             _isPlinkingIn = true;
             _allPlinks.Clear();
@@ -124,18 +112,6 @@ namespace ProjectVagabond.Scenes
             _plinkTitle2 = new PlinkAnimator(); _allPlinks.Add(_plinkTitle2);
 
             foreach (var p in _allPlinks) p.Start(9999f, 0.25f);
-
-            _btnMode1v1.SetHiddenForEntrance();
-            _btnMode4ffa.SetHiddenForEntrance();
-            _btnMode6ffa.SetHiddenForEntrance();
-            _btnMode8ffa.SetHiddenForEntrance();
-            _startButton.SetHiddenForEntrance();
-
-            _allPlinks.Add(_btnMode1v1.Plink);
-            _allPlinks.Add(_btnMode4ffa.Plink);
-            _allPlinks.Add(_btnMode6ffa.Plink);
-            _allPlinks.Add(_btnMode8ffa.Plink);
-            _allPlinks.Add(_startButton.Plink);
 
             var randomActions = new List<Action>
             {
@@ -147,133 +123,10 @@ namespace ProjectVagabond.Scenes
 
             foreach (var a in randomActions) _plinkQueue.Enqueue(a);
 
-            _plinkQueue.Enqueue(() => _btnMode1v1.PlayEntrance(0f));
-            _plinkQueue.Enqueue(() => _btnMode4ffa.PlayEntrance(0f));
-            _plinkQueue.Enqueue(() => _btnMode6ffa.PlayEntrance(0f));
-            _plinkQueue.Enqueue(() => _btnMode8ffa.PlayEntrance(0f));
-            _plinkQueue.Enqueue(() => _startButton.PlayEntrance(0f));
-
             _plinkTimer = 0f;
-        }
 
-        private void InitializeData()
-        {
-            _characterIds = GameDataCache.WizardCats.Keys.ToList();
-            _characterIds.Sort((a, b) =>
-            {
-                if (int.TryParse(a, out int idA) && int.TryParse(b, out int idB))
-                    return idA.CompareTo(idB);
-                return string.Compare(a, b, StringComparison.Ordinal);
-            });
-        }
-
-        private void InitializeUI()
-        {
-            _navigationGroup.Clear();
-            var core = ServiceLocator.Get<Core>();
-            var secondaryFont = core.SecondaryFont;
-
-            int centerX = Global.VIRTUAL_WIDTH / 2;
-
-            int btnW = 50;
-            int btnH = 16;
-            int gridStartX = centerX - 51;
-            int gridStartY = 80;
-            int gridSpacingX = 52;
-            int gridSpacingY = 18;
-
-            _btnMode1v1 = new Button(new Rectangle(gridStartX, gridStartY, btnW, btnH), "1v1", font: secondaryFont)
-            {
-                TriggerHapticOnHover = false,
-                HoverAnimation = HoverAnimationType.Hop,
-                CustomDefaultTextColor = _global.Palette_Off,
-                CustomHoverTextColor = _global.Palette_Off,
-                CustomSelectedTextColor = _global.Palette_Off,
-                CustomDisabledTextColor = _global.Palette_Off
-            };
-            _btnMode1v1.OnClick += () => SetMode(2);
-            _navigationGroup.Add(_btnMode1v1);
-
-            _btnMode4ffa = new Button(new Rectangle(gridStartX + gridSpacingX, gridStartY, btnW, btnH), "4 FFA", font: secondaryFont)
-            {
-                TriggerHapticOnHover = false,
-                HoverAnimation = HoverAnimationType.Hop,
-                CustomDefaultTextColor = _global.Palette_Off,
-                CustomHoverTextColor = _global.Palette_Off,
-                CustomSelectedTextColor = _global.Palette_Off,
-                CustomDisabledTextColor = _global.Palette_Off
-            };
-            _btnMode4ffa.OnClick += () => SetMode(4);
-            _navigationGroup.Add(_btnMode4ffa);
-
-            _btnMode6ffa = new Button(new Rectangle(gridStartX, gridStartY + gridSpacingY, btnW, btnH), "6 FFA", font: secondaryFont)
-            {
-                TriggerHapticOnHover = false,
-                HoverAnimation = HoverAnimationType.Hop,
-                CustomDefaultTextColor = _global.Palette_Off,
-                CustomHoverTextColor = _global.Palette_Off,
-                CustomSelectedTextColor = _global.Palette_Off,
-                CustomDisabledTextColor = _global.Palette_Off
-            };
-            _btnMode6ffa.OnClick += () => SetMode(6);
-            _navigationGroup.Add(_btnMode6ffa);
-
-            _btnMode8ffa = new Button(new Rectangle(gridStartX + gridSpacingX, gridStartY + gridSpacingY, btnW, btnH), "8 FFA", font: secondaryFont)
-            {
-                TriggerHapticOnHover = false,
-                HoverAnimation = HoverAnimationType.Hop,
-                CustomDefaultTextColor = _global.Palette_Off,
-                CustomHoverTextColor = _global.Palette_Off,
-                CustomSelectedTextColor = _global.Palette_Off,
-                CustomDisabledTextColor = _global.Palette_Off
-            };
-            _btnMode8ffa.OnClick += () => SetMode(8);
-            _navigationGroup.Add(_btnMode8ffa);
-
-            string startText = "START";
-            Vector2 startSize = core.DefaultFont.MeasureString(startText);
-            int startW = (int)startSize.X + 10;
-            int startH = (int)startSize.Y + 6;
-            int startButtonY = 146;
-
-            _startButton = new Button(
-                new Rectangle(Global.VIRTUAL_WIDTH / 2 - startW / 2, startButtonY, startW, startH),
-                startText,
-                font: core.DefaultFont
-            )
-            {
-                TriggerHapticOnHover = false,
-                HoverAnimation = HoverAnimationType.Hop
-            };
-            _startButton.OnClick += StartGame;
-            _navigationGroup.Add(_startButton);
-        }
-
-        private void SetMode(int count)
-        {
-            if (_isPlinkingIn || _state != IntroState.SelectingMode) return;
-            if (_randomCount != count)
-            {
-                _randomCount = count;
-                _hapticsManager.TriggerZoomPulse(_global.LightHapticZoomPulseStrength, _global.HapticZoomPulseDuration);
-
-                if (count == 2) _btnMode1v1.Plink.Start(0f, 0.15f);
-                else if (count == 4) _btnMode4ffa.Plink.Start(0f, 0.15f);
-                else if (count == 6) _btnMode6ffa.Plink.Start(0f, 0.15f);
-                else if (count == 8) _btnMode8ffa.Plink.Start(0f, 0.15f);
-            }
-        }
-
-        private void StartGame()
-        {
-            if (_isPlinkingIn || _transitionManager.IsTransitioning || _state != IntroState.SelectingMode) return;
-            _hapticsManager.TriggerZoomPulse(_global.HapticZoomPulseStrength, _global.HapticZoomPulseDuration);
-
-            _state = IntroState.Spinning;
-            _slots.Clear();
+            // Setup slots immediately
             var shuffled = _characterIds.OrderBy(x => _random.Next()).ToList();
-            _selectedWizards.Clear();
-
             for (int i = 0; i < _randomCount; i++)
             {
                 _slots.Add(new SlotColumn
@@ -291,12 +144,17 @@ namespace ProjectVagabond.Scenes
 
             _spinTimer = 0f;
             _slotsStopped = 0;
+        }
 
-            _btnMode1v1.SetHiddenForEntrance();
-            _btnMode4ffa.SetHiddenForEntrance();
-            _btnMode6ffa.SetHiddenForEntrance();
-            _btnMode8ffa.SetHiddenForEntrance();
-            _startButton.SetHiddenForEntrance();
+        private void InitializeData()
+        {
+            _characterIds = GameDataCache.WizardCats.Keys.ToList();
+            _characterIds.Sort((a, b) =>
+            {
+                if (int.TryParse(a, out int idA) && int.TryParse(b, out int idB))
+                    return idA.CompareTo(idB);
+                return string.Compare(a, b, StringComparison.Ordinal);
+            });
         }
 
         private void StartGameActual()
@@ -336,8 +194,6 @@ namespace ProjectVagabond.Scenes
                 _selectedWizards[key] = (data.Timer + dt, data.TargetRotation);
             }
 
-            var currentMouseState = _inputManager.GetEffectiveMouseState();
-
             if (_isPlinkingIn)
             {
                 _plinkTimer -= dt;
@@ -358,187 +214,122 @@ namespace ProjectVagabond.Scenes
                     _isPlinkingIn = false;
                 }
             }
-            else
+
+            if (_state == IntroState.Spinning)
             {
-                if (_state == IntroState.SelectingMode)
+                _spinTimer += dt;
+
+                float baseSpinDuration = 1.5f;
+                float stopInterval = 0.4f;
+
+                int shouldBeStopping = 0;
+                if (_spinTimer >= baseSpinDuration)
                 {
-                    _btnMode1v1.HoverAnimation = _randomCount == 2 ? HoverAnimationType.None : HoverAnimationType.Hop;
-                    _btnMode4ffa.HoverAnimation = _randomCount == 4 ? HoverAnimationType.None : HoverAnimationType.Hop;
-                    _btnMode6ffa.HoverAnimation = _randomCount == 6 ? HoverAnimationType.None : HoverAnimationType.Hop;
-                    _btnMode8ffa.HoverAnimation = _randomCount == 8 ? HoverAnimationType.None : HoverAnimationType.Hop;
-
-                    _btnMode1v1.Update(currentMouseState);
-                    _btnMode4ffa.Update(currentMouseState);
-                    _btnMode6ffa.Update(currentMouseState);
-                    _btnMode8ffa.Update(currentMouseState);
-                    _startButton.Update(currentMouseState);
-
-                    if (_inputManager.CurrentInputDevice == InputDeviceType.Mouse)
-                    {
-                        _navigationGroup.DeselectAll();
-                    }
-                    else
-                    {
-                        if (!_btnMode1v1.IsSelected && !_btnMode4ffa.IsSelected && !_btnMode6ffa.IsSelected && !_btnMode8ffa.IsSelected && !_startButton.IsSelected)
-                        {
-                            _navigationGroup.Select(0);
-                        }
-                        _navigationGroup.UpdateInput(_inputManager);
-                    }
-
-                    if (_inputManager.Back)
-                    {
-                        _sceneManager.ChangeScene(GameSceneState.MainMenu, TransitionType.FadeOff, TransitionType.FadeOff);
-                    }
+                    shouldBeStopping = Math.Min(_randomCount, (int)((_spinTimer - baseSpinDuration) / stopInterval) + 1);
                 }
-                else if (_state == IntroState.Spinning)
+
+                for (int i = 0; i < _slots.Count; i++)
                 {
-                    _spinTimer += dt;
-
-                    float baseSpinDuration = 1.5f;
-                    float stopInterval = 0.4f;
-
-                    int shouldBeStopping = 0;
-                    if (_spinTimer >= baseSpinDuration)
+                    var slot = _slots[i];
+                    if (slot.State == SlotState.Stopped)
                     {
-                        shouldBeStopping = Math.Min(_randomCount, (int)((_spinTimer - baseSpinDuration) / stopInterval) + 1);
+                        slot.Plink.Update(effectiveGameTime, Vector2.Zero);
+                        continue;
                     }
 
-                    for (int i = 0; i < _slots.Count; i++)
+                    slot.StateTimer += dt;
+
+                    if (slot.State == SlotState.WindUp)
                     {
-                        var slot = _slots[i];
-                        if (slot.State == SlotState.Stopped)
+                        float windUpDuration = 0.3f;
+                        float p = slot.StateTimer / windUpDuration;
+                        slot.Speed = MathHelper.Lerp(0, -15f, Easing.EaseInQuad(p));
+                        slot.VirtualIndex += slot.Speed * dt;
+
+                        if (slot.StateTimer >= windUpDuration)
                         {
-                            slot.Plink.Update(effectiveGameTime, Vector2.Zero);
-                            continue;
+                            slot.State = SlotState.Spinning;
+                            slot.StateTimer = 0f;
                         }
+                    }
+                    else if (slot.State == SlotState.Spinning)
+                    {
+                        slot.Speed = MathHelper.Lerp(slot.Speed, slot.MaxSpeed, dt * 4f);
+                        slot.VirtualIndex += slot.Speed * dt;
 
-                        slot.StateTimer += dt;
-
-                        if (slot.State == SlotState.WindUp)
+                        if (i < shouldBeStopping)
                         {
-                            float windUpDuration = 0.3f;
-                            float p = slot.StateTimer / windUpDuration;
-                            slot.Speed = MathHelper.Lerp(0, -15f, Easing.EaseInQuad(p));
-                            slot.VirtualIndex += slot.Speed * dt;
+                            float currentMod = slot.VirtualIndex % _characterIds.Count;
+                            if (currentMod < 0) currentMod += _characterIds.Count;
 
-                            if (slot.StateTimer >= windUpDuration)
-                            {
-                                slot.State = SlotState.Spinning;
-                                slot.StateTimer = 0f;
-                            }
+                            float diff = slot.TargetIdIndex - currentMod;
+                            if (diff < 0) diff += _characterIds.Count;
+
+                            diff += _characterIds.Count;
+
+                            slot.SettleDuration = 0.35f;
+                            slot.StartIndex = slot.VirtualIndex;
+                            slot.AbsoluteTargetIndex = slot.VirtualIndex + diff;
+                            slot.State = SlotState.Settling;
+                            slot.StateTimer = 0f;
                         }
-                        else if (slot.State == SlotState.Spinning)
+                    }
+                    else if (slot.State == SlotState.Settling)
+                    {
+                        float p = Math.Clamp(slot.StateTimer / slot.SettleDuration, 0f, 1f);
+
+                        float prevIndex = slot.VirtualIndex;
+                        float ease = Easing.EaseOutBackBig(p);
+                        slot.VirtualIndex = MathHelper.Lerp(slot.StartIndex, slot.AbsoluteTargetIndex, ease);
+
+                        if (dt > 0) slot.Speed = (slot.VirtualIndex - prevIndex) / dt;
+
+                        if (p >= 1f)
                         {
-                            slot.Speed = MathHelper.Lerp(slot.Speed, slot.MaxSpeed, dt * 4f);
-                            slot.VirtualIndex += slot.Speed * dt;
+                            slot.VirtualIndex = slot.AbsoluteTargetIndex;
+                            slot.Speed = 0f;
+                            slot.State = SlotState.Stopped;
+                            _slotsStopped++;
 
-                            if (i < shouldBeStopping)
+                            _hapticsManager.TriggerZoomPulse(_global.HapticZoomPulseStrength, _global.HapticZoomPulseDuration);
+                            slot.Plink.Start(0f, 0.3f);
+                            _selectedWizards[slot.TargetId] = (0f, 0f);
+
+                            var emitter = _particleSystemManager.CreateEmitter(ParticleEffects.CreateUIPlink());
+                            int slotWidth = (Global.VIRTUAL_WIDTH - 40) / _randomCount;
+                            int startX = 20 + (i * slotWidth);
+                            int centerX = startX + (slotWidth / 2);
+                            emitter.Position = new Vector2(centerX, Global.VIRTUAL_HEIGHT / 2f + 10);
+                            emitter.EmitBurst(15);
+
+                            if (_slotsStopped == _randomCount)
                             {
-                                float currentMod = slot.VirtualIndex % _characterIds.Count;
-                                if (currentMod < 0) currentMod += _characterIds.Count;
-
-                                float diff = slot.TargetIdIndex - currentMod;
-                                if (diff < 0) diff += _characterIds.Count;
-
-                                diff += _characterIds.Count;
-
-                                slot.SettleDuration = 0.35f;
-                                slot.StartIndex = slot.VirtualIndex;
-                                slot.AbsoluteTargetIndex = slot.VirtualIndex + diff;
-                                slot.State = SlotState.Settling;
-                                slot.StateTimer = 0f;
-                            }
-                        }
-                        else if (slot.State == SlotState.Settling)
-                        {
-                            float p = Math.Clamp(slot.StateTimer / slot.SettleDuration, 0f, 1f);
-
-                            float prevIndex = slot.VirtualIndex;
-                            float ease = Easing.EaseOutBackBig(p);
-                            slot.VirtualIndex = MathHelper.Lerp(slot.StartIndex, slot.AbsoluteTargetIndex, ease);
-
-                            if (dt > 0) slot.Speed = (slot.VirtualIndex - prevIndex) / dt;
-
-                            if (p >= 1f)
-                            {
-                                slot.VirtualIndex = slot.AbsoluteTargetIndex;
-                                slot.Speed = 0f;
-                                slot.State = SlotState.Stopped;
-                                _slotsStopped++;
-
-                                _hapticsManager.TriggerZoomPulse(_global.HapticZoomPulseStrength, _global.HapticZoomPulseDuration);
-                                slot.Plink.Start(0f, 0.3f);
-                                _selectedWizards[slot.TargetId] = (0f, 0f);
-
-                                var emitter = _particleSystemManager.CreateEmitter(ParticleEffects.CreateUIPlink());
-                                int slotWidth = (Global.VIRTUAL_WIDTH - 40) / _randomCount;
-                                int startX = 20 + (i * slotWidth);
-                                int centerX = startX + (slotWidth / 2);
-                                emitter.Position = new Vector2(centerX, Global.VIRTUAL_HEIGHT / 2f + 10);
-                                emitter.EmitBurst(15);
-
-                                if (_slotsStopped == _randomCount)
-                                {
-                                    _hapticsManager.TriggerShake(1.5f, 1.5f);
-                                    ServiceLocator.Get<Core>().TriggerFullscreenFlash(Color.White, 0.05f);
-                                }
+                                _hapticsManager.TriggerShake(1.5f, 1.5f);
+                                ServiceLocator.Get<Core>().TriggerFullscreenFlash(Color.White, 0.05f);
                             }
                         }
                     }
-
-                    if (_slotsStopped == _randomCount)
-                    {
-                        _state = IntroState.Transitioning;
-                        _spinTimer = 0f;
-                    }
                 }
-                else if (_state == IntroState.Transitioning)
+
+                if (_slotsStopped == _randomCount)
                 {
-                    _spinTimer += dt;
-                    for (int i = 0; i < _slots.Count; i++)
-                    {
-                        _slots[i].Plink.Update(effectiveGameTime, Vector2.Zero);
-                    }
-
-                    if (_spinTimer > 1.5f)
-                    {
-                        StartGameActual();
-                    }
+                    _state = IntroState.Transitioning;
+                    _spinTimer = 0f;
                 }
             }
-        }
-
-        private void DrawModeButtonBackground(SpriteBatch spriteBatch, Button btn, int modeValue, Texture2D pixel)
-        {
-            float scale = btn.Plink.IsActive ? btn.Plink.Scale : 1f;
-            float rotation = btn.Plink.IsActive ? btn.Plink.Rotation : 0f;
-            if (scale < 0.01f) return;
-
-            float yOffset = 0f;
-            Color bgColor;
-
-            if (_randomCount == modeValue)
+            else if (_state == IntroState.Transitioning)
             {
-                yOffset = 0f;
-                bgColor = _global.Palette_Sun;
+                _spinTimer += dt;
+                for (int i = 0; i < _slots.Count; i++)
+                {
+                    _slots[i].Plink.Update(effectiveGameTime, Vector2.Zero);
+                }
+
+                if (_spinTimer > 1.5f)
+                {
+                    StartGameActual();
+                }
             }
-            else
-            {
-                yOffset = btn.HoverAnimator.CurrentOffset;
-                if (btn.IsPressed) bgColor = _global.Palette_Fruit;
-                else if (btn.IsHovered) bgColor = _global.ButtonHoverColor;
-                else bgColor = _global.Palette_DarkestPale;
-            }
-
-            Vector2 center = new Vector2(btn.Bounds.Center.X, btn.Bounds.Center.Y + yOffset);
-
-            int w = btn.Bounds.Width;
-            int h = btn.Bounds.Height;
-
-            spriteBatch.Draw(pixel, center, new Rectangle(0, 0, 1, 1), bgColor, rotation, new Vector2(0.5f, 0.5f), new Vector2(w - 4, h) * scale, SpriteEffects.None, 0f);
-            spriteBatch.Draw(pixel, center, new Rectangle(0, 0, 1, 1), bgColor, rotation, new Vector2(0.5f, 0.5f), new Vector2(w - 2, h - 2) * scale, SpriteEffects.None, 0f);
-            spriteBatch.Draw(pixel, center, new Rectangle(0, 0, 1, 1), bgColor, rotation, new Vector2(0.5f, 0.5f), new Vector2(w, h - 4) * scale, SpriteEffects.None, 0f);
         }
 
         protected override void DrawSceneContent(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Matrix transform)
@@ -559,16 +350,13 @@ namespace ProjectVagabond.Scenes
 
             float titleY = 14f;
 
-            string line1 = _state == IntroState.SelectingMode ? INTRO_LINE_1 : (_state == IntroState.Spinning ? "SELECTING" : "GET");
-            string line2 = _state == IntroState.SelectingMode ? INTRO_LINE_2 : (_state == IntroState.Spinning ? "COMBATANTS..." : "READY!");
-
             float t1Scale = _isPlinkingIn ? _plinkTitle1.Scale : 1f;
             float t1Rot = _isPlinkingIn ? _plinkTitle1.Rotation : 0f;
             if (t1Scale > 0.01f)
             {
-                Vector2 size1 = secondaryFont.MeasureString(line1);
+                Vector2 size1 = secondaryFont.MeasureString(INTRO_LINE_1);
                 var pos1 = new Vector2(MathF.Round((Global.VIRTUAL_WIDTH - size1.X) / 2f), MathF.Round(titleY - 2));
-                TextAnimator.DrawTextWithEffect(spriteBatch, secondaryFont, line1, pos1, _global.Palette_DarkPale, TextEffectType.None, 0f, new Vector2(t1Scale), null, t1Rot);
+                TextAnimator.DrawTextWithEffect(spriteBatch, secondaryFont, INTRO_LINE_1, pos1, _global.Palette_DarkPale, TextEffectType.None, 0f, new Vector2(t1Scale), null, t1Rot);
 
                 if (_isPlinkingIn && _plinkTitle1.FlashTint.HasValue)
                 {
@@ -581,9 +369,9 @@ namespace ProjectVagabond.Scenes
             float t2Rot = _isPlinkingIn ? _plinkTitle2.Rotation : 0f;
             if (t2Scale > 0.01f)
             {
-                Vector2 size2 = font.MeasureString(line2);
+                Vector2 size2 = font.MeasureString(INTRO_LINE_2);
                 var pos2 = new Vector2(MathF.Round((Global.VIRTUAL_WIDTH - size2.X) / 2f), MathF.Round(titleY + secondaryFont.LineHeight + 2));
-                TextAnimator.DrawTextWithEffect(spriteBatch, font, line2, pos2, _global.Palette_White, TextEffectType.RainbowWave, _titleWaveTimer, new Vector2(t2Scale), null, t2Rot);
+                TextAnimator.DrawTextWithEffect(spriteBatch, font, INTRO_LINE_2, pos2, _global.Palette_White, TextEffectType.RainbowWave, _titleWaveTimer, new Vector2(t2Scale), null, t2Rot);
 
                 if (_isPlinkingIn && _plinkTitle2.FlashTint.HasValue)
                 {
@@ -592,102 +380,80 @@ namespace ProjectVagabond.Scenes
                 }
             }
 
-            if (_state == IntroState.SelectingMode)
+            spriteBatch.End();
+
+            int slotWidth = (Global.VIRTUAL_WIDTH - 40) / _randomCount;
+            int startX = 20;
+            int centerY = Global.VIRTUAL_HEIGHT / 2 + 10;
+            int clipHeight = 100;
+            int clipY = centerY - (clipHeight / 2);
+
+            var pixel = ServiceLocator.Get<Texture2D>();
+
+            var graphics = ServiceLocator.Get<GraphicsDeviceManager>();
+
+            Vector2 topLeft = Vector2.Transform(new Vector2(startX, clipY), transform);
+            Vector2 bottomRight = Vector2.Transform(new Vector2(startX + (slotWidth * _randomCount), clipY + clipHeight), transform);
+
+            Rectangle screenScissor = new Rectangle(
+                (int)Math.Min(topLeft.X, bottomRight.X),
+                (int)Math.Min(topLeft.Y, bottomRight.Y),
+                (int)Math.Abs(bottomRight.X - topLeft.X),
+                (int)Math.Abs(bottomRight.Y - topLeft.Y)
+            );
+
+            var originalRasterizerState = new RasterizerState { ScissorTestEnable = true };
+            graphics.GraphicsDevice.ScissorRectangle = screenScissor;
+
+            spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp, null, originalRasterizerState, null, transform);
+
+            for (int i = 0; i < _slots.Count; i++)
             {
-                var pixel = ServiceLocator.Get<Texture2D>();
-                DrawModeButtonBackground(spriteBatch, _btnMode1v1, 2, pixel);
-                DrawModeButtonBackground(spriteBatch, _btnMode4ffa, 4, pixel);
-                DrawModeButtonBackground(spriteBatch, _btnMode6ffa, 6, pixel);
-                DrawModeButtonBackground(spriteBatch, _btnMode8ffa, 8, pixel);
+                var slot = _slots[i];
+                int slotCenterX = startX + (i * slotWidth) + (slotWidth / 2);
 
-                _btnMode1v1.Draw(spriteBatch, secondaryFont, effectiveGameTime, Matrix.Identity);
-                _btnMode4ffa.Draw(spriteBatch, secondaryFont, effectiveGameTime, Matrix.Identity);
-                _btnMode6ffa.Draw(spriteBatch, secondaryFont, effectiveGameTime, Matrix.Identity);
-                _btnMode8ffa.Draw(spriteBatch, secondaryFont, effectiveGameTime, Matrix.Identity);
+                float vIndex = slot.VirtualIndex;
+                int centerCatIdx = ((int)MathF.Floor(vIndex) % _characterIds.Count + _characterIds.Count) % _characterIds.Count;
+                float offset = vIndex - MathF.Floor(vIndex);
 
-                Color startColor = (_startButton.IsHovered || _startButton.IsSelected) ? _global.ButtonHoverColor : _global.GameTextColor;
-                _startButton.Draw(spriteBatch, core.DefaultFont, effectiveGameTime, Matrix.Identity, false, null, null, startColor);
-            }
-            else
-            {
-                spriteBatch.End();
-
-                int slotWidth = (Global.VIRTUAL_WIDTH - 40) / _randomCount;
-                int startX = 20;
-                int centerY = Global.VIRTUAL_HEIGHT / 2 + 10;
-                int clipHeight = 100;
-                int clipY = centerY - (clipHeight / 2);
-
-                var pixel = ServiceLocator.Get<Texture2D>();
-
-                var graphics = ServiceLocator.Get<GraphicsDeviceManager>();
-                
-                Vector2 topLeft = Vector2.Transform(new Vector2(startX, clipY), transform);
-                Vector2 bottomRight = Vector2.Transform(new Vector2(startX + (slotWidth * _randomCount), clipY + clipHeight), transform);
-                
-                Rectangle screenScissor = new Rectangle(
-                    (int)Math.Min(topLeft.X, bottomRight.X),
-                    (int)Math.Min(topLeft.Y, bottomRight.Y),
-                    (int)Math.Abs(bottomRight.X - topLeft.X),
-                    (int)Math.Abs(bottomRight.Y - topLeft.Y)
-                );
-
-                var originalRasterizerState = new RasterizerState { ScissorTestEnable = true };
-                graphics.GraphicsDevice.ScissorRectangle = screenScissor;
-
-                spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp, null, originalRasterizerState, null, transform);
-
-                for (int i = 0; i < _slots.Count; i++)
+                for (int j = -2; j <= 2; j++)
                 {
-                    var slot = _slots[i];
-                    int slotCenterX = startX + (i * slotWidth) + (slotWidth / 2);
+                    int catIdx = (centerCatIdx + j) % _characterIds.Count;
+                    if (catIdx < 0) catIdx += _characterIds.Count;
 
-                    float vIndex = slot.VirtualIndex;
-                    int centerCatIdx = ((int)MathF.Floor(vIndex) % _characterIds.Count + _characterIds.Count) % _characterIds.Count;
-                    float offset = vIndex - MathF.Floor(vIndex);
+                    string charId = _characterIds[catIdx];
+                    int spriteIndex = int.Parse(charId);
 
-                    for (int j = -2; j <= 2; j++)
+                    float yPos = centerY + ((j - offset) * 40f);
+
+                    float pScale = 1f;
+                    float pRot = 0f;
+                    if (slot.State == SlotState.Stopped && j == 0)
                     {
-                        int catIdx = (centerCatIdx + j) % _characterIds.Count;
-                        if (catIdx < 0) catIdx += _characterIds.Count;
-
-                        string charId = _characterIds[catIdx];
-                        int spriteIndex = int.Parse(charId);
-
-                        float yPos = centerY + ((j - offset) * 40f);
-
-                        float pScale = 1f;
-                        float pRot = 0f;
-                        if (slot.State == SlotState.Stopped && j == 0)
-                        {
-                            pScale = slot.Plink.IsActive ? slot.Plink.Scale : 1f;
-                            pRot = slot.Plink.IsActive ? slot.Plink.Rotation : 0f;
-                        }
-
-                        float speedStretch = 1f + (Math.Abs(slot.Speed) * 0.015f);
-                        float blurAlpha = Math.Clamp(1f - (Math.Abs(slot.Speed) * 0.01f), 0.7f, 1f);
-                        float squashX = 1f / (1f + (speedStretch - 1f) * 0.5f);
-                        Vector2 pScaleVec = new Vector2(pScale * squashX, pScale * speedStretch);
-
-                        var sourceRect = _spriteManager.GetPlayerSourceRect(spriteIndex, PlayerSpriteType.Normal);
-                        Vector2 origin = new Vector2(16, 16);
-
-                        spriteBatch.Draw(_spriteManager.PlayerMasterSpriteSheet, new Vector2(slotCenterX, yPos), sourceRect, Color.White * blurAlpha, pRot, origin, pScaleVec, SpriteEffects.None, 0f);
+                        pScale = slot.Plink.IsActive ? slot.Plink.Scale : 1f;
+                        pRot = slot.Plink.IsActive ? slot.Plink.Rotation : 0f;
                     }
+
+                    float speedStretch = 1f + (Math.Abs(slot.Speed) * 0.015f);
+                    float blurAlpha = Math.Clamp(1f - (Math.Abs(slot.Speed) * 0.01f), 0.7f, 1f);
+                    float squashX = 1f / (1f + (speedStretch - 1f) * 0.5f);
+                    Vector2 pScaleVec = new Vector2(pScale * squashX, pScale * speedStretch);
+
+                    var sourceRect = _spriteManager.GetPlayerSourceRect(spriteIndex, PlayerSpriteType.Normal);
+                    Vector2 origin = new Vector2(16, 16);
+
+                    spriteBatch.Draw(_spriteManager.PlayerMasterSpriteSheet, new Vector2(slotCenterX, yPos), sourceRect, Color.White * blurAlpha, pRot, origin, pScaleVec, SpriteEffects.None, 0f);
                 }
+            }
 
-                int shadowHeight = 24;
-                for (int y = 0; y < shadowHeight; y++)
-                {
-                    float alpha = 1f - ((float)y / shadowHeight);
-                    alpha = Easing.EaseOutQuad(alpha) * 0.85f;
+            int shadowHeight = 24;
+            for (int y = 0; y < shadowHeight; y++)
+            {
+                float alpha = 1f - ((float)y / shadowHeight);
+                alpha = Easing.EaseOutQuad(alpha) * 0.85f;
 
-                    spriteBatch.Draw(pixel, new Rectangle(startX, clipY + y, slotWidth * _randomCount, 1), Color.Black * alpha);
-                    spriteBatch.Draw(pixel, new Rectangle(startX, clipY + clipHeight - 1 - y, slotWidth * _randomCount, 1), Color.Black * alpha);
-                }
-
-                spriteBatch.End();
-                spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp, null, null, null, transform);
+                spriteBatch.Draw(pixel, new Rectangle(startX, clipY + y, slotWidth * _randomCount, 1), Color.Black * alpha);
+                spriteBatch.Draw(pixel, new Rectangle(startX, clipY + clipHeight - 1 - y, slotWidth * _randomCount, 1), Color.Black * alpha);
             }
 
             spriteBatch.End();

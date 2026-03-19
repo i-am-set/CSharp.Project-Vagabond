@@ -74,7 +74,8 @@ namespace ProjectVagabond.Deliveries
                     ExecuteOnChargeStart = true,
                     RequiresFocus = false,
                     ShowProjectileIndicator = false,
-                    Delivery = SpreadAngle > 0 ? new InstantAOEDelivery { Radius = 12f } : new SingleTargetDelivery(),
+                    DeliveryImpactMidFlight = attack.Move.DeliveryImpactMidFlight,
+                    Delivery = SpreadAngle > 0 ? new InstantAOEDelivery { Radius = 12f, CheckProjectileCollision = attack.Move.DeliveryImpactMidFlight } : new SingleTargetDelivery { CheckProjectileCollision = attack.Move.DeliveryImpactMidFlight },
                     Effects = attack.Move.Effects.ToList()
                 };
             }
