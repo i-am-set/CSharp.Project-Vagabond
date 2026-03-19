@@ -7,6 +7,8 @@ namespace ProjectVagabond.Battle
     {
         public string Name { get; set; }
         public string AnimationID { get; set; }
+        public string CastSoundCue { get; set; }
+        public float CastSoundPitchVariance { get; set; }
         public int BasePower { get; set; }
         public float ChargeTime { get; set; }
         public int Weight { get; set; }

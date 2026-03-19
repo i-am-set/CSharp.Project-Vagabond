@@ -374,6 +374,8 @@ namespace ProjectVagabond.UI
         public float HapticStrength { get; set; } = 0.0f;
         public float FlashMaxAlpha { get; set; } = 0.8f;
         public float PlinkTriggerThreshold { get; set; } = 0.05f;
+        public string PlinkSoundCue { get; set; } = "ui_plink";
+        public float PlinkSoundPitchVariance { get; set; } = 0.1f;
 
         // --- State ---
         public bool IsActive { get; private set; }
@@ -427,6 +429,11 @@ namespace ProjectVagabond.UI
             if (!_hasPlinked && progress > PlinkTriggerThreshold)
             {
                 _hasPlinked = true;
+
+                if (!string.IsNullOrEmpty(PlinkSoundCue))
+                {
+                    ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlayUi(PlinkSoundCue, PlinkSoundPitchVariance);
+                }
 
                 // Spawn debris particles
                 if (ParticleCount > 0)

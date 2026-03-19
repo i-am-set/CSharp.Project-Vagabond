@@ -168,6 +168,10 @@ namespace ProjectVagabond
             ServiceLocator.Register<GraphicsDeviceManager>(_graphics);
             ServiceLocator.Register<GameWindow>(Window);
             ServiceLocator.Register<Global>(Global.Instance);
+
+            var audioManager = new ProjectVagabond.Audio.AudioManager();
+            ServiceLocator.Register<ProjectVagabond.Audio.AudioManager>(audioManager);
+
             _settings = SettingsManager.LoadSettings();
             ServiceLocator.Register<GameSettings>(_settings);
             _global = ServiceLocator.Get<Global>();
@@ -299,6 +303,7 @@ namespace ProjectVagabond
             _spriteManager.LoadEssentialContent();
             _spriteManager.LoadGameContent();
             GameDataCache.LoadData(Content);
+            ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().LoadContent(Content);
 
             _sceneManager.ChangeScene(GameSceneState.Startup, TransitionType.None, TransitionType.None);
         }
@@ -434,6 +439,7 @@ namespace ProjectVagabond
 
             _hapticsManager.Update(gameTime);
             _particleSystemManager.Update(elapsedSeconds);
+            ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().Update(elapsedSeconds);
 
             base.Update(gameTime);
         }

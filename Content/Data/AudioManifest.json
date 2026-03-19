@@ -1,0 +1,50 @@
+{
+  "Sfx": [
+    {
+      "Id": "sfx_fireball_cast",
+      "Path": "Audio/SFX/fireball_cast",
+      "PoolSize": 3,
+      "DefaultVolume": 0.2
+    },
+    {
+      "Id": "sfx_fireball_impact",
+      "Path": "Audio/SFX/fireball_impact",
+      "PoolSize": 5,
+      "DefaultVolume": 0.2
+    }
+  ],
+  "Ui": [
+    {
+      "Id": "ui_hover",
+      "Path": "Audio/UI/hover_tick",
+      "PoolSize": 5,
+      "DefaultVolume": 0.3
+    },
+    {
+      "Id": "ui_click",
+      "Path": "Audio/UI/click_down",
+      "PoolSize": 5,
+      "DefaultVolume": 0.8
+    },
+    {
+      "Id": "ui_confirm",
+      "Path": "Audio/UI/click_confirm",
+      "PoolSize": 5,
+      "DefaultVolume": 0.8
+    },
+    {
+      "Id": "ui_alert",
+      "Path": "Audio/UI/error_buzz",
+      "PoolSize": 2,
+      "DefaultVolume": 1.0
+    },
+    {
+      "Id": "ui_plink",
+      "Path": "Audio/UI/plink",
+      "PoolSize": 15,
+      "DefaultVolume": 0.3
+    }
+  ],
+  "Ambient": [],
+  "Music": []
+}

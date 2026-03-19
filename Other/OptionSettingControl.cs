@@ -37,6 +37,11 @@ namespace ProjectVagabond.UI
         private Rectangle _rightArrowRect;
         private bool _isLeftArrowHovered;
         private bool _isRightArrowHovered;
+        private bool _wasLeftArrowHovered;
+        private bool _wasRightArrowHovered;
+        private bool _isLeftArrowPressed;
+        private bool _isRightArrowPressed;
+
         private readonly HoverAnimator _hoverAnimator = new HoverAnimator();
         public HoverAnimator HoverAnimator => _hoverAnimator;
 
@@ -105,13 +110,15 @@ namespace ProjectVagabond.UI
             if (!IsEnabled) return false;
             if (input.NavigateLeft)
             {
-                _hapticsManager.TriggerZoomPulse(_global.LightHapticZoomPulseStrength, _global.HapticZoomPulseDuration); ;
+                _hapticsManager.TriggerZoomPulse(_global.LightHapticZoomPulseStrength, _global.HapticZoomPulseDuration);
+                ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlayUi("ui_confirm");
                 Decrement();
                 return true;
             }
             if (input.NavigateRight || input.Confirm)
             {
-                _hapticsManager.TriggerZoomPulse(_global.LightHapticZoomPulseStrength, _global.HapticZoomPulseDuration); ;
+                _hapticsManager.TriggerZoomPulse(_global.LightHapticZoomPulseStrength, _global.HapticZoomPulseDuration);
+                ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlayUi("ui_confirm");
                 Increment();
                 return true;
             }
@@ -154,25 +161,61 @@ namespace ProjectVagabond.UI
             {
                 _isLeftArrowHovered = false;
                 _isRightArrowHovered = false;
+                _wasLeftArrowHovered = false;
+                _wasRightArrowHovered = false;
+                _isLeftArrowPressed = false;
+                _isRightArrowPressed = false;
                 return;
             }
 
             _isLeftArrowHovered = _leftArrowRect.Contains(virtualMousePos);
             _isRightArrowHovered = _rightArrowRect.Contains(virtualMousePos);
 
+            var audio = ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>();
+
+            if ((_isLeftArrowHovered && !_wasLeftArrowHovered) || (_isRightArrowHovered && !_wasRightArrowHovered))
+            {
+                audio.PlayUi("ui_hover");
+            }
+
+            _wasLeftArrowHovered = _isLeftArrowHovered;
+            _wasRightArrowHovered = _isRightArrowHovered;
+
             var inputManager = ServiceLocator.Get<InputManager>();
-            if (inputManager.IsMouseClickAvailable() && currentMouseState.LeftButton == ButtonState.Pressed && previousMouseState.LeftButton == ButtonState.Released)
+            bool mouseIsDown = currentMouseState.LeftButton == ButtonState.Pressed;
+            bool mouseWasDown = previousMouseState.LeftButton == ButtonState.Pressed;
+
+            if (inputManager.IsMouseClickAvailable())
+            {
+                if (mouseIsDown && !mouseWasDown)
+                {
+                    if (_isLeftArrowHovered)
+                    {
+                        _isLeftArrowPressed = true;
+                        audio.PlayUi("ui_click");
+                    }
+                    else if (_isRightArrowHovered)
+                    {
+                        _isRightArrowPressed = true;
+                        audio.PlayUi("ui_click");
+                    }
+                }
+            }
+
+            if (!mouseIsDown && mouseWasDown)
             {
                 bool consumed = false;
-                if (_isLeftArrowHovered)
+                if (_isLeftArrowHovered && _isLeftArrowPressed)
                 {
-                    _hapticsManager.TriggerZoomPulse(_global.LightHapticZoomPulseStrength, _global.HapticZoomPulseDuration); ;
+                    _hapticsManager.TriggerZoomPulse(_global.LightHapticZoomPulseStrength, _global.HapticZoomPulseDuration);
+                    audio.PlayUi("ui_confirm");
                     Decrement();
                     consumed = true;
                 }
-                else if (_isRightArrowHovered)
+                else if (_isRightArrowHovered && _isRightArrowPressed)
                 {
-                    _hapticsManager.TriggerZoomPulse(_global.LightHapticZoomPulseStrength, _global.HapticZoomPulseDuration); ;
+                    _hapticsManager.TriggerZoomPulse(_global.LightHapticZoomPulseStrength, _global.HapticZoomPulseDuration);
+                    audio.PlayUi("ui_confirm");
                     Increment();
                     consumed = true;
                 }
@@ -181,6 +224,9 @@ namespace ProjectVagabond.UI
                 {
                     inputManager.ConsumeMouseClick();
                 }
+
+                _isLeftArrowPressed = false;
+                _isRightArrowPressed = false;
             }
         }
 
@@ -209,6 +255,10 @@ namespace ProjectVagabond.UI
             _waveTimer = 0f;
             _isLeftArrowHovered = false;
             _isRightArrowHovered = false;
+            _wasLeftArrowHovered = false;
+            _wasRightArrowHovered = false;
+            _isLeftArrowPressed = false;
+            _isRightArrowPressed = false;
             IsSelected = false;
         }
 

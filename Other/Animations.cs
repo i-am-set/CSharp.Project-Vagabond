@@ -30,6 +30,8 @@ namespace ProjectVagabond.Animations
         public bool IsProjectile { get; set; }
         public float ProjectileSpeed { get; set; }
         public bool DrawOnHitboxCenter { get; set; }
+        public string SoundCue { get; set; }
+        public float SoundPitchVariance { get; set; }
     }
 
     public class ParticleAnimationData
@@ -86,6 +88,8 @@ namespace ProjectVagabond.Animations
         public string BlendMode { get; set; }
         public string TexturePath { get; set; }
         public bool SnapToPixelGrid { get; set; }
+        public string SoundCue { get; set; }
+        public float SoundPitchVariance { get; set; }
     }
 
     public interface IAnimationInstance : IPoolable
@@ -187,6 +191,8 @@ namespace ProjectVagabond.Animations
 
             settings.BlendMode = data.BlendMode == "Additive" ? BlendState.Additive : BlendState.AlphaBlend;
             settings.SnapToPixelGrid = data.SnapToPixelGrid;
+            settings.SoundCue = data.SoundCue;
+            settings.SoundPitchVariance = data.SoundPitchVariance;
 
             if (!string.IsNullOrEmpty(data.TexturePath))
             {
@@ -293,6 +299,11 @@ namespace ProjectVagabond.Animations
 
         public void Start(ActiveAttack attack, BattleContext context)
         {
+            if (!string.IsNullOrEmpty(_data.SoundCue))
+            {
+                ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlaySfx(_data.SoundCue, _data.SoundPitchVariance);
+            }
+
             try
             {
                 _texture = context.Core.Content.Load<Texture2D>(_data.TexturePath);

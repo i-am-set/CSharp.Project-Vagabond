@@ -72,6 +72,8 @@
     "ID": "fireball",
     "Name": "Fireball",
     "AnimationID": "anim_fireball",
+    "CastSoundCue": "sfx_fireball_cast",
+    "CastSoundPitchVariance": 0.1,
     "BasePower": 60,
     "ChargeTime": 1.5,
     "Weight": 15,

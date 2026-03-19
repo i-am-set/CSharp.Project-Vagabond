@@ -15,6 +15,42 @@
 
 #---------------------------------- Content ---------------------------------#
 
+#begin Audio/SFX/fireball_cast.wav
+/importer:WavImporter
+/processor:SoundEffectProcessor
+/processorParam:Quality=Best
+/build:Audio/SFX/fireball_cast.wav;Audio/SFX/fireball_cast
+
+#begin Audio/SFX/fireball_impact.wav
+/importer:WavImporter
+/processor:SoundEffectProcessor
+/processorParam:Quality=Best
+/build:Audio/SFX/fireball_impact.wav;Audio/SFX/fireball_impact
+
+#begin Audio/UI/click_confirm.wav
+/importer:WavImporter
+/processor:SoundEffectProcessor
+/processorParam:Quality=Best
+/build:Audio/UI/click_confirm.wav;Audio/UI/click_confirm
+
+#begin Audio/UI/click_down.wav
+/importer:WavImporter
+/processor:SoundEffectProcessor
+/processorParam:Quality=Best
+/build:Audio/UI/click_down.wav;Audio/UI/click_down
+
+#begin Audio/UI/hover_tick.wav
+/importer:WavImporter
+/processor:SoundEffectProcessor
+/processorParam:Quality=Best
+/build:Audio/UI/hover_tick.wav;Audio/UI/hover_tick
+
+#begin Audio/UI/plink.wav
+/importer:WavImporter
+/processor:SoundEffectProcessor
+/processorParam:Quality=Best
+/build:Audio/UI/plink.wav;Audio/UI/plink
+
 #begin Fonts/3x4_SimpleOddHeight_0.png
 /importer:TextureImporter
 /processor:TextureProcessor

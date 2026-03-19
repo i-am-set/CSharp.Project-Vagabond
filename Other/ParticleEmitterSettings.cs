@@ -65,6 +65,9 @@ namespace ProjectVagabond.Particles
         public int SpriteSheetRows { get; set; } = 1;
         public int SpriteSheetTotalFrames { get; set; } = 1;
 
+        // Audio Properties
+        public string SoundCue { get; set; }
+        public float SoundPitchVariance { get; set; }
 
         // Global Properties
         public float TimeScale { get; set; }
@@ -129,6 +132,10 @@ namespace ProjectVagabond.Particles
                 SpriteSheetColumns = 1,
                 SpriteSheetRows = 1,
                 SpriteSheetTotalFrames = 1,
+
+                // Audio
+                SoundCue = null,
+                SoundPitchVariance = 0f,
 
                 // Global
                 TimeScale = 1.0f,

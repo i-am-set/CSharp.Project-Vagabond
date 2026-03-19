@@ -18,6 +18,8 @@ namespace ProjectVagabond.Battle
                 TargetClosest = data.TargetClosest,
                 ProjectileTravelTime = data.DeliveryProjectileTravelTime,
                 AnimationID = data.AnimationID,
+                CastSoundCue = data.CastSoundCue,
+                CastSoundPitchVariance = data.CastSoundPitchVariance,
                 ExecuteOnChargeStart = data.ExecuteOnChargeStart,
                 RequiresFocus = data.RequiresFocus,
                 ShowProjectileIndicator = data.ShowProjectileIndicator,

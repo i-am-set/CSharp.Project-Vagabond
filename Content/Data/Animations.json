@@ -108,6 +108,8 @@
         "Impacts": [
           {
             "Shape": "Point",
+            "SoundCue": "sfx_fireball_impact",
+            "SoundPitchVariance": 0.2,
             "EmitFrom": "Center",
             "BurstCount": 40,
             "VelocityPattern": "Radial",

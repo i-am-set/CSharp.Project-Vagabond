@@ -85,6 +85,10 @@ namespace ProjectVagabond.Battle
                 {
                     if (!HasStartedAnimation && Animation != null)
                     {
+                        if (!string.IsNullOrEmpty(Move.CastSoundCue))
+                        {
+                            ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlaySfx(Move.CastSoundCue, Move.CastSoundPitchVariance);
+                        }
                         Animation.Start(this, context);
                         HasStartedAnimation = true;
                     }
@@ -104,6 +108,10 @@ namespace ProjectVagabond.Battle
                     {
                         if (!HasStartedAnimation && Animation != null)
                         {
+                            if (!string.IsNullOrEmpty(Move.CastSoundCue))
+                            {
+                                ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlaySfx(Move.CastSoundCue, Move.CastSoundPitchVariance);
+                            }
                             Animation.Start(this, context);
                             HasStartedAnimation = true;
                         }

@@ -52,6 +52,10 @@ namespace ProjectVagabond.UI
         public TextEffectType WaveEffectType { get; set; } = TextEffectType.SmallWave;
         protected float _waveTimer = 0f;
 
+        public string HoverSoundCue { get; set; } = "ui_hover";
+        public string PressSoundCue { get; set; } = "ui_click";
+        public string ClickSoundCue { get; set; } = "ui_confirm";
+
         public bool UseInputDebounce { get; set; } = true;
         public bool TriggerHapticOnHover { get; set; } = false;
 
@@ -234,6 +238,11 @@ namespace ProjectVagabond.UI
             {
                 if (TriggerHapticOnHover) ServiceLocator.Get<HapticsManager>().TriggerZoomPulse(_global.LightHapticZoomPulseStrength, _global.HapticZoomPulseDuration);
                 if (EnableHoverRotation) _hoverRotationTimer = HOVER_ROTATION_DURATION;
+
+                if (!string.IsNullOrEmpty(HoverSoundCue))
+                {
+                    ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlayUi(HoverSoundCue);
+                }
             }
 
             bool mouseIsDown = currentMouseState.LeftButton == ButtonState.Pressed;
@@ -242,6 +251,10 @@ namespace ProjectVagabond.UI
             if (IsHovered && mouseIsDown && !mouseWasDown)
             {
                 _isPressed = true;
+                if (!string.IsNullOrEmpty(PressSoundCue))
+                {
+                    ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlayUi(PressSoundCue);
+                }
             }
 
             if (!mouseIsDown && _isPressed)
@@ -293,7 +306,14 @@ namespace ProjectVagabond.UI
 
         public void TriggerClick()
         {
-            if (IsEnabled) OnClick?.Invoke();
+            if (IsEnabled)
+            {
+                if (!string.IsNullOrEmpty(ClickSoundCue))
+                {
+                    ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlayUi(ClickSoundCue);
+                }
+                OnClick?.Invoke();
+            }
         }
 
         public virtual void TriggerShake() => _shakeTimer = SHAKE_DURATION;

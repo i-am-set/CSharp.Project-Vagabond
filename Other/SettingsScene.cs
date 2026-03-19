@@ -153,7 +153,12 @@ namespace ProjectVagabond.Scenes
             _navigationGroup.Clear();
             _controlPlinks.Clear();
 
-            // --- 1. Resolution ---
+            // --- VIDEO ---
+            var videoHeader = new HeaderSettingControl("VIDEO");
+            _settingControls.Add(videoHeader);
+            _navigationGroup.Add(videoHeader);
+
+            // 1. Resolution
             var resolutions = SettingsManager.GetResolutions();
             var resolutionDisplayList = resolutions.Select(kvp =>
             {
@@ -191,7 +196,7 @@ namespace ProjectVagabond.Scenes
             _settingControls.Add(resolutionControl);
             _navigationGroup.Add(resolutionControl);
 
-            // --- 2. Window Mode ---
+            // 2. Window Mode
             var windowModes = new List<KeyValuePair<string, WindowMode>>
             {
                 new("Windowed", WindowMode.Windowed),
@@ -206,33 +211,74 @@ namespace ProjectVagabond.Scenes
             _settingControls.Add(windowModeControl);
             _navigationGroup.Add(windowModeControl);
 
-            // --- 3. Other Settings ---
+            // 3. Gamma
             var gammaControl = new SegmentedBarSettingControl("Gamma", 1.0f, 2.0f, 11, () => _tempSettings.Gamma, v => _tempSettings.Gamma = v);
             _settingControls.Add(gammaControl);
             _navigationGroup.Add(gammaControl);
 
-            var smallerUiControl = new BoolSettingControl("Smaller UI", () => _tempSettings.SmallerUi, v => _tempSettings.SmallerUi = v);
-            _settingControls.Add(smallerUiControl);
-            _navigationGroup.Add(smallerUiControl);
-
+            // 4. VSync
             var vsyncControl = new BoolSettingControl("VSync", () => _tempSettings.IsVsync, v => _tempSettings.IsVsync = v);
             _settingControls.Add(vsyncControl);
             _navigationGroup.Add(vsyncControl);
 
+            // 5. Frame Limiter
             var frameLimiterControl = new BoolSettingControl("Frame Limiter", () => _tempSettings.IsFrameLimiterEnabled, v => _tempSettings.IsFrameLimiterEnabled = v);
             _settingControls.Add(frameLimiterControl);
             _navigationGroup.Add(frameLimiterControl);
 
+            // 6. Target Framerate
             var framerates = new List<KeyValuePair<string, int>> { new("30 FPS", 30), new("60 FPS", 60), new("75 FPS", 75), new("120 FPS", 120), new("144 FPS", 144), new("240 FPS", 240) };
             var framerateControl = new OptionSettingControl<int>("Target Framerate", framerates, () => _tempSettings.TargetFramerate, v => _tempSettings.TargetFramerate = v);
             framerateControl.IsEnabled = _tempSettings.IsFrameLimiterEnabled;
             _settingControls.Add(framerateControl);
             _navigationGroup.Add(framerateControl);
 
-            // --- 4. Visual ---
+            // --- GAME ---
+            var gameHeader = new HeaderSettingControl("GAME");
+            _settingControls.Add(gameHeader);
+            _navigationGroup.Add(gameHeader);
+
+            // 7. Smaller UI
+            var smallerUiControl = new BoolSettingControl("Smaller UI", () => _tempSettings.SmallerUi, v => _tempSettings.SmallerUi = v);
+            _settingControls.Add(smallerUiControl);
+            _navigationGroup.Add(smallerUiControl);
+
+            // 8. Glitch Effects
             var glitchControl = new BoolSettingControl("Glitch Effects", () => _tempSettings.EnableGlitchEffects, v => _tempSettings.EnableGlitchEffects = v);
             _settingControls.Add(glitchControl);
             _navigationGroup.Add(glitchControl);
+
+            // --- AUDIO ---
+            var audioHeader = new HeaderSettingControl("AUDIO");
+            _settingControls.Add(audioHeader);
+            _navigationGroup.Add(audioHeader);
+
+            var audioManager = ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>();
+
+            // 9. Master Volume
+            var masterVolControl = new SegmentedBarSettingControl("Master Volume", 0f, 1f, 11, () => _tempSettings.MasterVolume, v => { _tempSettings.MasterVolume = v; audioManager.SetVolumes(_tempSettings.MasterVolume, _tempSettings.MusicVolume, _tempSettings.SfxVolume, _tempSettings.AmbientVolume, _tempSettings.UiVolume); });
+            _settingControls.Add(masterVolControl);
+            _navigationGroup.Add(masterVolControl);
+
+            // 10. Music Volume
+            var musicVolControl = new SegmentedBarSettingControl("Music Volume", 0f, 1f, 11, () => _tempSettings.MusicVolume, v => { _tempSettings.MusicVolume = v; audioManager.SetVolumes(_tempSettings.MasterVolume, _tempSettings.MusicVolume, _tempSettings.SfxVolume, _tempSettings.AmbientVolume, _tempSettings.UiVolume); });
+            _settingControls.Add(musicVolControl);
+            _navigationGroup.Add(musicVolControl);
+
+            // 11. SFX Volume
+            var sfxVolControl = new SegmentedBarSettingControl("SFX Volume", 0f, 1f, 11, () => _tempSettings.SfxVolume, v => { _tempSettings.SfxVolume = v; audioManager.SetVolumes(_tempSettings.MasterVolume, _tempSettings.MusicVolume, _tempSettings.SfxVolume, _tempSettings.AmbientVolume, _tempSettings.UiVolume); });
+            _settingControls.Add(sfxVolControl);
+            _navigationGroup.Add(sfxVolControl);
+
+            // 12. Ambient Volume
+            var ambientVolControl = new SegmentedBarSettingControl("Ambient Volume", 0f, 1f, 11, () => _tempSettings.AmbientVolume, v => { _tempSettings.AmbientVolume = v; audioManager.SetVolumes(_tempSettings.MasterVolume, _tempSettings.MusicVolume, _tempSettings.SfxVolume, _tempSettings.AmbientVolume, _tempSettings.UiVolume); });
+            _settingControls.Add(ambientVolControl);
+            _navigationGroup.Add(ambientVolControl);
+
+            // 13. UI Volume
+            var uiVolControl = new SegmentedBarSettingControl("UI Volume", 0f, 1f, 11, () => _tempSettings.UiVolume, v => { _tempSettings.UiVolume = v; audioManager.SetVolumes(_tempSettings.MasterVolume, _tempSettings.MusicVolume, _tempSettings.SfxVolume, _tempSettings.AmbientVolume, _tempSettings.UiVolume); });
+            _settingControls.Add(uiVolControl);
+            _navigationGroup.Add(uiVolControl);
 
             // --- Footer Buttons ---
             var applyButton = new Button(new Rectangle(0, 0, 125, 12), "APPLY") { TextRenderOffset = new Vector2(0, 1) };
@@ -250,7 +296,7 @@ namespace ProjectVagabond.Scenes
             _footerButtons.Add(resetButton);
             _navigationGroup.Add(resetButton);
 
-            _listViewPort = new Rectangle(SETTINGS_PANEL_X - 10, SETTINGS_START_Y - 2, SETTINGS_PANEL_WIDTH + 30, SCROLL_VIEW_HEIGHT + 4);
+            _listViewPort = new Rectangle(SETTINGS_PANEL_X - 10, SETTINGS_START_Y, SETTINGS_PANEL_WIDTH + 30, SCROLL_VIEW_HEIGHT);
             _navigationGroup.ClipRectangle = _listViewPort;
 
             CalculateButtonLayout();
@@ -258,12 +304,16 @@ namespace ProjectVagabond.Scenes
 
             // Trigger Plink Entrance
             float delay = 0f;
-            foreach (var ctrl in _settingControls)
+            for (int i = 0; i < _settingControls.Count; i++)
             {
+                var ctrl = _settingControls[i];
                 var plink = new PlinkAnimator();
-                plink.Start(delay);
+                if (i < VISIBLE_ITEMS_COUNT)
+                {
+                    plink.Start(delay);
+                    delay += 0.05f;
+                }
                 _controlPlinks[ctrl] = plink;
-                delay += 0.05f;
             }
             foreach (var btn in _footerButtons)
             {
@@ -353,6 +403,12 @@ namespace ProjectVagabond.Scenes
             _settings.Gamma = _tempSettings.Gamma;
             _settings.EnableGlitchEffects = _tempSettings.EnableGlitchEffects;
 
+            _settings.MasterVolume = _tempSettings.MasterVolume;
+            _settings.MusicVolume = _tempSettings.MusicVolume;
+            _settings.SfxVolume = _tempSettings.SfxVolume;
+            _settings.AmbientVolume = _tempSettings.AmbientVolume;
+            _settings.UiVolume = _tempSettings.UiVolume;
+
             _settings.ApplyGraphicsSettings(_graphics, _core);
             _settings.ApplyGameSettings();
             SettingsManager.SaveSettings(_settings);
@@ -377,6 +433,14 @@ namespace ProjectVagabond.Scenes
             _tempSettings.DisplayIndex = _settings.DisplayIndex;
             _tempSettings.Gamma = _settings.Gamma;
             _tempSettings.EnableGlitchEffects = _settings.EnableGlitchEffects;
+
+            _tempSettings.MasterVolume = _settings.MasterVolume;
+            _tempSettings.MusicVolume = _settings.MusicVolume;
+            _tempSettings.SfxVolume = _settings.SfxVolume;
+            _tempSettings.AmbientVolume = _settings.AmbientVolume;
+            _tempSettings.UiVolume = _settings.UiVolume;
+
+            ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().SetVolumes(_settings.MasterVolume, _settings.MusicVolume, _settings.SfxVolume, _settings.AmbientVolume, _settings.UiVolume);
 
             foreach (var item in _settingControls) item.RefreshValue();
             _isApplyingSettings = false;
@@ -518,6 +582,13 @@ namespace ProjectVagabond.Scenes
 
         private void OnNavigationSelectionChanged(ISelectable selection)
         {
+            if (_currentInputDelay <= 0)
+            {
+                ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlayUi("ui_hover");
+            }
+
+            if (_inputManager.CurrentInputDevice == InputDeviceType.Mouse) return;
+
             if (selection == null || !(selection is ISettingControl)) return;
 
             int index = _settingControls.IndexOf((ISettingControl)selection);

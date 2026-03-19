@@ -176,6 +176,11 @@ namespace ProjectVagabond.Particles
 
         public void EmitBurst(int count)
         {
+            if (count > 0 && !string.IsNullOrEmpty(Settings.SoundCue))
+            {
+                ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlaySfx(Settings.SoundCue, Settings.SoundPitchVariance);
+            }
+
             for (int i = 0; i < count; i++)
             {
                 EmitParticle();
