@@ -1,21 +1,12 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
-using MonoGame.Extended.BitmapFonts;
-using MonoGame.Extended.ECS;
-using ProjectVagabond;
-using ProjectVagabond.Scenes;
-using ProjectVagabond.Transitions;
-using ProjectVagabond.UI;
-using System;
 using System.Collections.Generic;
-using System.Linq;
-using static System.Net.Mime.MediaTypeNames;
 
 namespace ProjectVagabond.Particles
 {
     public static class ParticleEffects
     {
-        public static ParticleEmitterSettings CreateRetroBackgroundShape(Texture2D texture, float scale, float speed, float maxAlpha, Global global)
+        public static ParticleEmitterSettings CreateGeometricBackgroundShape(Texture2D texture, float scale, float speed, float maxAlpha, Global global)
         {
             var settings = ParticleEmitterSettings.CreateDefault();
             settings.Shape = EmitterShape.Rectangle;
@@ -46,6 +37,7 @@ namespace ProjectVagabond.Particles
             settings.Texture = texture;
             settings.BlendMode = BlendState.AlphaBlend;
             settings.LayerDepth = 0.9f;
+            settings.DrawLayer = 0;
 
             return settings;
         }

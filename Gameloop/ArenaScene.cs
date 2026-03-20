@@ -9,12 +9,8 @@ using ProjectVagabond.Transitions;
 using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
-using System.Collections;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
-using System.Text;
-using System.Text.RegularExpressions;
 
 namespace ProjectVagabond.Scenes
 {
@@ -68,6 +64,7 @@ namespace ProjectVagabond.Scenes
         private ArenaWizard? _hoveredHudWizard;
 
         private const int MULT_DEFAULT_MIN_STEP = 9; // Index 9 is Palette_Rust
+        private const float ARENA_FILL_OPACITY = 1f; // Tunable window effect
 
         private readonly Dictionary<ArenaWizard, int> _probSteps = new Dictionary<ArenaWizard, int>();
         private readonly Dictionary<ArenaWizard, PlinkAnimator> _probPlinks = new Dictionary<ArenaWizard, PlinkAnimator>();
@@ -171,6 +168,8 @@ namespace ProjectVagabond.Scenes
             _probPlinks.Clear();
             _winProbabilities.Clear();
             _printedTickets.Clear();
+
+            ServiceLocator.Get<GeometricBackgroundManager>().Show(0.5f);
 
             _battleContext = new BattleContext
             {
@@ -277,6 +276,7 @@ namespace ProjectVagabond.Scenes
         public override void Exit()
         {
             base.Exit();
+            ServiceLocator.Get<GeometricBackgroundManager>().Hide();
             PoolManager.ClearAll();
         }
 
@@ -682,11 +682,39 @@ namespace ProjectVagabond.Scenes
 
             spriteBatch.Draw(_pixel, new Rectangle(0, 0, Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT), _global.GameBg);
 
+            spriteBatch.End();
+
+            // Draw Background Particles (Geometry)
+            _particleSystemManager.Draw(spriteBatch, transform, 0);
+
+            spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp, null, null, null, transform);
+
             int L = _arenaBounds.Left - 1;
             int R = _arenaBounds.Right;
             int T = _arenaBounds.Top - 1;
             int B = _arenaBounds.Bottom;
             int bev = 24;
+
+            // --- Arena Fill (Window Effect) ---
+            Color fillColor = _global.Palette_Off * ARENA_FILL_OPACITY;
+
+            // Central vertical strip
+            spriteBatch.Draw(_pixel, new Rectangle(L + bev, T, R - L - bev * 2, B - T), fillColor);
+            // Left middle strip
+            spriteBatch.Draw(_pixel, new Rectangle(L, T + bev, bev, B - T - bev * 2), fillColor);
+            // Right middle strip
+            spriteBatch.Draw(_pixel, new Rectangle(R - bev, T + bev, bev, B - T - bev * 2), fillColor);
+
+            // Corner triangles
+            for (int y = 0; y < bev; y++)
+            {
+                int width = y;
+                spriteBatch.Draw(_pixel, new Rectangle(L + bev - width, T + y, width, 1), fillColor); // TL
+                spriteBatch.Draw(_pixel, new Rectangle(R - bev, T + y, width, 1), fillColor); // TR
+                spriteBatch.Draw(_pixel, new Rectangle(L + bev - width, B - 1 - y, width, 1), fillColor); // BL
+                spriteBatch.Draw(_pixel, new Rectangle(R - bev, B - 1 - y, width, 1), fillColor); // BR
+            }
+            // ----------------------------------
 
             // Top
             spriteBatch.Draw(_pixel, new Rectangle(L + bev, T, R - L - bev * 2, 1), _global.Palette_Black);
@@ -726,7 +754,10 @@ namespace ProjectVagabond.Scenes
             }
 
             spriteBatch.End();
-            _particleSystemManager.Draw(spriteBatch, transform);
+
+            // Draw Foreground Particles (Explosions, Sparks, etc.)
+            _particleSystemManager.Draw(spriteBatch, transform, 1);
+
             spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp, null, null, null, transform);
 
             if (_hoveredHudWizard != null && _hoveredHudWizard.Data.Combat.State != WizardState.Dead)

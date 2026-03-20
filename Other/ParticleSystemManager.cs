@@ -66,12 +66,14 @@ namespace ProjectVagabond.Particles
             }
         }
 
-        public void Draw(SpriteBatch spriteBatch, Matrix? transformMatrix = null)
+        public void Draw(SpriteBatch spriteBatch, Matrix? transformMatrix = null, int drawLayer = 1)
         {
             // Group emitters by a composite key of BlendState and Effect for efficient rendering.
             _renderBatches.Clear();
             foreach (var emitter in _emitters)
             {
+                if (emitter.Settings.DrawLayer != drawLayer) continue;
+
                 var key = (emitter.Settings.BlendMode, emitter.Settings.ShaderEffect);
                 if (!_renderBatches.ContainsKey(key))
                 {

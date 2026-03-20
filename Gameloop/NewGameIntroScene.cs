@@ -474,6 +474,9 @@ namespace ProjectVagabond.Scenes
             }
 
             spriteBatch.End();
+
+            _particleSystemManager.Draw(spriteBatch, transform, 1); // Foreground particles (Plinks)
+
             spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp, null, null, null, transform);
         }
     }

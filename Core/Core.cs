@@ -187,8 +187,13 @@ namespace ProjectVagabond
             ServiceLocator.Register<HapticsManager>(_hapticsManager);
             _tooltipManager = new TooltipManager();
             ServiceLocator.Register<TooltipManager>(_tooltipManager);
+
             _particleSystemManager = new ParticleSystemManager();
             ServiceLocator.Register<ParticleSystemManager>(_particleSystemManager);
+
+            var geometricBackgroundManager = new GeometricBackgroundManager();
+            ServiceLocator.Register<GeometricBackgroundManager>(geometricBackgroundManager);
+
             _gameState = new GameState(_global, _spriteManager);
             ServiceLocator.Register<GameState>(_gameState);
             var autoCompleteManager = new AutoCompleteManager();
@@ -317,6 +322,7 @@ namespace ProjectVagabond
         public void ResetGame()
         {
             _particleSystemManager.ClearAllEmitters();
+            ServiceLocator.Get<GeometricBackgroundManager>().Reset();
             _hapticsManager.StopAll();
             _tooltipManager.Hide();
             _loadingScreen.Clear();

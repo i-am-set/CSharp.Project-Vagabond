@@ -58,6 +58,7 @@ namespace ProjectVagabond.Particles
         public Texture2D Texture { get; set; }
         public BlendState BlendMode { get; set; }
         public float LayerDepth { get; set; }
+        public int DrawLayer { get; set; } = 1;
         public bool SnapToPixelGrid { get; set; }
         public Effect ShaderEffect { get; set; }
         public bool UsesCustomShaderData { get; set; } = false;
@@ -126,6 +127,7 @@ namespace ProjectVagabond.Particles
                 Texture = ServiceLocator.Get<Texture2D>(), // Default 1x1 white pixel
                 BlendMode = BlendState.AlphaBlend,
                 LayerDepth = 0.5f,
+                DrawLayer = 1,
                 SnapToPixelGrid = true,
                 ShaderEffect = null,
                 UsesCustomShaderData = false,
