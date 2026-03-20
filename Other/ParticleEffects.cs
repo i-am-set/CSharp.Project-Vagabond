@@ -15,6 +15,41 @@ namespace ProjectVagabond.Particles
 {
     public static class ParticleEffects
     {
+        public static ParticleEmitterSettings CreateRetroBackgroundShape(Texture2D texture, float scale, float speed, float maxAlpha, Global global)
+        {
+            var settings = ParticleEmitterSettings.CreateDefault();
+            settings.Shape = EmitterShape.Rectangle;
+            settings.EmitFrom = EmissionSource.Volume;
+            settings.EmitterSize = new Vector2(Global.VIRTUAL_WIDTH + 100, Global.VIRTUAL_HEIGHT + 100);
+            settings.EmissionRate = 1.5f;
+            settings.MaxParticles = 30;
+            settings.Duration = float.PositiveInfinity;
+
+            settings.VelocityPattern = EmissionPattern.Cartesian;
+            settings.InitialVelocityX = new FloatRange(-speed * 0.5f, speed * 0.5f);
+            settings.InitialVelocityY = new FloatRange(-speed, -speed * 0.2f);
+
+            settings.Lifetime = new FloatRange(15f, 25f);
+            settings.InitialSize = new FloatRange(scale * 0.8f, scale * 1.2f);
+            settings.EndSize = new FloatRange(scale * 0.8f, scale * 1.2f);
+            settings.InterpolateSize = false;
+
+            settings.InitialRotation = new FloatRange(0, MathHelper.TwoPi);
+            settings.InitialRotationSpeed = new FloatRange(-0.5f, 0.5f);
+
+            settings.StartColor = global.Palette_Black;
+            settings.EndColor = global.Palette_Black;
+            settings.StartAlpha = maxAlpha;
+            settings.EndAlpha = maxAlpha;
+            settings.AlphaFadeInAndOut = true;
+
+            settings.Texture = texture;
+            settings.BlendMode = BlendState.AlphaBlend;
+            settings.LayerDepth = 0.9f;
+
+            return settings;
+        }
+
         public static ParticleEmitterSettings CreateUIPlink()
         {
             var settings = ParticleEmitterSettings.CreateDefault();

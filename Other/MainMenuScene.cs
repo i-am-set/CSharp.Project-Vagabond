@@ -28,6 +28,7 @@ namespace ProjectVagabond.Scenes
         private readonly TransitionManager _transitionManager;
         private readonly HapticsManager _hapticsManager;
         private readonly InputManager _inputManager;
+        private readonly TextureFactory _textureFactory;
         private readonly List<Button> _buttons = new();
         private readonly NavigationGroup _navigationGroup;
 
@@ -39,6 +40,11 @@ namespace ProjectVagabond.Scenes
 
         private const float BUTTON_STAGGER_DELAY = 0.15f;
 
+        private Texture2D _texTriangle;
+        private Texture2D _texSquare;
+        private Texture2D _texHexagon;
+        private readonly List<ParticleEmitter> _bgEmitters = new();
+
         public MainMenuScene()
         {
             _sceneManager = ServiceLocator.Get<SceneManager>();
@@ -48,6 +54,7 @@ namespace ProjectVagabond.Scenes
             _transitionManager = ServiceLocator.Get<TransitionManager>();
             _hapticsManager = ServiceLocator.Get<HapticsManager>();
             _inputManager = ServiceLocator.Get<InputManager>();
+            _textureFactory = ServiceLocator.Get<TextureFactory>();
             _navigationGroup = new NavigationGroup(wrapNavigation: true);
         }
 
@@ -59,6 +66,38 @@ namespace ProjectVagabond.Scenes
         public override void Initialize()
         {
             _confirmationDialog = new ConfirmationDialog(this);
+        }
+
+        private void InitializeBackgroundParticles()
+        {
+            if (_texTriangle == null) _texTriangle = _textureFactory.CreatePolygonTexture(24, 3);
+            if (_texSquare == null) _texSquare = _textureFactory.CreatePolygonTexture(24, 4);
+            if (_texHexagon == null) _texHexagon = _textureFactory.CreatePolygonTexture(24, 6);
+
+            foreach (var e in _bgEmitters) e.IsActive = false;
+            _bgEmitters.Clear();
+
+            _bgEmitters.Add(_particleSystemManager.CreateEmitter(ParticleEffects.CreateRetroBackgroundShape(_texTriangle, 0.5f, 5f, 0.15f, _global)));
+            _bgEmitters.Add(_particleSystemManager.CreateEmitter(ParticleEffects.CreateRetroBackgroundShape(_texSquare, 0.6f, 6f, 0.15f, _global)));
+            _bgEmitters.Add(_particleSystemManager.CreateEmitter(ParticleEffects.CreateRetroBackgroundShape(_texHexagon, 0.7f, 7f, 0.15f, _global)));
+
+            _bgEmitters.Add(_particleSystemManager.CreateEmitter(ParticleEffects.CreateRetroBackgroundShape(_texTriangle, 1.0f, 12f, 0.25f, _global)));
+            _bgEmitters.Add(_particleSystemManager.CreateEmitter(ParticleEffects.CreateRetroBackgroundShape(_texSquare, 1.2f, 14f, 0.25f, _global)));
+            _bgEmitters.Add(_particleSystemManager.CreateEmitter(ParticleEffects.CreateRetroBackgroundShape(_texHexagon, 1.4f, 16f, 0.25f, _global)));
+
+            _bgEmitters.Add(_particleSystemManager.CreateEmitter(ParticleEffects.CreateRetroBackgroundShape(_texTriangle, 2.0f, 25f, 0.4f, _global)));
+            _bgEmitters.Add(_particleSystemManager.CreateEmitter(ParticleEffects.CreateRetroBackgroundShape(_texSquare, 2.5f, 30f, 0.4f, _global)));
+            _bgEmitters.Add(_particleSystemManager.CreateEmitter(ParticleEffects.CreateRetroBackgroundShape(_texHexagon, 3.0f, 35f, 0.4f, _global)));
+
+            foreach (var e in _bgEmitters)
+            {
+                e.Position = new Vector2(Global.VIRTUAL_WIDTH / 2f, Global.VIRTUAL_HEIGHT / 2f);
+
+                for (int i = 0; i < 200; i++)
+                {
+                    e.Update(0.1f, null);
+                }
+            }
         }
 
         private void InitializeUI()
@@ -235,6 +274,7 @@ namespace ProjectVagabond.Scenes
         {
             base.Enter();
             InitializeUI();
+            InitializeBackgroundParticles();
 
             _currentInputDelay = _inputDelay;
             _previousKeyboardState = Keyboard.GetState();
@@ -262,6 +302,8 @@ namespace ProjectVagabond.Scenes
         public override void Exit()
         {
             base.Exit();
+            foreach (var e in _bgEmitters) e.IsActive = false;
+            _bgEmitters.Clear();
         }
 
         protected override Rectangle? GetFirstSelectableElementBounds()
@@ -327,6 +369,13 @@ namespace ProjectVagabond.Scenes
         {
             int screenWidth = Global.VIRTUAL_WIDTH;
             var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
+            var pixel = ServiceLocator.Get<Texture2D>();
+
+            spriteBatch.Draw(pixel, new Rectangle(0, 0, Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT), _global.GameBg);
+
+            spriteBatch.End();
+            _particleSystemManager.Draw(spriteBatch, transform);
+            spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp, null, null, null, transform);
 
             spriteBatch.DrawSnapped(_spriteManager.LogoSprite, new Vector2(screenWidth / 2 - _spriteManager.LogoSprite.Width / 2, 25), Color.White);
 
