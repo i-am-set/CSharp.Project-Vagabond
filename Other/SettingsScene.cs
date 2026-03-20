@@ -667,6 +667,11 @@ namespace ProjectVagabond.Scenes
             float itemTop = index * ITEM_VERTICAL_SPACING;
             float itemBottom = itemTop + ITEM_VERTICAL_SPACING;
 
+            if (index > 0 && _settingControls[index - 1] is HeaderSettingControl)
+            {
+                itemTop = (index - 1) * ITEM_VERTICAL_SPACING;
+            }
+
             if (itemTop < _targetScrollOffset)
             {
                 _targetScrollOffset = itemTop;
