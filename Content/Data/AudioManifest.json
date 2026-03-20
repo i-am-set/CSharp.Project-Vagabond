@@ -18,7 +18,9 @@
       "Id": "ui_hover",
       "Path": "Audio/UI/hover_tick",
       "PoolSize": 5,
-      "DefaultVolume": 0.5
+      "DefaultVolume": 1.0,
+      "MinPitch": -0.2,
+      "MaxPitch": 0.2
     },
     {
       "Id": "ui_click",
@@ -42,7 +44,9 @@
       "Id": "ui_plink",
       "Path": "Audio/UI/plink",
       "PoolSize": 15,
-      "DefaultVolume": 0.5
+      "DefaultVolume": 1.0,
+      "MinPitch": -0.1,
+      "MaxPitch": 0.3
     }
   ],
   "Ambient": [],

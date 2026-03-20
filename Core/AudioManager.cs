@@ -32,6 +32,8 @@ namespace ProjectVagabond.Audio
         {
             public SoundEffectInstance[] Instances;
             public float BaseVolume;
+            public float MinPitch;
+            public float MaxPitch;
             public int CurrentIndex;
         }
 
@@ -122,6 +124,8 @@ namespace ProjectVagabond.Audio
                     {
                         Instances = instances,
                         BaseVolume = entry.DefaultVolume,
+                        MinPitch = entry.MinPitch,
+                        MaxPitch = entry.MaxPitch,
                         CurrentIndex = 0
                     };
                 }
@@ -199,7 +203,12 @@ namespace ProjectVagabond.Audio
             if (instance != null)
             {
                 instance.Volume = pool.BaseVolume * _sfxVolume * _masterVolume;
-                if (pitchVariance > 0f)
+
+                if (pool.MinPitch != 0f || pool.MaxPitch != 0f)
+                {
+                    instance.Pitch = pool.MinPitch + (float)(_random.NextDouble() * (pool.MaxPitch - pool.MinPitch));
+                }
+                else if (pitchVariance > 0f)
                 {
                     instance.Pitch = (float)(_random.NextDouble() * 2.0 - 1.0) * pitchVariance;
                 }
@@ -207,6 +216,7 @@ namespace ProjectVagabond.Audio
                 {
                     instance.Pitch = 0f;
                 }
+
                 instance.Play();
             }
         }
@@ -219,7 +229,12 @@ namespace ProjectVagabond.Audio
             if (instance != null)
             {
                 instance.Volume = pool.BaseVolume * _uiVolume * _masterVolume;
-                if (pitchVariance > 0f)
+
+                if (pool.MinPitch != 0f || pool.MaxPitch != 0f)
+                {
+                    instance.Pitch = pool.MinPitch + (float)(_random.NextDouble() * (pool.MaxPitch - pool.MinPitch));
+                }
+                else if (pitchVariance > 0f)
                 {
                     instance.Pitch = (float)(_random.NextDouble() * 2.0 - 1.0) * pitchVariance;
                 }
@@ -227,6 +242,7 @@ namespace ProjectVagabond.Audio
                 {
                     instance.Pitch = 0f;
                 }
+
                 instance.Play();
             }
         }

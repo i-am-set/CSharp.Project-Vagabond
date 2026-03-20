@@ -589,6 +589,13 @@ namespace ProjectVagabond.Scenes
 
             _scrollOffset = _targetScrollOffset;
 
+            // Mask the mouse position if it's outside the viewport so hidden items don't react to hover
+            Vector2 listMousePos = virtualMousePos;
+            if (!_listViewPort.Contains(virtualMousePos))
+            {
+                listMousePos.Y = -9999;
+            }
+
             // --- 1. Update Controls (Position & Bounds) ---
             for (int i = 0; i < _settingControls.Count; i++)
             {
@@ -604,7 +611,7 @@ namespace ProjectVagabond.Scenes
 
                 if (_currentInputDelay <= 0 && (!plink.IsActive || plink.Scale > 0.9f))
                 {
-                    item.Update(new Vector2(updatePos.X, updatePos.Y + 2), currentMouseState, _previousMouseState, virtualMousePos, font, font);
+                    item.Update(new Vector2(updatePos.X, updatePos.Y + 2), currentMouseState, _previousMouseState, listMousePos, font, font);
                 }
             }
 

@@ -16,6 +16,8 @@ namespace ProjectVagabond.Audio
         public string Path { get; set; }
         public int PoolSize { get; set; } = 3;
         public float DefaultVolume { get; set; } = 1.0f;
+        public float MinPitch { get; set; } = 0.0f;
+        public float MaxPitch { get; set; } = 0.0f;
     }
 
     public class MusicEntry

@@ -226,7 +226,9 @@ namespace ProjectVagabond.Scenes
                     if (_spinSoundTimer <= 0f)
                     {
                         ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlayUi("ui_hover");
-                        _spinSoundTimer = 0.06f;
+
+                        float speedUpProgress = Math.Clamp(_spinTimer / 0.5f, 0f, 1f);
+                        _spinSoundTimer = MathHelper.Lerp(0.25f, 0.06f, Easing.EaseInQuad(speedUpProgress));
                     }
                 }
 

@@ -29,7 +29,7 @@ namespace ProjectVagabond
             GameTextColor = Palette_Sun;
             EmphasisTextColor = Palette_DarkSun;
             HighlightTextColor = Palette_Fruit;
-            DullTextColor = Palette_DarkestPale;
+            DullTextColor = Palette_Black;
             ButtonHoverColor = Palette_DarkSun;
             ButtonDisableColor = Palette_Black;
             SplitMapNodeColor = Palette_Sun;
@@ -136,7 +136,7 @@ namespace ProjectVagabond
         public float HoverHapticStrength { get; set; } = 0.25f;
         public float ButtonHapticStrength { get; set; } = 0.5f;
         public float ButtonHapticDuration { get; set; } = 0.15f;
-        public float LightHapticZoomPulseStrength { get; set; } = 1.01f;
+        public float LightHapticZoomPulseStrength { get; set; } = 1.0025f;
         public float HapticZoomPulseStrength { get; set; } = 1.02f;
         public float HapticZoomPulseDuration { get; set; } = 0.05f;
 
