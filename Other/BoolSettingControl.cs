@@ -36,6 +36,7 @@ namespace ProjectVagabond.UI
         private bool _isRightArrowHovered;
         private bool _wasLeftArrowHovered;
         private bool _wasRightArrowHovered;
+        private bool _wasHovered;
 
         private readonly HoverAnimator _hoverAnimator = new HoverAnimator();
         public HoverAnimator HoverAnimator => _hoverAnimator;
@@ -132,21 +133,33 @@ namespace ProjectVagabond.UI
                 _isRightArrowHovered = false;
                 _wasLeftArrowHovered = false;
                 _wasRightArrowHovered = false;
+                _wasHovered = false;
                 return;
             }
+
+            bool isHovered = Bounds.Contains(virtualMousePos);
+            bool justEnteredRow = isHovered && !_wasHovered;
+            _wasHovered = isHovered;
 
             _isLeftArrowHovered = _leftArrowRect.Contains(virtualMousePos);
             _isRightArrowHovered = _rightArrowRect.Contains(virtualMousePos);
 
-            var audio = ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>();
-
-            if ((_isLeftArrowHovered && !_wasLeftArrowHovered) || (_isRightArrowHovered && !_wasRightArrowHovered))
-            {
-                audio.PlayUi("ui_hover");
-            }
+            bool justEnteredLeftArrow = _isLeftArrowHovered && !_wasLeftArrowHovered;
+            bool justEnteredRightArrow = _isRightArrowHovered && !_wasRightArrowHovered;
 
             _wasLeftArrowHovered = _isLeftArrowHovered;
             _wasRightArrowHovered = _isRightArrowHovered;
+
+            var audio = ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>();
+
+            if (justEnteredLeftArrow || justEnteredRightArrow)
+            {
+                audio.PlayUi("ui_hover");
+            }
+            else if (justEnteredRow)
+            {
+                audio.PlayUi("ui_hover");
+            }
 
             var inputManager = ServiceLocator.Get<InputManager>();
             bool mouseIsDown = currentMouseState.LeftButton == ButtonState.Pressed;
@@ -205,6 +218,7 @@ namespace ProjectVagabond.UI
             _isRightArrowHovered = false;
             _wasLeftArrowHovered = false;
             _wasRightArrowHovered = false;
+            _wasHovered = false;
             IsSelected = false;
         }
 

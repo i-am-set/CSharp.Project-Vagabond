@@ -37,6 +37,7 @@ namespace ProjectVagabond.UI
         private bool _isDragging;
         private int _hoveredSegmentIndex = -1;
         private int _previousHoveredSegmentIndex = -1;
+        private bool _wasHovered;
         private readonly HoverAnimator _hoverAnimator = new HoverAnimator();
         public HoverAnimator HoverAnimator => _hoverAnimator;
 
@@ -100,6 +101,7 @@ namespace ProjectVagabond.UI
             if (input.NavigateLeft)
             {
                 _hapticsManager.TriggerZoomPulse(_global.LightHapticZoomPulseStrength, _global.HapticZoomPulseDuration);
+                ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlayUi("ui_click");
                 ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlayUi("ui_confirm");
                 SetValue(_currentValue - _step);
                 return true;
@@ -107,6 +109,7 @@ namespace ProjectVagabond.UI
             else if (input.NavigateRight)
             {
                 _hapticsManager.TriggerZoomPulse(_global.LightHapticZoomPulseStrength, _global.HapticZoomPulseDuration);
+                ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlayUi("ui_click");
                 ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlayUi("ui_confirm");
                 SetValue(_currentValue + _step);
                 return true;
@@ -137,8 +140,13 @@ namespace ProjectVagabond.UI
                 _isDragging = false;
                 _hoveredSegmentIndex = -1;
                 _previousHoveredSegmentIndex = -1;
+                _wasHovered = false;
                 return;
             }
+
+            bool isHovered = Bounds.Contains(virtualMousePos);
+            bool justEnteredRow = isHovered && !_wasHovered;
+            _wasHovered = isHovered;
 
             Rectangle hitRect = _barAreaRect;
             hitRect.X -= 1;
@@ -152,13 +160,19 @@ namespace ProjectVagabond.UI
                 UpdateHoveredSegment(virtualMousePos);
             }
 
+            bool justEnteredSegment = _hoveredSegmentIndex != -1 && _hoveredSegmentIndex != _previousHoveredSegmentIndex;
+            _previousHoveredSegmentIndex = _hoveredSegmentIndex;
+
             var audio = ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>();
 
-            if (_hoveredSegmentIndex != -1 && _hoveredSegmentIndex != _previousHoveredSegmentIndex)
+            if (justEnteredSegment)
             {
                 audio.PlayUi("ui_hover");
             }
-            _previousHoveredSegmentIndex = _hoveredSegmentIndex;
+            else if (justEnteredRow)
+            {
+                audio.PlayUi("ui_hover");
+            }
 
             bool leftClickPressed = currentMouseState.LeftButton == ButtonState.Pressed && previousMouseState.LeftButton == ButtonState.Released;
             bool leftClickHeld = currentMouseState.LeftButton == ButtonState.Pressed;
@@ -235,6 +249,7 @@ namespace ProjectVagabond.UI
             _isDragging = false;
             _hoveredSegmentIndex = -1;
             _previousHoveredSegmentIndex = -1;
+            _wasHovered = false;
             IsSelected = false;
         }
 

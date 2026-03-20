@@ -583,7 +583,7 @@ namespace ProjectVagabond.Scenes
 
             if (Math.Abs(_targetScrollOffset - _lastAudioScrollOffset) > 0.1f)
             {
-                ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlayUi("ui_hover");
+                ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlayUi("ui_plink");
                 _lastAudioScrollOffset = _targetScrollOffset;
             }
 
@@ -652,12 +652,12 @@ namespace ProjectVagabond.Scenes
 
         private void OnNavigationSelectionChanged(ISelectable selection)
         {
+            if (_inputManager.CurrentInputDevice == InputDeviceType.Mouse) return;
+
             if (_currentInputDelay <= 0)
             {
                 ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlayUi("ui_hover");
             }
-
-            if (_inputManager.CurrentInputDevice == InputDeviceType.Mouse) return;
 
             if (selection == null || !(selection is ISettingControl)) return;
 
