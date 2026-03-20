@@ -1,11 +1,7 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
-using MonoGame.Extended;
 using MonoGame.Extended.BitmapFonts;
-using MonoGame.Extended.Graphics;
-using MonoGame.Extended.Screens;
-using ProjectVagabond;
 using ProjectVagabond.Battle;
 using ProjectVagabond.Particles;
 using ProjectVagabond.Scenes;
@@ -16,10 +12,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using System.Reflection;
 using System.Runtime.InteropServices;
-using System.Text;
-using System.Text.RegularExpressions;
 using System.Threading;
 
 namespace ProjectVagabond
@@ -337,14 +330,14 @@ namespace ProjectVagabond
         {
             _fullscreenOverlays.Clear();
 
-            if (_settings.IsFrameLimiterEnabled)
+            // Enforce a 500 FPS hard cap even when "Unlimited" to prevent physics/input polling breakdown
+            double targetFps = _settings.IsFrameLimiterEnabled ? _settings.TargetFramerate : 500.0;
+            _targetElapsedTimeSpan = TimeSpan.FromSeconds(1.0 / targetFps);
+
+            while (_frameStopwatch.Elapsed < _targetElapsedTimeSpan)
             {
-                _targetElapsedTimeSpan = TimeSpan.FromSeconds(1.0 / _settings.TargetFramerate);
-                while (_frameStopwatch.Elapsed < _targetElapsedTimeSpan)
-                {
-                    var remaining = _targetElapsedTimeSpan - _frameStopwatch.Elapsed;
-                    if (remaining.TotalMilliseconds > 1) Thread.Sleep(1);
-                }
+                var remaining = _targetElapsedTimeSpan - _frameStopwatch.Elapsed;
+                if (remaining.TotalMilliseconds > 1) Thread.Sleep(1);
             }
             _frameStopwatch.Restart();
 

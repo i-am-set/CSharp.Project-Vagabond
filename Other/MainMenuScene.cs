@@ -92,7 +92,9 @@ namespace ProjectVagabond.Scenes
                 EnableTextWave = false,
                 AlwaysAnimateText = false,
                 EnableHoverSway = false,
-                IsEnabled = false // Disabled for now
+                IsEnabled = false, // Disabled for now
+                UseTextOutline = true,
+                TextOutlineColor = _global.Palette_Off
             };
             _buttons.Add(continueButton);
             // Note: Not adding disabled button to navigation group
@@ -115,7 +117,9 @@ namespace ProjectVagabond.Scenes
                 EnableTextWave = true,
                 AlwaysAnimateText = true,
                 WaveEffectType = TextEffectType.TypewriterPop,
-                EnableHoverSway = false
+                EnableHoverSway = false,
+                UseTextOutline = true,
+                TextOutlineColor = _global.Palette_Off
             };
             newGameButton.OnClick += () =>
             {
@@ -145,7 +149,9 @@ namespace ProjectVagabond.Scenes
                 EnableTextWave = true,
                 AlwaysAnimateText = true,
                 WaveEffectType = TextEffectType.TypewriterPop,
-                EnableHoverSway = false
+                EnableHoverSway = false,
+                UseTextOutline = true,
+                TextOutlineColor = _global.Palette_Off
             };
             catyButton.OnClick += () =>
             {
@@ -174,7 +180,9 @@ namespace ProjectVagabond.Scenes
                 EnableTextWave = true,
                 AlwaysAnimateText = true,
                 WaveEffectType = TextEffectType.TypewriterPop,
-                EnableHoverSway = false
+                EnableHoverSway = false,
+                UseTextOutline = true,
+                TextOutlineColor = _global.Palette_Off
             };
             settingsButton.OnClick += () =>
             {
@@ -203,7 +211,9 @@ namespace ProjectVagabond.Scenes
                 EnableTextWave = true,
                 AlwaysAnimateText = true,
                 WaveEffectType = TextEffectType.TypewriterPop,
-                EnableHoverSway = false
+                EnableHoverSway = false,
+                UseTextOutline = true,
+                TextOutlineColor = _global.Palette_Off
             };
             exitButton.OnClick += ConfirmExit;
             _buttons.Add(exitButton);
@@ -357,7 +367,7 @@ namespace ProjectVagabond.Scenes
                     float liftOffset = button.HoverAnimator.CurrentOffset;
                     var leftPos = new Vector2(bounds.Left - arrowSize.Width - 4 + pressOffset, bounds.Center.Y - arrowSize.Height / 2f + button.TextRenderOffset.Y + liftOffset);
 
-                    spriteBatch.DrawStringSnapped(fontToUse, leftArrow, leftPos, color);
+                    spriteBatch.DrawStringOutlinedSnapped(fontToUse, leftArrow, leftPos, color, _global.Palette_Off);
                 }
             }
 

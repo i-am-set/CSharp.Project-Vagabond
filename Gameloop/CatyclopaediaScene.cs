@@ -43,6 +43,7 @@ namespace ProjectVagabond.Scenes
         private float _carouselVelocity = 0f;
         private float _carouselFriction = 2.5f;
         private int _lastHapticIndex = 0;
+        private Queue<(double time, float index)> _dragHistory = new();
 
         // UI Elements
         private Button _leftArrow = null!;
@@ -54,7 +55,7 @@ namespace ProjectVagabond.Scenes
         private const string INTRO_LINE_1 = "WIZARD";
         private const string INTRO_LINE_2 = "CATYCLOPAEDIA";
 
-        // --- Plink Animation State ---
+        // Plink Animation State
         private bool _isPlinkingIn = true;
         private PlinkAnimator _plinkTitle1 = null!;
         private PlinkAnimator _plinkTitle2 = null!;
@@ -129,6 +130,7 @@ namespace ProjectVagabond.Scenes
             _isHoveringCarouselArea = false;
             _carouselVelocity = 0f;
             _lastHapticIndex = _targetVirtualIndex;
+            _dragHistory.Clear(); // Added history clear
 
             _navigationGroup.DeselectAll();
 
@@ -157,11 +159,11 @@ namespace ProjectVagabond.Scenes
             _allPlinks.Add(_backButton.Plink);
 
             var randomActions = new List<Action>
-            {
-                () => _plinkTitle1.Start(0f, 0.25f),
-                () => _plinkTitle2.Start(0f, 0.25f),
-                () => _plinkStats.Start(0f, 0.25f)
-            };
+    {
+        () => _plinkTitle1.Start(0f, 0.25f),
+        () => _plinkTitle2.Start(0f, 0.25f),
+        () => _plinkStats.Start(0f, 0.25f)
+    };
 
             for (int i = 0; i < 7; i++)
             {
@@ -389,6 +391,8 @@ namespace ProjectVagabond.Scenes
                     _isMouseDownOnCarousel = true;
                     _isDraggingCarousel = false;
                     _dragStartPos = virtualMousePos;
+                    _dragHistory.Clear();
+                    _dragHistory.Enqueue((gameTime.TotalGameTime.TotalSeconds, _virtualIndex));
                 }
 
                 if (isPressed && _isMouseDownOnCarousel)
@@ -400,14 +404,21 @@ namespace ProjectVagabond.Scenes
                         _dragStartPos = virtualMousePos;
                         _dragStartVirtualIndex = _virtualIndex;
                         _carouselVelocity = 0f;
+                        _dragHistory.Clear();
+                        _dragHistory.Enqueue((gameTime.TotalGameTime.TotalSeconds, _virtualIndex));
                     }
 
                     if (_isDraggingCarousel)
                     {
-                        float prevIndex = _virtualIndex;
                         float activeDeltaX = _dragStartPos.X - virtualMousePos.X;
                         _virtualIndex = _dragStartVirtualIndex + (activeDeltaX / 40f);
-                        if (dt > 0) _carouselVelocity = (_virtualIndex - prevIndex) / dt;
+
+                        _dragHistory.Enqueue((gameTime.TotalGameTime.TotalSeconds, _virtualIndex));
+                        while (_dragHistory.Count > 0 && gameTime.TotalGameTime.TotalSeconds - _dragHistory.Peek().time > 0.1)
+                        {
+                            _dragHistory.Dequeue();
+                        }
+
                         _targetVirtualIndex = (int)MathF.Round(_virtualIndex);
                     }
                 }
@@ -420,6 +431,26 @@ namespace ProjectVagabond.Scenes
                         if (_leftArrow.IsHovered) CycleCharacter(-1);
                         else if (_rightArrow.IsHovered) CycleCharacter(1);
                     }
+                    else
+                    {
+                        if (_dragHistory.Count > 1)
+                        {
+                            var oldest = _dragHistory.Peek();
+                            double dtHist = gameTime.TotalGameTime.TotalSeconds - oldest.time;
+                            if (dtHist > 0.001)
+                            {
+                                _carouselVelocity = (float)((_virtualIndex - oldest.index) / dtHist);
+                            }
+                            else
+                            {
+                                _carouselVelocity = 0f;
+                            }
+                        }
+                        else
+                        {
+                            _carouselVelocity = 0f;
+                        }
+                    }
                     _isDraggingCarousel = false;
                 }
 
@@ -428,13 +459,19 @@ namespace ProjectVagabond.Scenes
                     if (Math.Abs(_carouselVelocity) > 0.1f)
                     {
                         _virtualIndex += _carouselVelocity * dt;
-                        _carouselVelocity *= MathF.Max(0f, 1f - _carouselFriction * dt);
+                        _carouselVelocity *= MathF.Exp(-_carouselFriction * dt);
                         _targetVirtualIndex = (int)MathF.Round(_virtualIndex);
                     }
                     else
                     {
                         _carouselVelocity = 0f;
-                        _virtualIndex = MathHelper.Lerp(_virtualIndex, _targetVirtualIndex, dt * CAROUSEL_SLIDE_SPEED);
+                        _virtualIndex = MathHelper.Lerp(_virtualIndex, _targetVirtualIndex, 1f - MathF.Exp(-CAROUSEL_SLIDE_SPEED * dt));
+
+                        // Snap to prevent micro-jitter at high FPS
+                        if (Math.Abs(_virtualIndex - _targetVirtualIndex) < 0.001f)
+                        {
+                            _virtualIndex = _targetVirtualIndex;
+                        }
                     }
                 }
 
@@ -479,16 +516,14 @@ namespace ProjectVagabond.Scenes
             var core = ServiceLocator.Get<Core>();
             var secondaryFont = core.SecondaryFont;
             var tertiaryFont = core.TertiaryFont;
-            Matrix staticTransform = Matrix.CreateScale(core.FinalScale, core.FinalScale, 1.0f) *
-                                     Matrix.CreateTranslation(core.FinalRenderRectangle.X, core.FinalRenderRectangle.Y, 0);
 
             spriteBatch.End();
 
-            spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.Opaque, SamplerState.PointClamp, null, null, null, staticTransform);
+            spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.Opaque, SamplerState.PointClamp, null, null, null, transform);
             spriteBatch.Draw(_spriteManager.EmptySprite, new Rectangle(0, 0, Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT), _global.Palette_Off);
             spriteBatch.End();
 
-            spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp, null, null, null, staticTransform);
+            spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp, null, null, null, transform);
 
             float titleY = 14f;
 
@@ -556,7 +591,7 @@ namespace ProjectVagabond.Scenes
                 }
             }
 
-            spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp, null, null, null, Matrix.CreateTranslation(0, leftY, 0) * staticTransform);
+            spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp, null, null, null, Matrix.CreateTranslation(0, leftY, 0) * transform);
             _leftArrow.Draw(spriteBatch, font, effectiveGameTime, Matrix.Identity, false, null, null, leftColor);
             spriteBatch.End();
 
@@ -580,11 +615,11 @@ namespace ProjectVagabond.Scenes
                 }
             }
 
-            spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp, null, null, null, Matrix.CreateTranslation(0, rightY, 0) * staticTransform);
+            spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp, null, null, null, Matrix.CreateTranslation(0, rightY, 0) * transform);
             _rightArrow.Draw(spriteBatch, font, effectiveGameTime, Matrix.Identity, false, null, null, rightColor);
             spriteBatch.End();
 
-            spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp, null, null, null, staticTransform);
+            spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp, null, null, null, transform);
 
             Color backColor = (_backButton.IsHovered || _backButton.IsSelected) ? _global.ButtonHoverColor : _global.GameTextColor;
             _backButton.Draw(spriteBatch, core.DefaultFont, effectiveGameTime, Matrix.Identity, false, null, null, backColor);
@@ -602,7 +637,7 @@ namespace ProjectVagabond.Scenes
                                      Matrix.CreateRotationZ(sRot) *
                                      Matrix.CreateTranslation(statsCenter.X, statsCenter.Y, 0);
 
-                spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp, null, null, null, statsMatrix * staticTransform);
+                spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp, null, null, null, statsMatrix * transform);
                 DrawStats(spriteBatch, secondaryFont, tertiaryFont);
 
                 if (_isPlinkingIn && _plinkStats.FlashTint.HasValue)

@@ -2,12 +2,8 @@
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
-using ProjectVagabond.Battle;
-using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
-using System.Collections.Generic;
-using System.Linq;
 
 namespace ProjectVagabond.UI
 {
@@ -45,6 +41,9 @@ namespace ProjectVagabond.UI
         public BitmapFont? Font { get; set; }
         public Vector2 TextRenderOffset { get; set; } = Vector2.Zero;
         public Color? DebugColor { get; set; }
+
+        public bool UseTextOutline { get; set; } = false;
+        public Color? TextOutlineColor { get; set; }
 
         public bool DrawBorderOnHover { get; set; }
         public Color? HoverBorderColor { get; set; }
@@ -535,13 +534,29 @@ namespace ProjectVagabond.UI
             Vector2 origin = new Vector2(MathF.Round(textSize.X / 2f), MathF.Round(textSize.Y / 2f));
             Vector2 drawPos = textPosition + origin;
 
+            Color outlineColor = TextOutlineColor ?? _global.Palette_Black;
+
             if (EnableTextWave && (isActivated || AlwaysAnimateText))
             {
-                TextAnimator.DrawTextWithEffect(spriteBatch, font, Text, textPosition, textColor, WaveEffectType, _waveTimer, new Vector2(_currentScale), null, _currentHoverRotation);
+                if (UseTextOutline)
+                {
+                    TextAnimator.DrawTextWithEffectOutlined(spriteBatch, font, Text, textPosition, textColor, outlineColor, WaveEffectType, _waveTimer, new Vector2(_currentScale), null, _currentHoverRotation);
+                }
+                else
+                {
+                    TextAnimator.DrawTextWithEffect(spriteBatch, font, Text, textPosition, textColor, WaveEffectType, _waveTimer, new Vector2(_currentScale), null, _currentHoverRotation);
+                }
             }
             else
             {
-                spriteBatch.DrawStringSnapped(font, Text, drawPos, textColor, _currentHoverRotation, origin, _currentScale, SpriteEffects.None, 0f);
+                if (UseTextOutline)
+                {
+                    spriteBatch.DrawStringOutlinedSnapped(font, Text, drawPos, textColor, outlineColor, _currentHoverRotation, origin, _currentScale, SpriteEffects.None, 0f);
+                }
+                else
+                {
+                    spriteBatch.DrawStringSnapped(font, Text, drawPos, textColor, _currentHoverRotation, origin, _currentScale, SpriteEffects.None, 0f);
+                }
             }
         }
     }
