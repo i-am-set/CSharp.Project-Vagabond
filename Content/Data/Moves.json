@@ -243,7 +243,7 @@
     "AnimationID": "anim_magic_missile_cast",
     "BasePower": 5,
     "ChargeTime": 1.0,
-    "Weight": 20,
+    "Weight": 10,
     "Knockback": 1.0,
     "DeliveryType": "MultiProjectile",
     "DeliveryRadius": 0.0,

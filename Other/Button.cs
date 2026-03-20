@@ -46,6 +46,9 @@ namespace ProjectVagabond.UI
         public Vector2 TextRenderOffset { get; set; } = Vector2.Zero;
         public Color? DebugColor { get; set; }
 
+        public bool DrawBorderOnHover { get; set; }
+        public Color? HoverBorderColor { get; set; }
+
         public HoverAnimationType HoverAnimation { get; set; } = HoverAnimationType.Hop;
         public bool EnableTextWave { get; set; } = true;
         public bool AlwaysAnimateText { get; set; } = false;
@@ -139,6 +142,7 @@ namespace ProjectVagabond.UI
             OverflowScrollSpeed = overflowScrollSpeed;
             EnableHoverSway = enableHoverSway;
             Font = font;
+            DrawBorderOnHover = true;
 
             HoverLiftOffset = _global.UI_ButtonHoverLift;
             HoverLiftDuration = _global.UI_ButtonHoverDuration;
@@ -157,6 +161,7 @@ namespace ProjectVagabond.UI
             _clickedSourceRect = clickedSourceRect;
             _disabledSourceRect = disabledSourceRect;
             DebugColor = debugColor;
+            DrawBorderOnHover = false;
 
             HoverLiftOffset = _global.UI_ButtonHoverLift;
             HoverLiftDuration = _global.UI_ButtonHoverDuration;
@@ -487,6 +492,33 @@ namespace ProjectVagabond.UI
 
             float totalXOffset = xHoverOffset + (horizontalOffset ?? 0f) + shakeOffset.X;
             float totalYOffset = yHoverOffset + (verticalOffset ?? 0f) + shakeOffset.Y;
+
+            if (isActivated && DrawBorderOnHover)
+            {
+                var pixel = ServiceLocator.Get<Texture2D>();
+                Color borderColor = HoverBorderColor ?? _global.ButtonHoverColor;
+                var core = ServiceLocator.Get<Core>();
+
+                int bX = (int)MathF.Round(Bounds.X + totalXOffset);
+                int bY = (int)MathF.Round(Bounds.Y + totalYOffset - 1);
+                int bW = Bounds.Width;
+                int bH = Bounds.Height + 2;
+
+                if (font == core.DefaultFont)
+                {
+                    bY += 1;
+                    bH -= 2;
+                }
+                else if (font == core.SecondaryFont)
+                {
+                    bH -= 2;
+                }
+
+                spriteBatch.Draw(pixel, new Rectangle(bX, bY, bW, 1), borderColor);
+                spriteBatch.Draw(pixel, new Rectangle(bX, bY + bH - 1, bW, 1), borderColor);
+                spriteBatch.Draw(pixel, new Rectangle(bX, bY, 1, bH), borderColor);
+                spriteBatch.Draw(pixel, new Rectangle(bX + bW - 1, bY, 1, bH), borderColor);
+            }
 
             Vector2 textSize = font.MeasureString(Text);
             Vector2 textPosition;

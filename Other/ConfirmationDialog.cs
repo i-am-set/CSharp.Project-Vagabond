@@ -237,11 +237,6 @@ namespace ProjectVagabond.UI
             foreach (var button in _buttons)
             {
                 button.Draw(spriteBatch, font, gameTime, transform);
-
-                if (button.IsHovered || button.IsSelected)
-                {
-                    DrawRectangleBorder(spriteBatch, pixel, button.Bounds, 1, _global.ButtonHoverColor);
-                }
             }
         }
 

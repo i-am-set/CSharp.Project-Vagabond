@@ -20,8 +20,6 @@ namespace ProjectVagabond.UI
         public Rectangle? IconSourceRect { get; set; }
 
         public bool TintBackgroundOnHover { get; set; } = true;
-        public bool DrawBorderOnHover { get; set; } = false;
-        public Color? HoverBorderColor { get; set; }
 
         public bool TintIconOnHover { get; set; } = true;
         public bool IconColorMatchesText { get; set; } = false;
@@ -34,6 +32,7 @@ namespace ProjectVagabond.UI
             _backgroundTexture = backgroundTexture;
             IconTexture = iconTexture;
             IconSourceRect = iconSourceRect;
+            DrawBorderOnHover = false;
 
             if (!startVisible)
             {
@@ -155,18 +154,28 @@ namespace ProjectVagabond.UI
 
             if (isActivated && DrawBorderOnHover)
             {
-                Color borderColor = HoverBorderColor ?? _global.Palette_Rust;
-                var animatedBounds = new Rectangle(
-                    (int)(centerPos.X - width / 2f),
-                    (int)(centerPos.Y - height / 2f),
-                    width,
-                    height
-                );
+                var core = ServiceLocator.Get<Core>();
+                Color borderColor = HoverBorderColor ?? _global.ButtonHoverColor;
 
-                spriteBatch.DrawSnapped(pixel, new Rectangle(animatedBounds.Left, animatedBounds.Top, animatedBounds.Width, 1), borderColor);
-                spriteBatch.DrawSnapped(pixel, new Rectangle(animatedBounds.Left, animatedBounds.Bottom - 1, animatedBounds.Width, 1), borderColor);
-                spriteBatch.DrawSnapped(pixel, new Rectangle(animatedBounds.Left, animatedBounds.Top, 1, animatedBounds.Height), borderColor);
-                spriteBatch.DrawSnapped(pixel, new Rectangle(animatedBounds.Right - 1, animatedBounds.Top, 1, animatedBounds.Height), borderColor);
+                int bX = (int)MathF.Round(centerPos.X - width / 2f);
+                int bY = (int)MathF.Round(centerPos.Y - height / 2f) - 1;
+                int bW = width;
+                int bH = height + 2;
+
+                if (font == core.DefaultFont)
+                {
+                    bY += 1;
+                    bH -= 2;
+                }
+                else if (font == core.SecondaryFont)
+                {
+                    bH -= 2;
+                }
+
+                spriteBatch.DrawSnapped(pixel, new Rectangle(bX, bY, bW, 1), borderColor);
+                spriteBatch.DrawSnapped(pixel, new Rectangle(bX, bY + bH - 1, bW, 1), borderColor);
+                spriteBatch.DrawSnapped(pixel, new Rectangle(bX, bY, 1, bH), borderColor);
+                spriteBatch.DrawSnapped(pixel, new Rectangle(bX + bW - 1, bY, 1, bH), borderColor);
             }
 
             if (verticalScale > 0.8f)

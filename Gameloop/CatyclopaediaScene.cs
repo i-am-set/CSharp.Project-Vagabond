@@ -219,7 +219,8 @@ namespace ProjectVagabond.Scenes
                 TriggerHapticOnHover = false,
                 EnableHoverSway = true,
                 HoverAnimation = HoverAnimationType.None,
-                EnableTextWave = false
+                EnableTextWave = false,
+                DrawBorderOnHover = false
             };
 
             _rightArrow = new Button(
@@ -231,7 +232,8 @@ namespace ProjectVagabond.Scenes
                 TriggerHapticOnHover = false,
                 EnableHoverSway = true,
                 HoverAnimation = HoverAnimationType.None,
-                EnableTextWave = false
+                EnableTextWave = false,
+                DrawBorderOnHover = false
             };
 
             string backText = "BACK";
@@ -252,7 +254,7 @@ namespace ProjectVagabond.Scenes
             _backButton.OnClick += () =>
             {
                 if (_isPlinkingIn || _transitionManager.IsTransitioning) return;
-                _hapticsManager.TriggerZoomPulse(_global.LightHapticZoomPulseStrength, _global.HapticZoomPulseDuration);
+                _hapticsManager.TriggerZoomPulse(_global.HapticZoomPulseStrength, _global.HapticZoomPulseDuration);
                 _sceneManager.ChangeScene(GameSceneState.MainMenu, TransitionType.FadeOff, TransitionType.FadeOff);
             };
             _navigationGroup.Add(_backButton);

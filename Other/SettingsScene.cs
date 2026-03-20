@@ -767,10 +767,6 @@ namespace ProjectVagabond.Scenes
             for (int i = 0; i < _footerButtons.Count; i++)
             {
                 var button = _footerButtons[i];
-                if (button.IsSelected)
-                {
-                    DrawRectangleBorder(spriteBatch, pixel, new Rectangle(button.Bounds.X, button.Bounds.Y - 1, button.Bounds.Width, button.Bounds.Height + 2), 1, _global.ButtonHoverColor);
-                }
                 button.Draw(spriteBatch, font, gameTime, transform);
             }
 
