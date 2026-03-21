@@ -38,6 +38,10 @@ namespace ProjectVagabond.Scenes
         private float _logoWaveTimer2 = 0f;
         private float _logoWaveCooldown2 = 3f;
 
+        private BasicEffect _logoEffect;
+        private VertexPositionColorTexture[] _logoVertices;
+        private short[] _logoIndices;
+
         public MainMenuScene()
         {
             _sceneManager = ServiceLocator.Get<SceneManager>();
@@ -59,6 +63,26 @@ namespace ProjectVagabond.Scenes
         public override void Initialize()
         {
             _confirmationDialog = new ConfirmationDialog(this);
+
+            var gd = ServiceLocator.Get<GraphicsDevice>();
+            _logoEffect = new BasicEffect(gd)
+            {
+                TextureEnabled = true,
+                VertexColorEnabled = true
+            };
+
+            _logoVertices = new VertexPositionColorTexture[72];
+            _logoIndices = new short[108];
+
+            for (int i = 0; i < 18; i++)
+            {
+                _logoIndices[i * 6 + 0] = (short)(i * 4 + 0);
+                _logoIndices[i * 6 + 1] = (short)(i * 4 + 1);
+                _logoIndices[i * 6 + 2] = (short)(i * 4 + 2);
+                _logoIndices[i * 6 + 3] = (short)(i * 4 + 1);
+                _logoIndices[i * 6 + 4] = (short)(i * 4 + 3);
+                _logoIndices[i * 6 + 5] = (short)(i * 4 + 2);
+            }
         }
 
         private void InitializeUI()
@@ -81,7 +105,6 @@ namespace ProjectVagabond.Scenes
             string settingsText = "SETTINGS";
             string exitText = "EXIT";
 
-            // --- CONTINUE BUTTON ---
             Vector2 continueSize = secondaryFont.MeasureString(continueText);
             int continueWidth = (int)continueSize.X + horizontalPadding * 2;
             int continueHeight = (int)continueSize.Y + verticalPadding * 2;
@@ -98,15 +121,13 @@ namespace ProjectVagabond.Scenes
                 EnableTextWave = false,
                 AlwaysAnimateText = false,
                 EnableHoverSway = false,
-                IsEnabled = false, // Disabled for now
+                IsEnabled = false,
                 UseTextOutline = true,
                 TextOutlineColor = _global.Palette_Off
             };
             _buttons.Add(continueButton);
-            // Note: Not adding disabled button to navigation group
             currentY += continueHeight + buttonYSpacing;
 
-            // NEW GAME BUTTON
             Vector2 newGameSize = secondaryFont.MeasureString(newGameText);
             int newGameWidth = (int)newGameSize.X + horizontalPadding * 2;
             int newGameHeight = (int)newGameSize.Y + verticalPadding * 2;
@@ -138,7 +159,6 @@ namespace ProjectVagabond.Scenes
             _navigationGroup.Add(newGameButton);
             currentY += newGameHeight + buttonYSpacing;
 
-            // --- CATYCLOPAEDIA BUTTON ---
             string catyText = "CATYCLOPAEDIA";
             Vector2 catySize = secondaryFont.MeasureString(catyText);
             int catyWidth = (int)catySize.X + horizontalPadding * 2;
@@ -170,7 +190,6 @@ namespace ProjectVagabond.Scenes
             _navigationGroup.Add(catyButton);
             currentY += catyHeight + buttonYSpacing;
 
-            // --- SETTINGS BUTTON ---
             Vector2 settingsSize = secondaryFont.MeasureString(settingsText);
             int settingsWidth = (int)settingsSize.X + horizontalPadding * 2;
             int settingsHeight = (int)settingsSize.Y + verticalPadding * 2;
@@ -201,7 +220,6 @@ namespace ProjectVagabond.Scenes
             _navigationGroup.Add(settingsButton);
             currentY += settingsHeight + buttonYSpacing;
 
-            // --- EXIT BUTTON ---
             Vector2 exitSize = secondaryFont.MeasureString(exitText);
             int exitWidth = (int)exitSize.X + horizontalPadding * 2;
             int exitHeight = (int)exitSize.Y + verticalPadding * 2;
@@ -289,7 +307,6 @@ namespace ProjectVagabond.Scenes
 
         protected override Rectangle? GetFirstSelectableElementBounds()
         {
-            // Return the first enabled button
             foreach (var button in _buttons)
             {
                 if (button.IsEnabled) return button.Bounds;
@@ -322,7 +339,6 @@ namespace ProjectVagabond.Scenes
                 return;
             }
 
-            // Use effective mouse state to disable hovering when using keyboard
             var currentMouseState = _inputManager.GetEffectiveMouseState();
 
             if (IsInputBlocked)
@@ -367,77 +383,23 @@ namespace ProjectVagabond.Scenes
             var pixel = ServiceLocator.Get<Texture2D>();
 
             spriteBatch.Draw(pixel, new Rectangle(0, 0, Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT), _global.GameBg);
-
             spriteBatch.End();
 
-            _particleSystemManager.Draw(spriteBatch, transform, 0); // Background
-            _particleSystemManager.Draw(spriteBatch, transform, 1); // Foreground
-
-            spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp, null, null, null, transform);
+            _particleSystemManager.Draw(spriteBatch, transform, 0);
+            _particleSystemManager.Draw(spriteBatch, transform, 1);
 
             if (_spriteManager.TitleLogoSpriteSheet != null)
             {
-                float time = (float)gameTime.TotalGameTime.TotalSeconds;
-                float scale = 1.0f;
-                int frameSize = 40;
-                float scaledFrameSize = frameSize * scale;
-                Vector2 origin = new Vector2(frameSize / 2f, frameSize / 2f);
-
-                int[] rowLengths = { 3, 6, 6, 3 };
-                int[] centerToCenterSpacings = { 16, 24, 16, 24 };
-                float[] rowShifts = { -25f, 0f, 12f, 46f };
-                float rowVerticalSpacing = scaledFrameSize * 0.55f;
-                float baseY = 0f;
-
-                for (int row = 0; row < 4; row++)
-                {
-                    int wordLength = rowLengths[row];
-                    int spacing = centerToCenterSpacings[row];
-
-                    float rowWidthCenterToCenter = (wordLength - 1) * spacing;
-                    float startCenterX = (screenWidth - rowWidthCenterToCenter) / 2f + rowShifts[row];
-                    float centerY = baseY + (row * rowVerticalSpacing) + (scaledFrameSize / 2f);
-
-                    for (int col = 0; col < wordLength; col++)
-                    {
-                        float swayX = 0f;
-                        float swayY = 0f;
-
-                        if (row == 1 || row == 3)
-                        {
-                            float timer = (row == 1) ? _logoWaveTimer1 : _logoWaveTimer2;
-                            float cooldown = (row == 1) ? _logoWaveCooldown1 : _logoWaveCooldown2;
-
-                            if (timer > cooldown)
-                            {
-                                float charWaveTime = (timer - cooldown) - (col * 0.1f);
-                                if (charWaveTime > 0 && charWaveTime < 0.15f)
-                                {
-                                    swayY = -1f;
-                                }
-                            }
-                        }
-                        else
-                        {
-                            float phase = (row * 7.3f) + (col * 3.1f);
-                            swayX = MathF.Sin(time * 0.65f + phase) * 1.4f;
-                            swayY = MathF.Cos(time * 0.85f + phase) * 1.4f;
-                        }
-
-                        float finalX = MathF.Round(startCenterX + (col * spacing) + swayX);
-                        float finalY = MathF.Round(centerY + swayY);
-                        Vector2 pos = new Vector2(finalX, finalY);
-
-                        Rectangle sourceRect = new Rectangle(col * frameSize, row * frameSize, frameSize, frameSize);
-
-                        spriteBatch.DrawSnapped(_spriteManager.TitleLogoSpriteSheet, pos, sourceRect, Color.White, 0f, origin, scale, SpriteEffects.None, 0f);
-                    }
-                }
+                Draw3DLogo(gameTime);
             }
             else
             {
+                spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp, null, null, null, transform);
                 spriteBatch.DrawSnapped(_spriteManager.LogoSprite, new Vector2(screenWidth / 2 - _spriteManager.LogoSprite.Width / 2, 25), Color.White);
+                spriteBatch.End();
             }
+
+            spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp, null, null, null, transform);
 
             for (int i = 0; i < _buttons.Count; i++)
             {
@@ -468,6 +430,136 @@ namespace ProjectVagabond.Scenes
             {
                 _confirmationDialog.DrawContent(spriteBatch, font, gameTime, transform);
             }
+        }
+
+        private void Draw3DLogo(GameTime gameTime)
+        {
+            var gd = ServiceLocator.Get<GraphicsDevice>();
+            var core = ServiceLocator.Get<Core>();
+
+            Viewport oldViewport = gd.Viewport;
+            gd.Viewport = new Viewport(core.FinalRenderRectangle);
+
+            float fov = MathHelper.PiOver4;
+            float cameraZ = (Global.VIRTUAL_HEIGHT / 2f) / MathF.Tan(fov / 2f);
+
+            // Negating cameraZ fixes the horizontal mirroring by aligning the 3D view matrix with 2D screen space
+            _logoEffect.View = Matrix.CreateLookAt(
+                new Vector3(Global.VIRTUAL_WIDTH / 2f, Global.VIRTUAL_HEIGHT / 2f, -cameraZ),
+                new Vector3(Global.VIRTUAL_WIDTH / 2f, Global.VIRTUAL_HEIGHT / 2f, 0),
+                Vector3.Down);
+
+            _logoEffect.Projection = Matrix.CreatePerspectiveFieldOfView(fov, (float)Global.VIRTUAL_WIDTH / Global.VIRTUAL_HEIGHT, 1f, 1000f);
+            _logoEffect.World = Matrix.Identity;
+
+            Texture2D tex = _spriteManager.TitleLogoSpriteSheet;
+            _logoEffect.Texture = tex;
+
+            int vertIndex = 0;
+            float time = (float)gameTime.TotalGameTime.TotalSeconds;
+            int frameSize = 40;
+            float halfSize = frameSize / 2f;
+
+            int[] rowLengths = { 3, 6, 6, 3 };
+            int[] centerToCenterSpacings = { 16, 24, 16, 24 };
+            float[] rowShifts = { -25f, 0f, 12f, 46f };
+            float rowVerticalSpacing = frameSize * 0.55f;
+            float baseY = 0f;
+
+            for (int row = 0; row < 4; row++)
+            {
+                int wordLength = rowLengths[row];
+                int spacing = centerToCenterSpacings[row];
+
+                float rowWidthCenterToCenter = (wordLength - 1) * spacing;
+                float startCenterX = (Global.VIRTUAL_WIDTH - rowWidthCenterToCenter) / 2f + rowShifts[row];
+                float centerY = baseY + (row * rowVerticalSpacing) + halfSize;
+
+                for (int col = 0; col < wordLength; col++)
+                {
+                    float swayX = 0f;
+                    float swayY = 0f;
+                    float pitch = 0f;
+                    float yaw = 0f;
+
+                    if (row == 1 || row == 3)
+                    {
+                        float timer = (row == 1) ? _logoWaveTimer1 : _logoWaveTimer2;
+                        float cooldown = (row == 1) ? _logoWaveCooldown1 : _logoWaveCooldown2;
+
+                        if (timer > cooldown)
+                        {
+                            float charWaveTime = (timer - cooldown) - (col * 0.1f);
+                            if (charWaveTime > 0 && charWaveTime < 0.15f)
+                            {
+                                swayY = -1f;
+                                pitch = -0.2f;
+                            }
+                        }
+                    }
+                    else
+                    {
+                        float phase = (row * 7.3f) + (col * 3.1f);
+                        swayX = MathF.Sin(time * 0.65f + phase) * 1.4f;
+                        swayY = MathF.Cos(time * 0.85f + phase) * 1.4f;
+                    }
+
+                    float finalX = MathF.Round(startCenterX + (col * spacing) + swayX);
+                    float finalY = MathF.Round(centerY + swayY);
+
+                    Matrix rot = Matrix.CreateRotationX(pitch) * Matrix.CreateRotationY(yaw);
+
+                    float uMin = (col * frameSize) / (float)tex.Width;
+                    float uMax = ((col + 1) * frameSize) / (float)tex.Width;
+                    float vMin = (row * frameSize) / (float)tex.Height;
+                    float vMax = ((row + 1) * frameSize) / (float)tex.Height;
+
+                    Vector3[] corners = new Vector3[4];
+                    corners[0] = new Vector3(-halfSize, -halfSize, 0);
+                    corners[1] = new Vector3(halfSize, -halfSize, 0);
+                    corners[2] = new Vector3(-halfSize, halfSize, 0);
+                    corners[3] = new Vector3(halfSize, halfSize, 0);
+
+                    Vector2[] uvs = new Vector2[4];
+                    uvs[0] = new Vector2(uMin, vMin);
+                    uvs[1] = new Vector2(uMax, vMin);
+                    uvs[2] = new Vector2(uMin, vMax);
+                    uvs[3] = new Vector2(uMax, vMax);
+
+                    for (int v = 0; v < 4; v++)
+                    {
+                        Vector3 transformed = Vector3.Transform(corners[v], rot);
+
+                        // Adjusted divisor to keep shading visible with the smaller rotation magnitude
+                        float depthFactor = Math.Clamp(1.0f - (transformed.Z / 12f), 0.4f, 1.0f);
+                        Color vertColor = new Color(depthFactor, depthFactor, depthFactor, 1.0f);
+
+                        _logoVertices[vertIndex + v] = new VertexPositionColorTexture(
+                            new Vector3(finalX + transformed.X, finalY + transformed.Y, transformed.Z),
+                            vertColor,
+                            uvs[v]
+                        );
+                    }
+                    vertIndex += 4;
+                }
+            }
+
+            gd.BlendState = BlendState.AlphaBlend;
+            gd.DepthStencilState = DepthStencilState.None;
+            gd.RasterizerState = RasterizerState.CullNone;
+            gd.SamplerStates[0] = SamplerState.PointClamp;
+
+            foreach (EffectPass pass in _logoEffect.CurrentTechnique.Passes)
+            {
+                pass.Apply();
+                gd.DrawUserIndexedPrimitives(
+                    PrimitiveType.TriangleList,
+                    _logoVertices, 0, 72,
+                    _logoIndices, 0, 36
+                );
+            }
+
+            gd.Viewport = oldViewport;
         }
 
         public override void DrawFullscreenUI(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Matrix transform)
