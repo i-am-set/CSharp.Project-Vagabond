@@ -19,12 +19,6 @@
 /importer:WavImporter
 /processor:SoundEffectProcessor
 /processorParam:Quality=Best
-/build:Audio/Music/Seven_Loop_Muffled.wav;Audio/SFX/Seven_Loop_Muffled
-
-#begin Audio/Music/Seven_Loop_Muffled.wav
-/importer:WavImporter
-/processor:SoundEffectProcessor
-/processorParam:Quality=Best
 /build:Audio/Music/Seven_Loop_Muffled.wav;Audio/Music/Seven_Loop_Muffled
 
 #begin Audio/Music/Seven_Loop.wav
@@ -2519,6 +2513,18 @@
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
 /build:Sprites/UI/KeyPrompts/ui_key_up.png;Sprites/UI/KeyPrompts/ui_key_up
+
+#begin Sprites/UI/Logo/cwwc_logo_spritesheet.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Sprites/UI/Logo/cwwc_logo_spritesheet.png;Sprites/UI/Logo/cwwc_logo_spritesheet
 
 #begin Sprites/UI/Rest/rest_action_icons.png
 /importer:TextureImporter

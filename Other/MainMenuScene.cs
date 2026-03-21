@@ -23,6 +23,7 @@ namespace ProjectVagabond.Scenes
         private readonly TextureFactory _textureFactory;
         private readonly List<Button> _buttons = new();
         private readonly NavigationGroup _navigationGroup;
+        private readonly Random _random = new Random();
 
         private float _inputDelay = 0.1f;
         private float _currentInputDelay = 0f;
@@ -31,6 +32,11 @@ namespace ProjectVagabond.Scenes
         private bool _uiInitialized = false;
 
         private const float BUTTON_STAGGER_DELAY = 0.15f;
+
+        private float _logoWaveTimer1 = 0f;
+        private float _logoWaveCooldown1 = 2f;
+        private float _logoWaveTimer2 = 0f;
+        private float _logoWaveCooldown2 = 3f;
 
         public MainMenuScene()
         {
@@ -67,7 +73,7 @@ namespace ProjectVagabond.Scenes
             const int horizontalPadding = 4;
             const int verticalPadding = 2;
             const int buttonYSpacing = 0;
-            float currentY = 90f;
+            float currentY = 95f;
             int screenCenterX = Global.VIRTUAL_WIDTH / 2;
 
             string continueText = "CONTINUE";
@@ -267,6 +273,11 @@ namespace ProjectVagabond.Scenes
                 _navigationGroup.DeselectAll();
             }
 
+            _logoWaveTimer1 = 0f;
+            _logoWaveCooldown1 = 2f + (float)_random.NextDouble() * 3f;
+            _logoWaveTimer2 = 0f;
+            _logoWaveCooldown2 = 2f + (float)_random.NextDouble() * 3f;
+
             firstTimeOpened = false;
         }
 
@@ -291,6 +302,20 @@ namespace ProjectVagabond.Scenes
             base.Update(gameTime);
 
             float dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
+
+            _logoWaveTimer1 += dt;
+            if (_logoWaveTimer1 > _logoWaveCooldown1 + 1.5f)
+            {
+                _logoWaveTimer1 = 0f;
+                _logoWaveCooldown1 = 2f + (float)_random.NextDouble() * 4f;
+            }
+
+            _logoWaveTimer2 += dt;
+            if (_logoWaveTimer2 > _logoWaveCooldown2 + 1.5f)
+            {
+                _logoWaveTimer2 = 0f;
+                _logoWaveCooldown2 = 2f + (float)_random.NextDouble() * 4f;
+            }
 
             if (_transitionManager.IsTransitioning)
             {
@@ -350,7 +375,69 @@ namespace ProjectVagabond.Scenes
 
             spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp, null, null, null, transform);
 
-            spriteBatch.DrawSnapped(_spriteManager.LogoSprite, new Vector2(screenWidth / 2 - _spriteManager.LogoSprite.Width / 2, 25), Color.White);
+            if (_spriteManager.TitleLogoSpriteSheet != null)
+            {
+                float time = (float)gameTime.TotalGameTime.TotalSeconds;
+                float scale = 1.0f;
+                int frameSize = 40;
+                float scaledFrameSize = frameSize * scale;
+                Vector2 origin = new Vector2(frameSize / 2f, frameSize / 2f);
+
+                int[] rowLengths = { 3, 6, 6, 3 };
+                int[] centerToCenterSpacings = { 16, 24, 16, 24 };
+                float[] rowShifts = { -25f, 0f, 12f, 46f };
+                float rowVerticalSpacing = scaledFrameSize * 0.55f;
+                float baseY = 0f;
+
+                for (int row = 0; row < 4; row++)
+                {
+                    int wordLength = rowLengths[row];
+                    int spacing = centerToCenterSpacings[row];
+
+                    float rowWidthCenterToCenter = (wordLength - 1) * spacing;
+                    float startCenterX = (screenWidth - rowWidthCenterToCenter) / 2f + rowShifts[row];
+                    float centerY = baseY + (row * rowVerticalSpacing) + (scaledFrameSize / 2f);
+
+                    for (int col = 0; col < wordLength; col++)
+                    {
+                        float swayX = 0f;
+                        float swayY = 0f;
+
+                        if (row == 1 || row == 3)
+                        {
+                            float timer = (row == 1) ? _logoWaveTimer1 : _logoWaveTimer2;
+                            float cooldown = (row == 1) ? _logoWaveCooldown1 : _logoWaveCooldown2;
+
+                            if (timer > cooldown)
+                            {
+                                float charWaveTime = (timer - cooldown) - (col * 0.1f);
+                                if (charWaveTime > 0 && charWaveTime < 0.15f)
+                                {
+                                    swayY = -1f;
+                                }
+                            }
+                        }
+                        else
+                        {
+                            float phase = (row * 7.3f) + (col * 3.1f);
+                            swayX = MathF.Sin(time * 0.65f + phase) * 1.4f;
+                            swayY = MathF.Cos(time * 0.85f + phase) * 1.4f;
+                        }
+
+                        float finalX = MathF.Round(startCenterX + (col * spacing) + swayX);
+                        float finalY = MathF.Round(centerY + swayY);
+                        Vector2 pos = new Vector2(finalX, finalY);
+
+                        Rectangle sourceRect = new Rectangle(col * frameSize, row * frameSize, frameSize, frameSize);
+
+                        spriteBatch.DrawSnapped(_spriteManager.TitleLogoSpriteSheet, pos, sourceRect, Color.White, 0f, origin, scale, SpriteEffects.None, 0f);
+                    }
+                }
+            }
+            else
+            {
+                spriteBatch.DrawSnapped(_spriteManager.LogoSprite, new Vector2(screenWidth / 2 - _spriteManager.LogoSprite.Width / 2, 25), Color.White);
+            }
 
             for (int i = 0; i < _buttons.Count; i++)
             {

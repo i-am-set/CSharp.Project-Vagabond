@@ -63,6 +63,7 @@ namespace ProjectVagabond
         public Texture2D LevelIconSprite { get; private set; }
 
         public Texture2D FastForwardIcon { get; private set; }
+        public Texture2D TitleLogoSpriteSheet { get; private set; }
 
         public Rectangle[] ActionButtonSourceRects { get; private set; }
         public Rectangle[] ActionIconSourceRects { get; private set; }
@@ -202,6 +203,7 @@ namespace ProjectVagabond
         public void LoadEssentialContent()
         {
             _logoSprite = LoadTex("Sprites/logo", 8, 8, Color.Red);
+            TitleLogoSpriteSheet = LoadTex("Sprites/UI/Logo/cwwc_logo_spritesheet", 240, 160, Color.Magenta);
             _mapMarkerSprite = LoadTex("Sprites/map_marker", 8, 8, Color.Magenta);
 
             try { _circleTextureSprite = _textureFactory.CreateCircleTexture(); }
