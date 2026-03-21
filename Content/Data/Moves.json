@@ -85,6 +85,7 @@
     "DeliveryLifetime": 0.0,
     "DeliveryTickRate": 0.0,
     "DeliveryDashDistance": 0.0,
+    "DeliveryImpactMidFlight": false,
     "EffectType": "Damage",
     "EffectArg": 0.0,
     "TargetSelf": false,

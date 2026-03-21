@@ -927,7 +927,9 @@ namespace ProjectVagabond.Scenes
                 if (_hoveredHudWizard == w)
                 {
                     Color bgColor = _global.Palette_DarkShadow * 0.5f;
-                    spriteBatch.Draw(_pixel, hudRect, bgColor);
+                    spriteBatch.Draw(_pixel, new Rectangle(hudRect.X + 1, hudRect.Y, hudRect.Width - 2, hudRect.Height), bgColor);
+                    spriteBatch.Draw(_pixel, new Rectangle(hudRect.X, hudRect.Y + 1, 1, hudRect.Height - 2), bgColor);
+                    spriteBatch.Draw(_pixel, new Rectangle(hudRect.Right - 1, hudRect.Y + 1, 1, hudRect.Height - 2), bgColor);
                 }
 
                 Color baseNameColor = w.Data.Stats.IsPlayer ? _global.Palette_DarkPale : _global.Palette_DarkestPale;
