@@ -148,6 +148,7 @@ namespace ProjectVagabond
             Window.ClientSizeChanged += OnResize;
             IsFixedTimeStep = false;
             _graphics.SynchronizeWithVerticalRetrace = false;
+            InactiveSleepTime = TimeSpan.Zero;
         }
 
         protected override void Initialize()
@@ -330,7 +331,6 @@ namespace ProjectVagabond
         {
             _fullscreenOverlays.Clear();
 
-            // Enforce a 500 FPS hard cap even when "Unlimited" to prevent physics/input polling breakdown
             double targetFps = _settings.IsFrameLimiterEnabled ? _settings.TargetFramerate : 500.0;
             _targetElapsedTimeSpan = TimeSpan.FromSeconds(1.0 / targetFps);
 
@@ -357,7 +357,6 @@ namespace ProjectVagabond
             }
 
             IsMouseVisible = _debugConsole.IsVisible;
-            if (!IsActive) return;
 
             _inputManager.Update();
 
