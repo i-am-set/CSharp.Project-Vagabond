@@ -69,6 +69,12 @@
 /processorParam:Quality=Best
 /build:Audio/SFX/combatant_hit.wav;Audio/SFX/combatant_hit
 
+#begin Audio/SFX/explosion.wav
+/importer:WavImporter
+/processor:SoundEffectProcessor
+/processorParam:Quality=Best
+/build:Audio/SFX/explosion.wav;Audio/SFX/explosion
+
 #begin Audio/SFX/fireball_cast.wav
 /importer:WavImporter
 /processor:SoundEffectProcessor
@@ -99,11 +105,29 @@
 /processorParam:Quality=Best
 /build:Audio/SFX/ticket_cut.wav;Audio/SFX/ticket_cut
 
-#begin Audio/SFX/ticket_print.wav
+#begin Audio/SFX/ticket_print_1.wav
 /importer:WavImporter
 /processor:SoundEffectProcessor
 /processorParam:Quality=Best
-/build:Audio/SFX/ticket_print.wav;Audio/SFX/ticket_print
+/build:Audio/SFX/ticket_print_1.wav;Audio/SFX/ticket_print_1
+
+#begin Audio/SFX/ticket_print_2.wav
+/importer:WavImporter
+/processor:SoundEffectProcessor
+/processorParam:Quality=Best
+/build:Audio/SFX/ticket_print_2.wav;Audio/SFX/ticket_print_2
+
+#begin Audio/SFX/ticket_print_3.wav
+/importer:WavImporter
+/processor:SoundEffectProcessor
+/processorParam:Quality=Best
+/build:Audio/SFX/ticket_print_3.wav;Audio/SFX/ticket_print_3
+
+#begin Audio/SFX/ticket_print_4.wav
+/importer:WavImporter
+/processor:SoundEffectProcessor
+/processorParam:Quality=Best
+/build:Audio/SFX/ticket_print_4.wav;Audio/SFX/ticket_print_4
 
 #begin Audio/SFX/voice_place_your_bets.wav
 /importer:WavImporter

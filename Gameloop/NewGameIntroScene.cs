@@ -376,8 +376,9 @@ namespace ProjectVagabond.Scenes
                 if (!_hasPlayedFinishEffect && _spinTimer >= SLOT_SHAKE_DURATION)
                 {
                     _hasPlayedFinishEffect = true;
-                    _hapticsManager.TriggerShake(3.0f, 1.5f);
-                    ServiceLocator.Get<Core>().TriggerFullscreenFlash(Color.White, 0.1f);
+                    _hapticsManager.TriggerZoomPulse(1.07f, 0.1f);
+                    ServiceLocator.Get<Core>().TriggerFullscreenFlash(_global.Palette_Off, 0.5f); 
+                        ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlaySfx("sfx_explosion");
                     ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlaySfx("sfx_slot_finish");
                 }
 

@@ -27,6 +27,12 @@
       "DefaultVolume": 1.0
     },
     {
+      "Id": "sfx_explosion",
+      "Path": "Audio/SFX/explosion",
+      "PoolSize": 2,
+      "DefaultVolume": 1.0
+    },
+    {
       "Id": "sfx_combatant_hit",
       "Path": "Audio/SFX/combatant_hit",
       "PoolSize": 10,
@@ -55,16 +61,34 @@
       "DefaultVolume": 1.0
     },
     {
-      "Id": "sfx_ticket_print",
-      "Path": "Audio/SFX/ticket_print",
+      "Id": "sfx_ticket_print_1",
+      "Path": "Audio/SFX/ticket_print_1",
       "PoolSize": 3,
-      "DefaultVolume": 0.7
+      "DefaultVolume": 0.5
+    },
+    {
+      "Id": "sfx_ticket_print_2",
+      "Path": "Audio/SFX/ticket_print_2",
+      "PoolSize": 3,
+      "DefaultVolume": 0.5
+    },
+    {
+      "Id": "sfx_ticket_print_3",
+      "Path": "Audio/SFX/ticket_print_3",
+      "PoolSize": 3,
+      "DefaultVolume": 0.5
+    },
+    {
+      "Id": "sfx_ticket_print_4",
+      "Path": "Audio/SFX/ticket_print_4",
+      "PoolSize": 3,
+      "DefaultVolume": 0.5
     },
     {
       "Id": "sfx_ticket_cut",
       "Path": "Audio/SFX/ticket_cut",
       "PoolSize": 3,
-      "DefaultVolume": 0.35
+      "DefaultVolume": 0.30
     }
   ],
   "Ui": [

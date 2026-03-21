@@ -42,6 +42,11 @@ namespace ProjectVagabond.Battle
         public float DispenseStartY { get; set; } = -20f;
         public float DispenseEndY { get; set; } = 14.5f;
 
+        // --- Tunable Print Sound Settings ---
+        public float PrintSoundDelay { get; set; } = 0.25f;
+        public float PrintSilenceDelay { get; set; } = 0.25f;
+        public float PrintSoundTimeout { get; set; } = 2.0f;
+
         private const float GRAVITY_ACCELERATION = 200f;
         private const float DRAG_X_MULTIPLIER = 2.0f;
         private const float DRAG_Y_MIN = 0.5f;
@@ -79,12 +84,20 @@ namespace ProjectVagabond.Battle
 
         private MatchTicket _draggedTicket;
 
+        // --- Print Sound State ---
+        private float _printSoundTimer = 0f;
+        private int _lastPrintSoundIndex = -1;
+        private bool _lastWasSilence = false;
+
         public void Clear()
         {
             _tickets.Clear();
             _pendingTickets.Clear();
             _draggedTicket = null;
             IsHoveringTicket = false;
+            _printSoundTimer = 0f;
+            _lastPrintSoundIndex = -1;
+            _lastWasSilence = false;
         }
 
         public void PrintTicket(int wizardNumber, int placement)
@@ -177,6 +190,18 @@ namespace ProjectVagabond.Battle
             ticket.Position.X = ticket.TargetX;
         }
 
+        private void PlayRandomPrintSound()
+        {
+            int nextSound;
+            do
+            {
+                nextSound = _random.Next(1, 5); // 1, 2, 3, or 4
+            } while (nextSound == _lastPrintSoundIndex);
+
+            _lastPrintSoundIndex = nextSound;
+            ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlaySfx($"sfx_ticket_print_{nextSound}");
+        }
+
         public void Update(float dt, Vector2 virtualMousePos, bool justClicked, bool isClicking, InputManager inputManager)
         {
             IsHoveringTicket = false;
@@ -185,7 +210,39 @@ namespace ProjectVagabond.Battle
             if (!isPrinting && _pendingTickets.Count > 0)
             {
                 _tickets.Add(_pendingTickets.Dequeue());
-                ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlaySfx("sfx_ticket_print");
+                _lastPrintSoundIndex = -1;
+                PlayRandomPrintSound();
+                _printSoundTimer = PrintSoundDelay;
+                _lastWasSilence = false;
+            }
+
+            var printingTicket = _tickets.FirstOrDefault(t => !t.IsDispensed);
+            if (printingTicket != null && printingTicket.AnimTimer < PrintSoundTimeout)
+            {
+                _printSoundTimer -= dt;
+                if (_printSoundTimer <= 0f)
+                {
+                    if (_lastWasSilence)
+                    {
+                        PlayRandomPrintSound();
+                        _lastWasSilence = false;
+                        _printSoundTimer = PrintSoundDelay;
+                    }
+                    else
+                    {
+                        if (_random.Next(2) == 0)
+                        {
+                            PlayRandomPrintSound();
+                            _lastWasSilence = false;
+                            _printSoundTimer = PrintSoundDelay;
+                        }
+                        else
+                        {
+                            _lastWasSilence = true;
+                            _printSoundTimer = PrintSilenceDelay;
+                        }
+                    }
+                }
             }
 
             if (justClicked && _draggedTicket == null && inputManager.IsMouseClickAvailable())
