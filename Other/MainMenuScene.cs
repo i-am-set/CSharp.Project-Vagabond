@@ -48,6 +48,7 @@ namespace ProjectVagabond.Scenes
         // Physics state for the interactive logo letters
         private Vector2[] _logoLetterOffsets = new Vector2[18];
         private Vector2[] _logoLetterVelocities = new Vector2[18];
+        private bool[] _logoLetterDisplaced = new bool[18];
 
         public MainMenuScene()
         {
@@ -303,6 +304,7 @@ namespace ProjectVagabond.Scenes
             {
                 _logoLetterOffsets[i] = Vector2.Zero;
                 _logoLetterVelocities[i] = Vector2.Zero;
+                _logoLetterDisplaced[i] = false;
             }
 
             firstTimeOpened = false;
@@ -547,6 +549,20 @@ namespace ProjectVagabond.Scenes
                     // Integrate velocity and position
                     _logoLetterVelocities[letterIndex] += (springForce + dampingForce) * dt;
                     _logoLetterOffsets[letterIndex] += _logoLetterVelocities[letterIndex] * dt;
+
+                    float offsetSq = _logoLetterOffsets[letterIndex].LengthSquared();
+                    if (offsetSq > 9f)
+                    {
+                        if (!_logoLetterDisplaced[letterIndex])
+                        {
+                            _logoLetterDisplaced[letterIndex] = true;
+                            ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlayUi("ui_hover");
+                        }
+                    }
+                    else if (offsetSq < 0.25f)
+                    {
+                        _logoLetterDisplaced[letterIndex] = false;
+                    }
 
                     // Calculate final snapped position
                     float finalX = MathF.Round(basePos.X + swayX + _logoLetterOffsets[letterIndex].X);

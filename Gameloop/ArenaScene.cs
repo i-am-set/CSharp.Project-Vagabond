@@ -48,6 +48,7 @@ namespace ProjectVagabond.Scenes
         private ArenaState _arenaState;
         private float _phaseTimer = 0f;
         private int _lastCountdownSecond = 0;
+        private bool _hasPlayedBetSound = false;
 
         private PlinkAnimator _plinkBetCountdown = null!;
         private PlinkAnimator _plinkFight = null!;
@@ -185,8 +186,8 @@ namespace ProjectVagabond.Scenes
             _arenaState = ArenaState.Betting;
             _phaseTimer = 10.0f;
             _lastCountdownSecond = 10;
+            _hasPlayedBetSound = false;
 
-            ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlaySfx("sfx_voice_place_your_bets");
             ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlayMusic("music_battle", 10.0f);
 
             IsOvertime = false;
@@ -306,6 +307,13 @@ namespace ProjectVagabond.Scenes
             if (_arenaState == ArenaState.Betting)
             {
                 _phaseTimer -= dt;
+
+                if (!_hasPlayedBetSound && _phaseTimer <= 9.0f)
+                {
+                    ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlaySfx("sfx_voice_place_your_bets");
+                    _hasPlayedBetSound = true;
+                }
+
                 int currentSecond = (int)Math.Ceiling(_phaseTimer);
                 if (currentSecond != _lastCountdownSecond && currentSecond > 0)
                 {

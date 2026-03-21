@@ -93,11 +93,17 @@
 /processorParam:Quality=Best
 /build:Audio/SFX/slot_lock.wav;Audio/SFX/slot_lock
 
-#begin Audio/SFX/voice_place_your_bets.wav
+#begin Audio/SFX/ticket_cut.wav
 /importer:WavImporter
 /processor:SoundEffectProcessor
 /processorParam:Quality=Best
-/build:Audio/SFX/voice_place_your_bets.wav;Audio/SFX/voice_place_your_bets
+/build:Audio/SFX/ticket_cut.wav;Audio/SFX/ticket_cut
+
+#begin Audio/SFX/ticket_print.wav
+/importer:WavImporter
+/processor:SoundEffectProcessor
+/processorParam:Quality=Best
+/build:Audio/SFX/ticket_print.wav;Audio/SFX/ticket_print
 
 #begin Audio/SFX/voice_place_your_bets.wav
 /importer:WavImporter

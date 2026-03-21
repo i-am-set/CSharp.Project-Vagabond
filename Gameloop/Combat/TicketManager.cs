@@ -163,6 +163,7 @@ namespace ProjectVagabond.Battle
                 if (!ticket.IsDispensed)
                 {
                     ticket.IsDispensed = true;
+                    ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlaySfx("sfx_ticket_cut");
                     ticket.Velocity = new Vector2((float)(_random.NextDouble() * 60 - 30), 0f);
                     ticket.VelRotX = (float)(_random.NextDouble() * 4.0 - 2.0);
                     ticket.VelRotY = (float)(_random.NextDouble() * 4.0 - 2.0);
@@ -184,6 +185,7 @@ namespace ProjectVagabond.Battle
             if (!isPrinting && _pendingTickets.Count > 0)
             {
                 _tickets.Add(_pendingTickets.Dequeue());
+                ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlaySfx("sfx_ticket_print");
             }
 
             if (justClicked && _draggedTicket == null && inputManager.IsMouseClickAvailable())

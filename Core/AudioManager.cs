@@ -32,6 +32,7 @@ namespace ProjectVagabond.Audio
         private class PooledSound
         {
             public SoundEffectInstance[] Instances;
+            public float[] BasePitches;
             public float BaseVolume;
             public float MinPitch;
             public float MaxPitch;
@@ -66,6 +67,7 @@ namespace ProjectVagabond.Audio
         private float _musicCrossfadeDuration = 2.0f;
         private float _currentMusicMasterFade = 1.0f;
         private float _fadingMusicMasterFade = 0.0f;
+        private float _fadingMusicStartFade = 1.0f;
 
         private readonly Random _random = new Random();
 
@@ -125,6 +127,7 @@ namespace ProjectVagabond.Audio
                     targetDict[entry.Id] = new PooledSound
                     {
                         Instances = instances,
+                        BasePitches = new float[entry.PoolSize],
                         BaseVolume = entry.DefaultVolume,
                         MinPitch = entry.MinPitch,
                         MaxPitch = entry.MaxPitch,
@@ -217,63 +220,67 @@ namespace ProjectVagabond.Audio
         {
             if (string.IsNullOrEmpty(id) || !_sfxPools.TryGetValue(id, out var pool)) return;
 
-            var instance = GetAvailableInstance(pool);
-            if (instance != null)
+            int index = GetAvailableInstanceIndex(pool);
+            var instance = pool.Instances[index];
+
+            instance.Volume = pool.BaseVolume * _sfxVolume * _masterVolume;
+
+            float calculatedPitch = 0f;
+            if (exactPitch.HasValue)
             {
-                instance.Volume = pool.BaseVolume * _sfxVolume * _masterVolume;
-
-                if (exactPitch.HasValue)
-                {
-                    instance.Pitch = exactPitch.Value;
-                }
-                else if (pool.MinPitch != 0f || pool.MaxPitch != 0f)
-                {
-                    instance.Pitch = pool.MinPitch + (float)(_random.NextDouble() * (pool.MaxPitch - pool.MinPitch));
-                }
-                else if (pitchVariance > 0f)
-                {
-                    instance.Pitch = (float)(_random.NextDouble() * 2.0 - 1.0) * pitchVariance;
-                }
-                else
-                {
-                    instance.Pitch = 0f;
-                }
-
-                instance.Play();
+                calculatedPitch = exactPitch.Value;
             }
+            else if (pool.MinPitch != 0f || pool.MaxPitch != 0f)
+            {
+                calculatedPitch = pool.MinPitch + (float)(_random.NextDouble() * (pool.MaxPitch - pool.MinPitch));
+            }
+            else if (pitchVariance > 0f)
+            {
+                calculatedPitch = (float)(_random.NextDouble() * 2.0 - 1.0) * pitchVariance;
+            }
+
+            pool.BasePitches[index] = calculatedPitch;
+
+            bool isFF = false;
+            try { isFF = ServiceLocator.Get<InputManager>().IsCurrentlyFastForwarding; } catch { }
+            instance.Pitch = Math.Clamp(calculatedPitch + (isFF ? 1.0f : 0.0f), -1f, 1f);
+
+            instance.Play();
         }
 
         public void PlayUi(string id, float pitchVariance = 0f, float? exactPitch = null)
         {
             if (string.IsNullOrEmpty(id) || !_uiPools.TryGetValue(id, out var pool)) return;
 
-            var instance = GetAvailableInstance(pool);
-            if (instance != null)
+            int index = GetAvailableInstanceIndex(pool);
+            var instance = pool.Instances[index];
+
+            instance.Volume = pool.BaseVolume * _uiVolume * _masterVolume;
+
+            float calculatedPitch = 0f;
+            if (exactPitch.HasValue)
             {
-                instance.Volume = pool.BaseVolume * _uiVolume * _masterVolume;
-
-                if (exactPitch.HasValue)
-                {
-                    instance.Pitch = exactPitch.Value;
-                }
-                else if (pool.MinPitch != 0f || pool.MaxPitch != 0f)
-                {
-                    instance.Pitch = pool.MinPitch + (float)(_random.NextDouble() * (pool.MaxPitch - pool.MinPitch));
-                }
-                else if (pitchVariance > 0f)
-                {
-                    instance.Pitch = (float)(_random.NextDouble() * 2.0 - 1.0) * pitchVariance;
-                }
-                else
-                {
-                    instance.Pitch = 0f;
-                }
-
-                instance.Play();
+                calculatedPitch = exactPitch.Value;
             }
+            else if (pool.MinPitch != 0f || pool.MaxPitch != 0f)
+            {
+                calculatedPitch = pool.MinPitch + (float)(_random.NextDouble() * (pool.MaxPitch - pool.MinPitch));
+            }
+            else if (pitchVariance > 0f)
+            {
+                calculatedPitch = (float)(_random.NextDouble() * 2.0 - 1.0) * pitchVariance;
+            }
+
+            pool.BasePitches[index] = calculatedPitch;
+
+            bool isFF = false;
+            try { isFF = ServiceLocator.Get<InputManager>().IsCurrentlyFastForwarding; } catch { }
+            instance.Pitch = Math.Clamp(calculatedPitch + (isFF ? 1.0f : 0.0f), -1f, 1f);
+
+            instance.Play();
         }
 
-        private SoundEffectInstance GetAvailableInstance(PooledSound pool)
+        private int GetAvailableInstanceIndex(PooledSound pool)
         {
             for (int i = 0; i < pool.Instances.Length; i++)
             {
@@ -281,14 +288,14 @@ namespace ProjectVagabond.Audio
                 if (pool.Instances[index].State == SoundState.Stopped)
                 {
                     pool.CurrentIndex = (index + 1) % pool.Instances.Length;
-                    return pool.Instances[index];
+                    return index;
                 }
             }
 
             int stealIndex = pool.CurrentIndex;
             pool.CurrentIndex = (pool.CurrentIndex + 1) % pool.Instances.Length;
             pool.Instances[stealIndex].Stop();
-            return pool.Instances[stealIndex];
+            return stealIndex;
         }
 
         public void PlayMusic(string id, float crossfadeDuration = 2.0f)
@@ -300,6 +307,11 @@ namespace ProjectVagabond.Audio
             {
                 _fadingMusic = _currentMusic;
                 _fadingMusicMasterFade = _currentMusicMasterFade;
+                _fadingMusicStartFade = _currentMusicMasterFade;
+            }
+            else if (_fadingMusic != null)
+            {
+                _fadingMusicStartFade = _fadingMusicMasterFade;
             }
 
             _currentMusic = nextMusic;
@@ -310,6 +322,7 @@ namespace ProjectVagabond.Audio
             for (int i = 0; i < _currentMusic.Stems.Length; i++)
             {
                 _currentMusic.Stems[i].Stop();
+                _currentMusic.Stems[i].Volume = 0f; // Prevent pop
                 _currentMusic.Stems[i].Play();
             }
         }
@@ -340,6 +353,7 @@ namespace ProjectVagabond.Audio
                 track.TargetVolume = Math.Clamp(targetVolume, 0f, 1f);
                 if (track.Instance.State != SoundState.Playing)
                 {
+                    track.Instance.Volume = 0f; // Prevent pop
                     track.Instance.Play();
                 }
             }
@@ -359,6 +373,7 @@ namespace ProjectVagabond.Audio
             {
                 _fadingMusic = _currentMusic;
                 _fadingMusicMasterFade = _currentMusicMasterFade;
+                _fadingMusicStartFade = _currentMusicMasterFade;
                 _currentMusic = null;
                 _musicCrossfadeDuration = fadeDuration > 0f ? fadeDuration : 0.01f;
                 _musicCrossfadeTimer = 0f;
@@ -367,6 +382,10 @@ namespace ProjectVagabond.Audio
 
         public void Update(float dt)
         {
+            bool isFF = false;
+            try { isFF = ServiceLocator.Get<InputManager>().IsCurrentlyFastForwarding; } catch { }
+            float pitchOffset = isFF ? 1.0f : 0.0f;
+
             if (_musicCrossfadeTimer < _musicCrossfadeDuration)
             {
                 _musicCrossfadeTimer += dt;
@@ -376,7 +395,7 @@ namespace ProjectVagabond.Audio
                     _currentMusicMasterFade = MathHelper.Lerp(0f, 1f, progress);
 
                 if (_fadingMusic != null)
-                    _fadingMusicMasterFade = MathHelper.Lerp(1f, 0f, progress);
+                    _fadingMusicMasterFade = MathHelper.Lerp(_fadingMusicStartFade, 0f, progress);
             }
             else if (_fadingMusic != null)
             {
@@ -421,12 +440,12 @@ namespace ProjectVagabond.Audio
 
             if (_currentMusic != null)
             {
-                UpdateMusicTrack(_currentMusic, _currentMusicMasterFade, dt);
+                UpdateMusicTrack(_currentMusic, _currentMusicMasterFade, dt, pitchOffset);
             }
 
             if (_fadingMusic != null)
             {
-                UpdateMusicTrack(_fadingMusic, _fadingMusicMasterFade, dt);
+                UpdateMusicTrack(_fadingMusic, _fadingMusicMasterFade, dt, pitchOffset);
             }
 
             foreach (var track in _ambientTracks.Values)
@@ -447,11 +466,34 @@ namespace ProjectVagabond.Audio
                 else
                 {
                     track.Instance.Volume = track.CurrentVolume * track.BaseVolume * _ambientVolume * _masterVolume;
+                    if (track.Instance.State == SoundState.Playing) track.Instance.Pitch = pitchOffset;
+                }
+            }
+
+            foreach (var pool in _sfxPools.Values)
+            {
+                for (int i = 0; i < pool.Instances.Length; i++)
+                {
+                    if (pool.Instances[i].State == SoundState.Playing)
+                    {
+                        pool.Instances[i].Pitch = Math.Clamp(pool.BasePitches[i] + pitchOffset, -1f, 1f);
+                    }
+                }
+            }
+
+            foreach (var pool in _uiPools.Values)
+            {
+                for (int i = 0; i < pool.Instances.Length; i++)
+                {
+                    if (pool.Instances[i].State == SoundState.Playing)
+                    {
+                        pool.Instances[i].Pitch = Math.Clamp(pool.BasePitches[i] + pitchOffset, -1f, 1f);
+                    }
                 }
             }
         }
 
-        private void UpdateMusicTrack(MusicTrack track, float masterFade, float dt)
+        private void UpdateMusicTrack(MusicTrack track, float masterFade, float dt, float pitchOffset)
         {
             for (int i = 0; i < track.Stems.Length; i++)
             {
@@ -465,6 +507,7 @@ namespace ProjectVagabond.Audio
                 }
 
                 track.Stems[i].Volume = track.CurrentStemVolumes[i] * track.BaseVolume * masterFade * _musicVolume * _masterVolume;
+                if (track.Stems[i].State == SoundState.Playing) track.Stems[i].Pitch = pitchOffset;
             }
         }
 

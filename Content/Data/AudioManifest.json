@@ -53,6 +53,18 @@
       "Path": "Audio/SFX/win",
       "PoolSize": 1,
       "DefaultVolume": 1.0
+    },
+    {
+      "Id": "sfx_ticket_print",
+      "Path": "Audio/SFX/ticket_print",
+      "PoolSize": 3,
+      "DefaultVolume": 0.7
+    },
+    {
+      "Id": "sfx_ticket_cut",
+      "Path": "Audio/SFX/ticket_cut",
+      "PoolSize": 3,
+      "DefaultVolume": 0.35
     }
   ],
   "Ui": [
@@ -68,7 +80,9 @@
       "Id": "ui_click",
       "Path": "Audio/UI/click_down",
       "PoolSize": 5,
-      "DefaultVolume": 0.8
+      "DefaultVolume": 0.8,
+      "MinPitch": -0.2,
+      "MaxPitch": 0.2
     },
     {
       "Id": "ui_confirm",
@@ -87,8 +101,8 @@
       "Path": "Audio/UI/plink",
       "PoolSize": 15,
       "DefaultVolume": 1.0,
-      "MinPitch": -0.1,
-      "MaxPitch": 0.3
+      "MinPitch": -0.2,
+      "MaxPitch": 0.2
     },
     {
       "Id": "ui_hop_click",
