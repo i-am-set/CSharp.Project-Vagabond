@@ -30,17 +30,29 @@
       "Id": "sfx_combatant_hit",
       "Path": "Audio/SFX/combatant_hit",
       "PoolSize": 10,
-      "DefaultVolume": 0.35,
-      "MinPitch": -0.8,
-      "MaxPitch": 0.8
+      "DefaultVolume": 0.5,
+      "MinPitch": -0.3,
+      "MaxPitch": 0.3
     },
     {
       "Id": "sfx_combatant_heal",
       "Path": "Audio/SFX/combatant_heal",
       "PoolSize": 5,
-      "DefaultVolume": 0.15,
+      "DefaultVolume": 0.35,
       "MinPitch": -0.3,
       "MaxPitch": 0.3
+    },
+    {
+      "Id": "sfx_voice_place_your_bets",
+      "Path": "Audio/SFX/voice_place_your_bets",
+      "PoolSize": 1,
+      "DefaultVolume": 0.25
+    },
+    {
+      "Id": "sfx_win",
+      "Path": "Audio/SFX/win",
+      "PoolSize": 1,
+      "DefaultVolume": 1.0
     }
   ],
   "Ui": [
@@ -106,6 +118,13 @@
       ],
       "DefaultVolume": 1.0,
       "NextTrack": "music_main_menu_pt1"
+    },
+    {
+      "Id": "music_battle",
+      "StemPaths": [
+        "Audio/Music/battle_commences_loopable"
+      ],
+      "DefaultVolume": 0.15
     }
   ]
 }

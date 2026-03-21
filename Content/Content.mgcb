@@ -39,6 +39,12 @@
 /processorParam:Quality=Best
 /build:Audio/Music/2_Voltz_Supreme_-_Analog_Ambience_-_Analog_Random_Ambience.wav;Audio/Music/2_Voltz_Supreme_-_Analog_Ambience_-_Analog_Random_Ambience
 
+#begin Audio/Music/battle_commences_loopable.wav
+/importer:WavImporter
+/processor:SoundEffectProcessor
+/processorParam:Quality=Best
+/build:Audio/Music/battle_commences_loopable.wav;Audio/Music/battle_commences_loopable
+
 #begin Audio/Music/Seven_Loop_Muffled.wav
 /importer:WavImporter
 /processor:SoundEffectProcessor
@@ -86,6 +92,24 @@
 /processor:SoundEffectProcessor
 /processorParam:Quality=Best
 /build:Audio/SFX/slot_lock.wav;Audio/SFX/slot_lock
+
+#begin Audio/SFX/voice_place_your_bets.wav
+/importer:WavImporter
+/processor:SoundEffectProcessor
+/processorParam:Quality=Best
+/build:Audio/SFX/voice_place_your_bets.wav;Audio/SFX/voice_place_your_bets
+
+#begin Audio/SFX/voice_place_your_bets.wav
+/importer:WavImporter
+/processor:SoundEffectProcessor
+/processorParam:Quality=Best
+/build:Audio/SFX/voice_place_your_bets.wav;Audio/SFX/voice_place_your_bets
+
+#begin Audio/SFX/win.wav
+/importer:WavImporter
+/processor:SoundEffectProcessor
+/processorParam:Quality=Best
+/build:Audio/SFX/win.wav;Audio/SFX/win
 
 #begin Audio/UI/click_confirm.wav
 /importer:WavImporter

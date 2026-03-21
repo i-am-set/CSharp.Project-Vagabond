@@ -186,6 +186,9 @@ namespace ProjectVagabond.Scenes
             _phaseTimer = 10.0f;
             _lastCountdownSecond = 10;
 
+            ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlaySfx("sfx_voice_place_your_bets");
+            ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlayMusic("music_battle", 10.0f);
+
             IsOvertime = false;
             _matchTimer = 120f;
             _lastMatchSecond = 120;
@@ -244,96 +247,6 @@ namespace ProjectVagabond.Scenes
             }
 
             CalculateHUDLayout();
-        }
-
-        private void CalculateHUDLayout()
-        {
-            var secondaryFont = _core.SecondaryFont;
-            int totalWizards = _wizardsFixedOrder.Count;
-            if (totalWizards == 0) return;
-
-            float colWidth = Global.VIRTUAL_WIDTH / (float)totalWizards;
-
-            for (int i = 0; i < totalWizards; i++)
-            {
-                var w = _wizardsFixedOrder[i];
-                w.Data.UI.HudIsLeft = true;
-
-                float centerX = colWidth * i + colWidth / 2f;
-                w.Data.UI.HudNameSize = secondaryFont.MeasureString(w.Data.Stats.Name.ToUpper());
-
-                w.Data.UI.HudNamePos = new Vector2(centerX - w.Data.UI.HudNameSize.X / 2f, 15);
-
-                int maxHearts = (w.Data.Stats.MaxHP + 2) / 3;
-                int heartWidth = 5;
-                int heartSpacing = 1;
-                int totalHeartsWidth = maxHearts * heartWidth + (maxHearts - 1) * heartSpacing;
-
-                w.Data.UI.HudHeartStartPos = new Vector2(centerX - totalHeartsWidth / 2f, 15 + w.Data.UI.HudNameSize.Y + 2);
-            }
-        }
-
-        public override void Exit()
-        {
-            base.Exit();
-            ServiceLocator.Get<GeometricBackgroundManager>().Hide();
-            PoolManager.ClearAll();
-        }
-
-        public Vector2 ClampToArena(Vector2 point, float margin = 4f)
-        {
-            float L = _arenaBounds.Left + margin;
-            float R = _arenaBounds.Right - margin;
-            float T = _arenaBounds.Top + margin;
-            float B = _arenaBounds.Bottom - margin;
-            float bev = 24f; // Bevel size
-
-            // 1. Clamp to AABB
-            point.X = Math.Clamp(point.X, L, R);
-            point.Y = Math.Clamp(point.Y, T, B);
-
-            // 2. Clamp to Bevels
-            // Top-Left
-            float dx = point.X - L;
-            float dy = point.Y - T;
-            if (dx + dy < bev)
-            {
-                float delta = bev - (dx + dy);
-                point.X += delta / 2f;
-                point.Y += delta / 2f;
-            }
-
-            // Top-Right
-            dx = R - point.X;
-            dy = point.Y - T;
-            if (dx + dy < bev)
-            {
-                float delta = bev - (dx + dy);
-                point.X -= delta / 2f;
-                point.Y += delta / 2f;
-            }
-
-            // Bottom-Left
-            dx = point.X - L;
-            dy = B - point.Y;
-            if (dx + dy < bev)
-            {
-                float delta = bev - (dx + dy);
-                point.X += delta / 2f;
-                point.Y -= delta / 2f;
-            }
-
-            // Bottom-Right
-            dx = R - point.X;
-            dy = B - point.Y;
-            if (dx + dy < bev)
-            {
-                float delta = bev - (dx + dy);
-                point.X -= delta / 2f;
-                point.Y -= delta / 2f;
-            }
-
-            return point;
         }
 
         public override void Update(GameTime gameTime)
@@ -576,6 +489,9 @@ namespace ProjectVagabond.Scenes
                         _arenaState = ArenaState.MatchOver;
                         _matchOverTimer = 4.0f;
 
+                        ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().StopMusic(2.0f);
+                        ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlaySfx("sfx_win");
+
                         var winner = _wizards.FirstOrDefault(w => w.Data.Combat.State != WizardState.Dead);
                         if (winner != null)
                         {
@@ -611,6 +527,96 @@ namespace ProjectVagabond.Scenes
             }
 
             _lastMouseState = mouseState;
+        }
+
+        private void CalculateHUDLayout()
+        {
+            var secondaryFont = _core.SecondaryFont;
+            int totalWizards = _wizardsFixedOrder.Count;
+            if (totalWizards == 0) return;
+
+            float colWidth = Global.VIRTUAL_WIDTH / (float)totalWizards;
+
+            for (int i = 0; i < totalWizards; i++)
+            {
+                var w = _wizardsFixedOrder[i];
+                w.Data.UI.HudIsLeft = true;
+
+                float centerX = colWidth * i + colWidth / 2f;
+                w.Data.UI.HudNameSize = secondaryFont.MeasureString(w.Data.Stats.Name.ToUpper());
+
+                w.Data.UI.HudNamePos = new Vector2(centerX - w.Data.UI.HudNameSize.X / 2f, 15);
+
+                int maxHearts = (w.Data.Stats.MaxHP + 2) / 3;
+                int heartWidth = 5;
+                int heartSpacing = 1;
+                int totalHeartsWidth = maxHearts * heartWidth + (maxHearts - 1) * heartSpacing;
+
+                w.Data.UI.HudHeartStartPos = new Vector2(centerX - totalHeartsWidth / 2f, 15 + w.Data.UI.HudNameSize.Y + 2);
+            }
+        }
+
+        public override void Exit()
+        {
+            base.Exit();
+            ServiceLocator.Get<GeometricBackgroundManager>().Hide();
+            PoolManager.ClearAll();
+        }
+
+        public Vector2 ClampToArena(Vector2 point, float margin = 4f)
+        {
+            float L = _arenaBounds.Left + margin;
+            float R = _arenaBounds.Right - margin;
+            float T = _arenaBounds.Top + margin;
+            float B = _arenaBounds.Bottom - margin;
+            float bev = 24f; // Bevel size
+
+            // 1. Clamp to AABB
+            point.X = Math.Clamp(point.X, L, R);
+            point.Y = Math.Clamp(point.Y, T, B);
+
+            // 2. Clamp to Bevels
+            // Top-Left
+            float dx = point.X - L;
+            float dy = point.Y - T;
+            if (dx + dy < bev)
+            {
+                float delta = bev - (dx + dy);
+                point.X += delta / 2f;
+                point.Y += delta / 2f;
+            }
+
+            // Top-Right
+            dx = R - point.X;
+            dy = point.Y - T;
+            if (dx + dy < bev)
+            {
+                float delta = bev - (dx + dy);
+                point.X -= delta / 2f;
+                point.Y += delta / 2f;
+            }
+
+            // Bottom-Left
+            dx = point.X - L;
+            dy = B - point.Y;
+            if (dx + dy < bev)
+            {
+                float delta = bev - (dx + dy);
+                point.X += delta / 2f;
+                point.Y -= delta / 2f;
+            }
+
+            // Bottom-Right
+            dx = R - point.X;
+            dy = B - point.Y;
+            if (dx + dy < bev)
+            {
+                float delta = bev - (dx + dy);
+                point.X -= delta / 2f;
+                point.Y -= delta / 2f;
+            }
+
+            return point;
         }
 
         private int GetProbabilityStep(float prob)
