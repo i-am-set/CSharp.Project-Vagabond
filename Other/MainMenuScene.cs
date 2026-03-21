@@ -270,9 +270,9 @@ namespace ProjectVagabond.Scenes
             ServiceLocator.Get<GeometricBackgroundManager>().Show(1.0f);
 
             var audio = ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>();
-            audio.PlayMusic("music_main_menu_pt1", 2.0f);
-            audio.SetMusicStemVolume("music_main_menu_pt1", 0, 1.0f);
-            audio.SetMusicStemVolume("music_main_menu_pt1", 1, 0.0f);
+            audio.PlayMusic("music_main_menu_pt1", 5.0f);
+            audio.SetCurrentMusicStemVolume(0, 1.0f);
+            audio.SetCurrentMusicStemVolume(1, 0.0f);
 
             _currentInputDelay = _inputDelay;
             _previousKeyboardState = Microsoft.Xna.Framework.Input.Keyboard.GetState();
@@ -299,7 +299,6 @@ namespace ProjectVagabond.Scenes
             _logoWaveTimer2 = 0f;
             _logoWaveCooldown2 = 2f + (float)_random.NextDouble() * 3f;
 
-            // Reset physics state
             for (int i = 0; i < 18; i++)
             {
                 _logoLetterOffsets[i] = Vector2.Zero;

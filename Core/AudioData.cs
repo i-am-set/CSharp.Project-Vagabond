@@ -25,5 +25,6 @@ namespace ProjectVagabond.Audio
         public string Id { get; set; }
         public List<string> StemPaths { get; set; } = new List<string>();
         public float DefaultVolume { get; set; } = 1.0f;
+        public string NextTrack { get; set; }
     }
 }

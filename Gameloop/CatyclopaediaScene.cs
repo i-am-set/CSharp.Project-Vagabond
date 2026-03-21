@@ -115,8 +115,8 @@ namespace ProjectVagabond.Scenes
             InitializeUI();
 
             var audio = ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>();
-            audio.SetMusicStemVolume("music_main_menu_pt1", 0, 0.0f);
-            audio.SetMusicStemVolume("music_main_menu_pt1", 1, 1.0f);
+            audio.SetCurrentMusicStemVolume(0, 0.0f);
+            audio.SetCurrentMusicStemVolume(1, 1.0f);
 
             _selectedWizards.Clear();
             _titleWaveTimer = 0f;

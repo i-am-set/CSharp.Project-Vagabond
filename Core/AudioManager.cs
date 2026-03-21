@@ -5,6 +5,7 @@ using ProjectVagabond.Utils;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text.Json;
 using static ProjectVagabond.GameEvents;
 
@@ -43,6 +44,7 @@ namespace ProjectVagabond.Audio
             public float[] TargetStemVolumes;
             public float[] CurrentStemVolumes;
             public float BaseVolume;
+            public string NextTrackId;
         }
 
         private class AmbientTrack
@@ -177,7 +179,7 @@ namespace ProjectVagabond.Audio
                         {
                             var sfx = content.Load<SoundEffect>(entry.StemPaths[i]);
                             var instance = sfx.CreateInstance();
-                            instance.IsLooped = true;
+                            instance.IsLooped = string.IsNullOrEmpty(entry.NextTrack);
                             stems.Add(instance);
                             targetVols.Add(1.0f);
                             currentVols.Add(1.0f);
@@ -195,7 +197,8 @@ namespace ProjectVagabond.Audio
                             Stems = stems.ToArray(),
                             TargetStemVolumes = targetVols.ToArray(),
                             CurrentStemVolumes = currentVols.ToArray(),
-                            BaseVolume = entry.DefaultVolume
+                            BaseVolume = entry.DefaultVolume,
+                            NextTrackId = entry.NextTrack
                         };
                     }
                     else
@@ -306,10 +309,8 @@ namespace ProjectVagabond.Audio
 
             for (int i = 0; i < _currentMusic.Stems.Length; i++)
             {
-                if (_currentMusic.Stems[i].State != SoundState.Playing)
-                {
-                    _currentMusic.Stems[i].Play();
-                }
+                _currentMusic.Stems[i].Stop();
+                _currentMusic.Stems[i].Play();
             }
         }
 
@@ -321,6 +322,14 @@ namespace ProjectVagabond.Audio
                 {
                     track.TargetStemVolumes[stemIndex] = Math.Clamp(targetVolume, 0f, 1f);
                 }
+            }
+        }
+
+        public void SetCurrentMusicStemVolume(int stemIndex, float targetVolume)
+        {
+            if (_currentMusic != null && stemIndex >= 0 && stemIndex < _currentMusic.TargetStemVolumes.Length)
+            {
+                _currentMusic.TargetStemVolumes[stemIndex] = Math.Clamp(targetVolume, 0f, 1f);
             }
         }
 
@@ -376,6 +385,38 @@ namespace ProjectVagabond.Audio
                     stem.Stop();
                 }
                 _fadingMusic = null;
+            }
+
+            if (_currentMusic != null && _musicCrossfadeTimer > 1.0f && !string.IsNullOrEmpty(_currentMusic.NextTrackId))
+            {
+                bool allStopped = true;
+                foreach (var stem in _currentMusic.Stems)
+                {
+                    if (stem.State == SoundState.Playing)
+                    {
+                        allStopped = false;
+                        break;
+                    }
+                }
+
+                if (allStopped)
+                {
+                    var nextTrackId = _currentMusic.NextTrackId;
+                    var oldVols = _currentMusic.TargetStemVolumes.ToArray();
+                    var oldCurrentVols = _currentMusic.CurrentStemVolumes.ToArray();
+
+                    _currentMusic = null; // Prevent fading it out
+                    PlayMusic(nextTrackId, 0f);
+
+                    if (_currentMusic != null)
+                    {
+                        for (int i = 0; i < Math.Min(oldVols.Length, _currentMusic.TargetStemVolumes.Length); i++)
+                        {
+                            _currentMusic.TargetStemVolumes[i] = oldVols[i];
+                            _currentMusic.CurrentStemVolumes[i] = oldCurrentVols[i];
+                        }
+                    }
+                }
             }
 
             if (_currentMusic != null)
