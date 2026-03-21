@@ -57,6 +57,12 @@
 /processorParam:Quality=Best
 /build:Audio/UI/click_down.wav;Audio/UI/click_down
 
+#begin Audio/UI/hop_click.wav
+/importer:WavImporter
+/processor:SoundEffectProcessor
+/processorParam:Quality=Best
+/build:Audio/UI/hop_click.wav;Audio/UI/hop_click
+
 #begin Audio/UI/hover_tick.wav
 /importer:WavImporter
 /processor:SoundEffectProcessor

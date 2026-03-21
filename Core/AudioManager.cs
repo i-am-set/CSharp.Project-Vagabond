@@ -195,7 +195,7 @@ namespace ProjectVagabond.Audio
             }
         }
 
-        public void PlaySfx(string id, float pitchVariance = 0f)
+        public void PlaySfx(string id, float pitchVariance = 0f, float? exactPitch = null)
         {
             if (string.IsNullOrEmpty(id) || !_sfxPools.TryGetValue(id, out var pool)) return;
 
@@ -204,7 +204,11 @@ namespace ProjectVagabond.Audio
             {
                 instance.Volume = pool.BaseVolume * _sfxVolume * _masterVolume;
 
-                if (pool.MinPitch != 0f || pool.MaxPitch != 0f)
+                if (exactPitch.HasValue)
+                {
+                    instance.Pitch = exactPitch.Value;
+                }
+                else if (pool.MinPitch != 0f || pool.MaxPitch != 0f)
                 {
                     instance.Pitch = pool.MinPitch + (float)(_random.NextDouble() * (pool.MaxPitch - pool.MinPitch));
                 }
@@ -221,7 +225,7 @@ namespace ProjectVagabond.Audio
             }
         }
 
-        public void PlayUi(string id, float pitchVariance = 0f)
+        public void PlayUi(string id, float pitchVariance = 0f, float? exactPitch = null)
         {
             if (string.IsNullOrEmpty(id) || !_uiPools.TryGetValue(id, out var pool)) return;
 
@@ -230,7 +234,11 @@ namespace ProjectVagabond.Audio
             {
                 instance.Volume = pool.BaseVolume * _uiVolume * _masterVolume;
 
-                if (pool.MinPitch != 0f || pool.MaxPitch != 0f)
+                if (exactPitch.HasValue)
+                {
+                    instance.Pitch = exactPitch.Value;
+                }
+                else if (pool.MinPitch != 0f || pool.MaxPitch != 0f)
                 {
                     instance.Pitch = pool.MinPitch + (float)(_random.NextDouble() * (pool.MaxPitch - pool.MinPitch));
                 }

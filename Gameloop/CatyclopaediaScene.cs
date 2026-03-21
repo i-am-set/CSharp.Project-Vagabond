@@ -72,6 +72,7 @@ namespace ProjectVagabond.Scenes
         private float _titleWaveTimer = 0f;
         private float _introHeartWaveTimer = 0f;
         private float _introHeartWaveInterval = 3f;
+        private bool _isCenterBobbingUp = false;
 
         // Arrow Simulation State
         private float _leftArrowSimTimer = 0f;
@@ -120,6 +121,7 @@ namespace ProjectVagabond.Scenes
             _rightArrowSimTimer = 0f;
             _introHeartWaveTimer = 0f;
             _introHeartWaveInterval = 2f + (float)_random.NextDouble() * 4f;
+            _isCenterBobbingUp = false;
 
             _previousMouseState = _inputManager.GetEffectiveMouseState();
             _lastScrollWheelValue = _previousMouseState.ScrollWheelValue;
@@ -288,6 +290,15 @@ namespace ProjectVagabond.Scenes
 
             _idleTimer += dt;
             _titleWaveTimer += dt;
+
+            float centerBob = MathF.Sin(_idleTimer * 4f);
+            bool isCenterBobbingUp = centerBob > 0;
+            if (isCenterBobbingUp != _isCenterBobbingUp)
+            {
+                _isCenterBobbingUp = isCenterBobbingUp;
+                float pitch = isCenterBobbingUp ? 0.5f : -0.5f;
+                ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlayUi("ui_hop_click", exactPitch: pitch);
+            }
 
             foreach (var key in _selectedWizards.Keys.ToList())
             {

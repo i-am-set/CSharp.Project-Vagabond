@@ -61,6 +61,14 @@
       "DefaultVolume": 1.0,
       "MinPitch": -0.1,
       "MaxPitch": 0.3
+    },
+    {
+      "Id": "ui_hop_click",
+      "Path": "Audio/UI/hop_click",
+      "PoolSize": 5,
+      "DefaultVolume": 0.02,
+      "MinPitch": -0.2,
+      "MaxPitch": 0.2
     }
   ],
   "Ambient": [],

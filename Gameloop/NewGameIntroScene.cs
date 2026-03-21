@@ -71,6 +71,7 @@ namespace ProjectVagabond.Scenes
             public PlinkAnimator Plink = new PlinkAnimator();
             public bool HasHopped;
             public float ShakeTimer;
+            public bool IsBobbingUp;
         }
 
         private enum IntroState { Spinning, Transitioning }
@@ -149,7 +150,8 @@ namespace ProjectVagabond.Scenes
                     TargetIdIndex = _characterIds.IndexOf(shuffled[i]),
                     State = SlotState.WindUp,
                     StateTimer = 0f,
-                    ShakeTimer = 0f
+                    ShakeTimer = 0f,
+                    IsBobbingUp = false
                 });
             }
 
@@ -200,6 +202,22 @@ namespace ProjectVagabond.Scenes
 
             _titleWaveTimer += dt;
             _idleTimer += dt;
+
+            for (int i = 0; i < _slots.Count; i++)
+            {
+                var slot = _slots[i];
+                if (slot.State == SlotState.Stopped)
+                {
+                    float bob = MathF.Sin(_idleTimer * 6f - i * 0.5f);
+                    bool isBobbingUp = bob > 0;
+                    if (isBobbingUp != slot.IsBobbingUp)
+                    {
+                        slot.IsBobbingUp = isBobbingUp;
+                        float pitch = isBobbingUp ? 0.5f : -0.5f;
+                        ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlayUi("ui_hop_click", exactPitch: pitch);
+                    }
+                }
+            }
 
             foreach (var key in _selectedWizards.Keys.ToList())
             {
@@ -483,7 +501,7 @@ namespace ProjectVagabond.Scenes
                         pScale = slot.Plink.IsActive ? slot.Plink.Scale : 1f;
                         pRot = slot.Plink.IsActive ? slot.Plink.Rotation : 0f;
 
-                        float bob = MathF.Sin(_idleTimer * 6f);
+                        float bob = MathF.Sin(_idleTimer * 6f - i * 0.5f);
                         if (bob > 0)
                         {
                             spriteType = PlayerSpriteType.Alt;
