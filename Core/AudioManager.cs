@@ -167,26 +167,41 @@ namespace ProjectVagabond.Audio
             {
                 try
                 {
-                    var stems = new SoundEffectInstance[entry.StemPaths.Count];
-                    var targetVols = new float[entry.StemPaths.Count];
-                    var currentVols = new float[entry.StemPaths.Count];
+                    var stems = new List<SoundEffectInstance>();
+                    var targetVols = new List<float>();
+                    var currentVols = new List<float>();
 
                     for (int i = 0; i < entry.StemPaths.Count; i++)
                     {
-                        var sfx = content.Load<SoundEffect>(entry.StemPaths[i]);
-                        stems[i] = sfx.CreateInstance();
-                        stems[i].IsLooped = true;
-                        targetVols[i] = 1.0f;
-                        currentVols[i] = 1.0f;
+                        try
+                        {
+                            var sfx = content.Load<SoundEffect>(entry.StemPaths[i]);
+                            var instance = sfx.CreateInstance();
+                            instance.IsLooped = true;
+                            stems.Add(instance);
+                            targetVols.Add(1.0f);
+                            currentVols.Add(1.0f);
+                        }
+                        catch (Exception ex)
+                        {
+                            GameLogger.Log(LogSeverity.Warning, $"[AudioManager] Failed to load stem '{entry.StemPaths[i]}': {ex.Message}");
+                        }
                     }
 
-                    _musicTracks[entry.Id] = new MusicTrack
+                    if (stems.Count > 0)
                     {
-                        Stems = stems,
-                        TargetStemVolumes = targetVols,
-                        CurrentStemVolumes = currentVols,
-                        BaseVolume = entry.DefaultVolume
-                    };
+                        _musicTracks[entry.Id] = new MusicTrack
+                        {
+                            Stems = stems.ToArray(),
+                            TargetStemVolumes = targetVols.ToArray(),
+                            CurrentStemVolumes = currentVols.ToArray(),
+                            BaseVolume = entry.DefaultVolume
+                        };
+                    }
+                    else
+                    {
+                        GameLogger.Log(LogSeverity.Warning, $"[AudioManager] Music track '{entry.Id}' has no valid stems and was not loaded.");
+                    }
                 }
                 catch (Exception ex)
                 {

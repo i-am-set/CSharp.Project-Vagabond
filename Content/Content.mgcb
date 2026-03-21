@@ -15,11 +15,35 @@
 
 #---------------------------------- Content ---------------------------------#
 
+#begin Audio/Music/Seven_Loop_Muffled.wav
+/importer:WavImporter
+/processor:SoundEffectProcessor
+/processorParam:Quality=Best
+/build:Audio/Music/Seven_Loop_Muffled.wav;Audio/SFX/Seven_Loop_Muffled
+
+#begin Audio/Music/Seven_Loop_Muffled.wav
+/importer:WavImporter
+/processor:SoundEffectProcessor
+/processorParam:Quality=Best
+/build:Audio/Music/Seven_Loop_Muffled.wav;Audio/Music/Seven_Loop_Muffled
+
 #begin Audio/Music/Seven_Loop.wav
 /importer:WavImporter
 /processor:SoundEffectProcessor
 /processorParam:Quality=Best
 /build:Audio/Music/Seven_Loop.wav;Audio/Music/Seven_Loop
+
+#begin Audio/SFX/combatant_heal.wav
+/importer:WavImporter
+/processor:SoundEffectProcessor
+/processorParam:Quality=Best
+/build:Audio/SFX/combatant_heal.wav;Audio/SFX/combatant_heal
+
+#begin Audio/SFX/combatant_hit.wav
+/importer:WavImporter
+/processor:SoundEffectProcessor
+/processorParam:Quality=Best
+/build:Audio/SFX/combatant_hit.wav;Audio/SFX/combatant_hit
 
 #begin Audio/SFX/fireball_cast.wav
 /importer:WavImporter

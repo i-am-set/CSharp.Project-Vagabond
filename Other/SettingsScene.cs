@@ -90,6 +90,10 @@ namespace ProjectVagabond.Scenes
             EventBus.Subscribe<GameEvents.UIThemeOrResolutionChanged>(OnResolutionChanged);
             _navigationGroup.OnSelectionChanged += OnNavigationSelectionChanged;
 
+            var audio = ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>();
+            audio.SetMusicStemVolume("music_main_menu", 0, 0.0f);
+            audio.SetMusicStemVolume("music_main_menu", 1, 1.0f);
+
             foreach (var item in _settingControls) item.ResetAnimationState();
             foreach (var item in _footerButtons) item.ResetAnimationState();
 
@@ -103,9 +107,9 @@ namespace ProjectVagabond.Scenes
                 _navigationGroup.DeselectAll();
             }
 
-            _previousKeyboardState = Keyboard.GetState();
-            _previousMouseState = Mouse.GetState();
-            _previousScrollValue = Mouse.GetState().ScrollWheelValue;
+            _previousKeyboardState = Microsoft.Xna.Framework.Input.Keyboard.GetState();
+            _previousMouseState = Microsoft.Xna.Framework.Input.Mouse.GetState();
+            _previousScrollValue = Microsoft.Xna.Framework.Input.Mouse.GetState().ScrollWheelValue;
             _currentInputDelay = _inputDelay;
             _scrollOffset = 0;
             _targetScrollOffset = 0;
@@ -117,6 +121,10 @@ namespace ProjectVagabond.Scenes
         {
             base.Exit();
             EventBus.Unsubscribe<GameEvents.UIThemeOrResolutionChanged>(OnResolutionChanged);
+
+            var audio = ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>();
+            audio.SetMusicStemVolume("music_main_menu", 0, 1.0f);
+            audio.SetMusicStemVolume("music_main_menu", 1, 0.0f);
         }
 
         private void OnResolutionChanged(GameEvents.UIThemeOrResolutionChanged e)

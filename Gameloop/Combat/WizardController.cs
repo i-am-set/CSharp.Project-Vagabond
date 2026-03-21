@@ -1,19 +1,11 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
-using Microsoft.Xna.Framework.Input;
-using MonoGame.Extended.Animations;
-using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond.Animations;
-using ProjectVagabond.Battle;
 using ProjectVagabond.Deliveries;
 using ProjectVagabond.Particles;
 using ProjectVagabond.Scenes;
-using ProjectVagabond.Transitions;
-using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
-using System.Collections;
-using System.Collections.Generic;
 using System.Linq;
 
 namespace ProjectVagabond.Battle
@@ -198,6 +190,8 @@ namespace ProjectVagabond.Battle
 
             if (actualDamage > 0)
             {
+                ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlaySfx("sfx_combatant_hit");
+
                 if (attacker != null)
                 {
                     attacker.Data.Metrics.DamageDealt += actualDamage;
@@ -252,6 +246,8 @@ namespace ProjectVagabond.Battle
 
             if (actualHeal > 0)
             {
+                ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlaySfx("sfx_combatant_heal");
+
                 var hitbox = GetHitbox(_spriteManager);
                 Vector2 centerOffset = new Vector2(hitbox.Center.X - combat.Position.X, hitbox.Center.Y - combat.Position.Y);
 

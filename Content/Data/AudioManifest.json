@@ -25,6 +25,22 @@
       "Path": "Audio/SFX/slot_finish",
       "PoolSize": 2,
       "DefaultVolume": 1.0
+    },
+    {
+      "Id": "sfx_combatant_hit",
+      "Path": "Audio/SFX/combatant_hit",
+      "PoolSize": 10,
+      "DefaultVolume": 0.35,
+      "MinPitch": -0.3,
+      "MaxPitch": 0.3
+    },
+    {
+      "Id": "sfx_combatant_heal",
+      "Path": "Audio/SFX/combatant_heal",
+      "PoolSize": 5,
+      "DefaultVolume": 0.15,
+      "MinPitch": -0.3,
+      "MaxPitch": 0.3
     }
   ],
   "Ui": [
@@ -65,7 +81,7 @@
     {
       "Id": "ui_hop_click",
       "Path": "Audio/UI/hop_click",
-      "PoolSize": 5,
+      "PoolSize": 10,
       "DefaultVolume": 0.02,
       "MinPitch": -0.2,
       "MaxPitch": 0.2
@@ -76,7 +92,8 @@
     {
       "Id": "music_main_menu",
       "StemPaths": [
-        "Audio/Music/Seven_Loop"
+        "Audio/Music/Seven_Loop",
+        "Audio/Music/Seven_Loop_Muffled"
       ],
       "DefaultVolume": 1.0
     }

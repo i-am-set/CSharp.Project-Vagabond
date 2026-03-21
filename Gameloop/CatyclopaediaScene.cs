@@ -114,6 +114,10 @@ namespace ProjectVagabond.Scenes
             InitializeData();
             InitializeUI();
 
+            var audio = ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>();
+            audio.SetMusicStemVolume("music_main_menu", 0, 0.0f);
+            audio.SetMusicStemVolume("music_main_menu", 1, 1.0f);
+
             _selectedWizards.Clear();
             _titleWaveTimer = 0f;
             _idleTimer = 0f;
@@ -161,11 +165,11 @@ namespace ProjectVagabond.Scenes
             _allPlinks.Add(_backButton.Plink);
 
             var randomActions = new List<Action>
-    {
-        () => _plinkTitle1.Start(0f, 0.25f),
-        () => _plinkTitle2.Start(0f, 0.25f),
-        () => _plinkStats.Start(0f, 0.25f)
-    };
+            {
+                () => _plinkTitle1.Start(0f, 0.25f),
+                () => _plinkTitle2.Start(0f, 0.25f),
+                () => _plinkStats.Start(0f, 0.25f)
+            };
 
             for (int i = 0; i < 7; i++)
             {

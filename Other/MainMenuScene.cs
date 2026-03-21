@@ -242,10 +242,13 @@ namespace ProjectVagabond.Scenes
             InitializeUI();
             ServiceLocator.Get<GeometricBackgroundManager>().Show(1.0f);
 
-            ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlayMusic("music_main_menu", 2.0f);
+            var audio = ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>();
+            audio.PlayMusic("music_main_menu", 2.0f);
+            audio.SetMusicStemVolume("music_main_menu", 0, 1.0f);
+            audio.SetMusicStemVolume("music_main_menu", 1, 0.0f);
 
             _currentInputDelay = _inputDelay;
-            _previousKeyboardState = Keyboard.GetState();
+            _previousKeyboardState = Microsoft.Xna.Framework.Input.Keyboard.GetState();
 
             for (int i = 0; i < _buttons.Count; i++)
             {
