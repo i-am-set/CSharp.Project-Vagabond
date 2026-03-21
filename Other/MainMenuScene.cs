@@ -98,7 +98,7 @@ namespace ProjectVagabond.Scenes
             const int verticalPadding = 2;
             const int buttonYSpacing = 0;
             float currentY = 95f;
-            int screenCenterX = Global.VIRTUAL_WIDTH / 2;
+            int buttonX = Global.VIRTUAL_WIDTH / 2 - 130;
 
             string continueText = "CONTINUE";
             string newGameText = "NEW GAME";
@@ -108,13 +108,12 @@ namespace ProjectVagabond.Scenes
             Vector2 continueSize = secondaryFont.MeasureString(continueText);
             int continueWidth = (int)continueSize.X + horizontalPadding * 2;
             int continueHeight = (int)continueSize.Y + verticalPadding * 2;
-            int continueX = screenCenterX - (continueWidth / 2);
 
             var continueButton = new Button(
-                new Rectangle(continueX, (int)currentY, continueWidth, continueHeight),
+                new Rectangle(buttonX, (int)currentY, continueWidth, continueHeight),
                 continueText,
                 font: secondaryFont,
-                alignLeft: false
+                alignLeft: true
             )
             {
                 TextRenderOffset = new Vector2(0, -1),
@@ -131,13 +130,12 @@ namespace ProjectVagabond.Scenes
             Vector2 newGameSize = secondaryFont.MeasureString(newGameText);
             int newGameWidth = (int)newGameSize.X + horizontalPadding * 2;
             int newGameHeight = (int)newGameSize.Y + verticalPadding * 2;
-            int newGameX = screenCenterX - (newGameWidth / 2);
 
             var newGameButton = new Button(
-                new Rectangle(newGameX, (int)currentY, newGameWidth, newGameHeight),
+                new Rectangle(buttonX, (int)currentY, newGameWidth, newGameHeight),
                 newGameText,
                 font: secondaryFont,
-                alignLeft: false
+                alignLeft: true
             )
             {
                 TextRenderOffset = new Vector2(0, -1),
@@ -163,13 +161,12 @@ namespace ProjectVagabond.Scenes
             Vector2 catySize = secondaryFont.MeasureString(catyText);
             int catyWidth = (int)catySize.X + horizontalPadding * 2;
             int catyHeight = (int)catySize.Y + verticalPadding * 2;
-            int catyX = screenCenterX - (catyWidth / 2);
 
             var catyButton = new Button(
-                new Rectangle(catyX, (int)currentY, catyWidth, catyHeight),
+                new Rectangle(buttonX, (int)currentY, catyWidth, catyHeight),
                 catyText,
                 font: secondaryFont,
-                alignLeft: false
+                alignLeft: true
             )
             {
                 TextRenderOffset = new Vector2(0, -1),
@@ -193,13 +190,12 @@ namespace ProjectVagabond.Scenes
             Vector2 settingsSize = secondaryFont.MeasureString(settingsText);
             int settingsWidth = (int)settingsSize.X + horizontalPadding * 2;
             int settingsHeight = (int)settingsSize.Y + verticalPadding * 2;
-            int settingsX = screenCenterX - (settingsWidth / 2);
 
             var settingsButton = new Button(
-                new Rectangle(settingsX, (int)currentY, settingsWidth, settingsHeight),
+                new Rectangle(buttonX, (int)currentY, settingsWidth, settingsHeight),
                 settingsText,
                 font: secondaryFont,
-                alignLeft: false
+                alignLeft: true
             )
             {
                 TextRenderOffset = new Vector2(0, -1),
@@ -223,13 +219,12 @@ namespace ProjectVagabond.Scenes
             Vector2 exitSize = secondaryFont.MeasureString(exitText);
             int exitWidth = (int)exitSize.X + horizontalPadding * 2;
             int exitHeight = (int)exitSize.Y + verticalPadding * 2;
-            int exitX = screenCenterX - (exitWidth / 2);
 
             var exitButton = new Button(
-                new Rectangle(exitX, (int)currentY, exitWidth, exitHeight),
+                new Rectangle(buttonX, (int)currentY, exitWidth, exitHeight),
                 exitText,
                 font: secondaryFont,
-                alignLeft: false
+                alignLeft: true
             )
             {
                 TextRenderOffset = new Vector2(0, -1),
@@ -465,6 +460,7 @@ namespace ProjectVagabond.Scenes
             float[] rowShifts = { -25f, 0f, 12f, 46f };
             float rowVerticalSpacing = frameSize * 0.55f;
             float baseY = 0f;
+            float baseX = 35f;
 
             for (int row = 0; row < 4; row++)
             {
@@ -472,7 +468,7 @@ namespace ProjectVagabond.Scenes
                 int spacing = centerToCenterSpacings[row];
 
                 float rowWidthCenterToCenter = (wordLength - 1) * spacing;
-                float startCenterX = (Global.VIRTUAL_WIDTH - rowWidthCenterToCenter) / 2f + rowShifts[row];
+                float startCenterX = (Global.VIRTUAL_WIDTH - rowWidthCenterToCenter) / 2f + rowShifts[row] + baseX;
                 float centerY = baseY + (row * rowVerticalSpacing) + halfSize;
 
                 for (int col = 0; col < wordLength; col++)
