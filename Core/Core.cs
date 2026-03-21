@@ -230,7 +230,7 @@ namespace ProjectVagabond
             _sceneManager.AddScene(GameSceneState.Startup, new StartupScene());
             _sceneManager.AddScene(GameSceneState.MainMenu, new MainMenuScene());
             _sceneManager.AddScene(GameSceneState.NewGameIntro, new NewGameIntroScene());
-            _sceneManager.AddScene(GameSceneState.Catyclopaedia, new CatyclopaediaScene());
+            _sceneManager.AddScene(GameSceneState.Catyclopedia, new CatyclopediaScene());
             _sceneManager.AddScene(GameSceneState.Settings, new SettingsScene());
             _sceneManager.AddScene(GameSceneState.Arena, new ArenaScene());
 

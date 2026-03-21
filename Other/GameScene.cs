@@ -13,7 +13,7 @@ namespace ProjectVagabond.Scenes
         Startup,
         MainMenu,
         NewGameIntro,
-        Catyclopaedia,
+        Catyclopedia,
         TerminalMap,
         Settings,
         Transition,

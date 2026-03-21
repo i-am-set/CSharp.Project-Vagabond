@@ -165,7 +165,7 @@ namespace ProjectVagabond.Scenes
             _navigationGroup.Add(newGameButton);
             currentY += newGameHeight + buttonYSpacing;
 
-            string catyText = "CATYCLOPAEDIA";
+            string catyText = "CATYLOPEDIA";
             Vector2 catySize = secondaryFont.MeasureString(catyText);
             int catyWidth = (int)catySize.X + horizontalPadding * 2;
             int catyHeight = (int)catySize.Y + verticalPadding * 2;
@@ -189,7 +189,7 @@ namespace ProjectVagabond.Scenes
             {
                 _hapticsManager.TriggerZoomPulse(_global.LightHapticZoomPulseStrength, _global.HapticZoomPulseDuration);
                 catyButton.ResetAnimationState();
-                _sceneManager.ChangeScene(GameSceneState.Catyclopaedia, _transitionManager.GetRandomTransition(), _transitionManager.GetRandomTransition());
+                _sceneManager.ChangeScene(GameSceneState.Catyclopedia, _transitionManager.GetRandomTransition(), _transitionManager.GetRandomTransition());
             };
             _buttons.Add(catyButton);
             _navigationGroup.Add(catyButton);

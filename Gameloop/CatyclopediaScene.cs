@@ -16,7 +16,7 @@ using System.Linq;
 
 namespace ProjectVagabond.Scenes
 {
-    public class CatyclopaediaScene : GameScene
+    public class CatyclopediaScene : GameScene
     {
         private readonly SpriteManager _spriteManager;
         private readonly Global _global;
@@ -53,7 +53,7 @@ namespace ProjectVagabond.Scenes
 
         // Intro Text
         private const string INTRO_LINE_1 = "WIZARD";
-        private const string INTRO_LINE_2 = "CATYCLOPAEDIA";
+        private const string INTRO_LINE_2 = "CATYLOPEDIA";
 
         // Plink Animation State
         private bool _isPlinkingIn = true;
@@ -87,7 +87,7 @@ namespace ProjectVagabond.Scenes
         // Layout Constants
         private const int BASE_CENTER_Y = 50;
 
-        public CatyclopaediaScene()
+        public CatyclopediaScene()
         {
             _spriteManager = ServiceLocator.Get<SpriteManager>();
             _global = ServiceLocator.Get<Global>();
