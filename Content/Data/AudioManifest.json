@@ -31,8 +31,8 @@
       "Path": "Audio/SFX/combatant_hit",
       "PoolSize": 10,
       "DefaultVolume": 0.35,
-      "MinPitch": -0.3,
-      "MaxPitch": 0.3
+      "MinPitch": -0.8,
+      "MaxPitch": 0.8
     },
     {
       "Id": "sfx_combatant_heal",
@@ -92,8 +92,8 @@
     {
       "Id": "music_main_menu",
       "StemPaths": [
-        "Audio/Music/Seven_Loop",
-        "Audio/Music/Seven_Loop_Muffled"
+        "Audio/Music/1_Voltz_Supreme_-_Analog_Ambience_-_Analog_Random_Ambience",
+        "Audio/Music/1_Voltz_Supreme_-_Analog_Ambience_-_Analog_Random_Ambience_Muffled"
       ],
       "DefaultVolume": 1.0
     }

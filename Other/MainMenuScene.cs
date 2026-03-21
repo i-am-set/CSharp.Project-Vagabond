@@ -1,4 +1,5 @@
-﻿using Microsoft.Xna.Framework;
+﻿#nullable enable
+using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
@@ -41,6 +42,10 @@ namespace ProjectVagabond.Scenes
         private BasicEffect _logoEffect;
         private VertexPositionColorTexture[] _logoVertices;
         private short[] _logoIndices;
+
+        // Physics state for the interactive logo letters
+        private Vector2[] _logoLetterOffsets = new Vector2[18];
+        private Vector2[] _logoLetterVelocities = new Vector2[18];
 
         public MainMenuScene()
         {
@@ -291,6 +296,13 @@ namespace ProjectVagabond.Scenes
             _logoWaveTimer2 = 0f;
             _logoWaveCooldown2 = 2f + (float)_random.NextDouble() * 3f;
 
+            // Reset physics state
+            for (int i = 0; i < 18; i++)
+            {
+                _logoLetterOffsets[i] = Vector2.Zero;
+                _logoLetterVelocities[i] = Vector2.Zero;
+            }
+
             firstTimeOpened = false;
         }
 
@@ -452,6 +464,11 @@ namespace ProjectVagabond.Scenes
 
             int vertIndex = 0;
             float time = (float)gameTime.TotalGameTime.TotalSeconds;
+
+            // Clamp dt to prevent physics explosions during lag spikes
+            float dt = Math.Min((float)gameTime.ElapsedGameTime.TotalSeconds, 0.05f);
+            Vector2 mousePos = Core.TransformMouse(_inputManager.GetEffectiveMouseState().Position);
+
             int frameSize = 40;
             float halfSize = frameSize / 2f;
 
@@ -461,6 +478,8 @@ namespace ProjectVagabond.Scenes
             float rowVerticalSpacing = frameSize * 0.55f;
             float baseY = 0f;
             float baseX = 35f;
+
+            int letterIndex = 0;
 
             for (int row = 0; row < 4; row++)
             {
@@ -500,8 +519,35 @@ namespace ProjectVagabond.Scenes
                         swayY = MathF.Cos(time * 0.85f + phase) * 1.4f;
                     }
 
-                    float finalX = MathF.Round(startCenterX + (col * spacing) + swayX);
-                    float finalY = MathF.Round(centerY + swayY);
+                    // --- Interactive Physics ---
+                    Vector2 basePos = new Vector2(startCenterX + (col * spacing), centerY);
+                    Vector2 currentPos = basePos + _logoLetterOffsets[letterIndex];
+
+                    Vector2 toMouse = currentPos - mousePos;
+                    float dist = toMouse.Length();
+                    float repelRadius = 45f;
+
+                    // Apply repulsion force if mouse is close
+                    if (dist < repelRadius && dist > 0.001f)
+                    {
+                        float force = (repelRadius - dist) / repelRadius;
+                        Vector2 repelDir = toMouse / dist;
+                        _logoLetterVelocities[letterIndex] += repelDir * force * 2500f * dt;
+                    }
+
+                    // Apply spring force to pull back to center (0,0 offset)
+                    Vector2 springForce = -_logoLetterOffsets[letterIndex] * 150f;
+
+                    // Apply damping to prevent infinite bouncing
+                    Vector2 dampingForce = -_logoLetterVelocities[letterIndex] * 12f;
+
+                    // Integrate velocity and position
+                    _logoLetterVelocities[letterIndex] += (springForce + dampingForce) * dt;
+                    _logoLetterOffsets[letterIndex] += _logoLetterVelocities[letterIndex] * dt;
+
+                    // Calculate final snapped position
+                    float finalX = MathF.Round(basePos.X + swayX + _logoLetterOffsets[letterIndex].X);
+                    float finalY = MathF.Round(basePos.Y + swayY + _logoLetterOffsets[letterIndex].Y);
 
                     Matrix rot = Matrix.CreateRotationX(pitch) * Matrix.CreateRotationY(yaw);
 
@@ -537,6 +583,7 @@ namespace ProjectVagabond.Scenes
                         );
                     }
                     vertIndex += 4;
+                    letterIndex++;
                 }
             }
 
