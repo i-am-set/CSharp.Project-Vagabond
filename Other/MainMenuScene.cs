@@ -100,7 +100,7 @@ namespace ProjectVagabond.Scenes
             // Note: Not adding disabled button to navigation group
             currentY += continueHeight + buttonYSpacing;
 
-            // --- NEW GAME BUTTON ---
+            // NEW GAME BUTTON
             Vector2 newGameSize = secondaryFont.MeasureString(newGameText);
             int newGameWidth = (int)newGameSize.X + horizontalPadding * 2;
             int newGameHeight = (int)newGameSize.Y + verticalPadding * 2;

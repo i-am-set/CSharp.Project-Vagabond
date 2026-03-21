@@ -47,9 +47,14 @@ namespace ProjectVagabond.Scenes
         private const float PLINK_STAGGER = 0.05f;
 
         private float _titleWaveTimer = 0f;
+        private float _idleTimer = 0f;
 
         // Slot Machine State
         private enum SlotState { WindUp, Spinning, Settling, Stopped }
+
+        private const float SLOT_SHAKE_DURATION = 0.35f;
+        private const float SLOT_SHAKE_MAGNITUDE = 8f;
+        private const float SLOT_SHAKE_FREQUENCY = 60f;
 
         private class SlotColumn
         {
@@ -64,6 +69,8 @@ namespace ProjectVagabond.Scenes
             public float StateTimer;
             public float SettleDuration;
             public PlinkAnimator Plink = new PlinkAnimator();
+            public bool HasHopped;
+            public float ShakeTimer;
         }
 
         private enum IntroState { Spinning, Transitioning }
@@ -72,6 +79,7 @@ namespace ProjectVagabond.Scenes
         private float _spinTimer = 0f;
         private int _slotsStopped = 0;
         private float _spinSoundTimer = 0f;
+        private bool _hasPlayedFinishEffect = false;
 
         public NewGameIntroScene()
         {
@@ -101,8 +109,10 @@ namespace ProjectVagabond.Scenes
 
             _selectedWizards.Clear();
             _titleWaveTimer = 0f;
+            _idleTimer = 0f;
             _state = IntroState.Spinning;
             _slots.Clear();
+            _hasPlayedFinishEffect = false;
 
             _isPlinkingIn = true;
             _allPlinks.Clear();
@@ -138,7 +148,8 @@ namespace ProjectVagabond.Scenes
                     TargetId = shuffled[i],
                     TargetIdIndex = _characterIds.IndexOf(shuffled[i]),
                     State = SlotState.WindUp,
-                    StateTimer = 0f
+                    StateTimer = 0f,
+                    ShakeTimer = 0f
                 });
             }
 
@@ -188,6 +199,7 @@ namespace ProjectVagabond.Scenes
             if (_transitionManager.IsTransitioning) return;
 
             _titleWaveTimer += dt;
+            _idleTimer += dt;
 
             foreach (var key in _selectedWizards.Keys.ToList())
             {
@@ -232,8 +244,8 @@ namespace ProjectVagabond.Scenes
                     }
                 }
 
-                float baseSpinDuration = 1.5f;
-                float stopInterval = 0.4f;
+                float baseSpinDuration = 2.5f;
+                float stopInterval = 0.3f;
 
                 int shouldBeStopping = 0;
                 if (_spinTimer >= baseSpinDuration)
@@ -244,6 +256,12 @@ namespace ProjectVagabond.Scenes
                 for (int i = 0; i < _slots.Count; i++)
                 {
                     var slot = _slots[i];
+
+                    if (slot.ShakeTimer > 0)
+                    {
+                        slot.ShakeTimer -= dt;
+                    }
+
                     if (slot.State == SlotState.Stopped)
                     {
                         slot.Plink.Update(effectiveGameTime, Vector2.Zero);
@@ -302,6 +320,7 @@ namespace ProjectVagabond.Scenes
                             slot.VirtualIndex = slot.AbsoluteTargetIndex;
                             slot.Speed = 0f;
                             slot.State = SlotState.Stopped;
+                            slot.ShakeTimer = SLOT_SHAKE_DURATION;
                             _slotsStopped++;
 
                             _hapticsManager.TriggerZoomPulse(_global.HapticZoomPulseStrength, _global.HapticZoomPulseDuration);
@@ -309,7 +328,7 @@ namespace ProjectVagabond.Scenes
                             _selectedWizards[slot.TargetId] = (0f, 0f);
 
                             var audio = ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>();
-                            audio.PlayUi("ui_click");
+                            audio.PlaySfx("sfx_slot_lock", 0.1f);
 
                             var emitter = _particleSystemManager.CreateEmitter(ParticleEffects.CreateUIPlink());
                             int slotWidth = (Global.VIRTUAL_WIDTH - 40) / _randomCount;
@@ -320,18 +339,11 @@ namespace ProjectVagabond.Scenes
 
                             if (_slotsStopped == _randomCount)
                             {
-                                _hapticsManager.TriggerShake(1.5f, 1.5f);
-                                ServiceLocator.Get<Core>().TriggerFullscreenFlash(Color.White, 0.05f);
-                                audio.PlayUi("ui_confirm");
+                                _state = IntroState.Transitioning;
+                                _spinTimer = 0f;
                             }
                         }
                     }
-                }
-
-                if (_slotsStopped == _randomCount)
-                {
-                    _state = IntroState.Transitioning;
-                    _spinTimer = 0f;
                 }
             }
             else if (_state == IntroState.Transitioning)
@@ -339,10 +351,19 @@ namespace ProjectVagabond.Scenes
                 _spinTimer += dt;
                 for (int i = 0; i < _slots.Count; i++)
                 {
+                    if (_slots[i].ShakeTimer > 0) _slots[i].ShakeTimer -= dt;
                     _slots[i].Plink.Update(effectiveGameTime, Vector2.Zero);
                 }
 
-                if (_spinTimer > 1.5f)
+                if (!_hasPlayedFinishEffect && _spinTimer >= SLOT_SHAKE_DURATION)
+                {
+                    _hasPlayedFinishEffect = true;
+                    _hapticsManager.TriggerShake(3.0f, 1.5f);
+                    ServiceLocator.Get<Core>().TriggerFullscreenFlash(Color.White, 0.1f);
+                    ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlaySfx("sfx_slot_finish");
+                }
+
+                if (_spinTimer > 1.5f + SLOT_SHAKE_DURATION)
                 {
                     StartGameActual();
                 }
@@ -427,7 +448,16 @@ namespace ProjectVagabond.Scenes
             for (int i = 0; i < _slots.Count; i++)
             {
                 var slot = _slots[i];
-                int slotCenterX = startX + (i * slotWidth) + (slotWidth / 2);
+
+                float slotShakeX = 0f;
+                if (slot.ShakeTimer > 0)
+                {
+                    float progress = 1f - (slot.ShakeTimer / SLOT_SHAKE_DURATION);
+                    float decay = 1f - Easing.EaseOutQuad(progress);
+                    slotShakeX = MathF.Sin(slot.ShakeTimer * SLOT_SHAKE_FREQUENCY) * SLOT_SHAKE_MAGNITUDE * decay;
+                }
+
+                int slotCenterX = startX + (i * slotWidth) + (slotWidth / 2) + (int)MathF.Round(slotShakeX);
 
                 float vIndex = slot.VirtualIndex;
                 int centerCatIdx = ((int)MathF.Floor(vIndex) % _characterIds.Count + _characterIds.Count) % _characterIds.Count;
@@ -442,6 +472,9 @@ namespace ProjectVagabond.Scenes
                     int spriteIndex = int.Parse(charId);
 
                     float yPos = centerY + ((j - offset) * 40f);
+                    float drawYPos = yPos;
+
+                    PlayerSpriteType spriteType = PlayerSpriteType.Normal;
 
                     float pScale = 1f;
                     float pRot = 0f;
@@ -449,6 +482,13 @@ namespace ProjectVagabond.Scenes
                     {
                         pScale = slot.Plink.IsActive ? slot.Plink.Scale : 1f;
                         pRot = slot.Plink.IsActive ? slot.Plink.Rotation : 0f;
+
+                        float bob = MathF.Sin(_idleTimer * 6f);
+                        if (bob > 0)
+                        {
+                            spriteType = PlayerSpriteType.Alt;
+                            drawYPos -= 2f;
+                        }
                     }
 
                     float speedStretch = 1f + (Math.Abs(slot.Speed) * 0.015f);
@@ -456,10 +496,10 @@ namespace ProjectVagabond.Scenes
                     float squashX = 1f / (1f + (speedStretch - 1f) * 0.5f);
                     Vector2 pScaleVec = new Vector2(pScale * squashX, pScale * speedStretch);
 
-                    var sourceRect = _spriteManager.GetPlayerSourceRect(spriteIndex, PlayerSpriteType.Normal);
+                    var sourceRect = _spriteManager.GetPlayerSourceRect(spriteIndex, spriteType);
                     Vector2 origin = new Vector2(16, 16);
 
-                    spriteBatch.Draw(_spriteManager.PlayerMasterSpriteSheet, new Vector2(slotCenterX, yPos), sourceRect, Color.White * blurAlpha, pRot, origin, pScaleVec, SpriteEffects.None, 0f);
+                    spriteBatch.Draw(_spriteManager.PlayerMasterSpriteSheet, new Vector2(slotCenterX, drawYPos), sourceRect, Color.White * blurAlpha, pRot, origin, pScaleVec, SpriteEffects.None, 0f);
                 }
             }
 

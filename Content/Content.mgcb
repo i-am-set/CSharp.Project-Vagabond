@@ -33,6 +33,18 @@
 /processorParam:Quality=Best
 /build:Audio/SFX/fireball_impact.wav;Audio/SFX/fireball_impact
 
+#begin Audio/SFX/slot_finish.wav
+/importer:WavImporter
+/processor:SoundEffectProcessor
+/processorParam:Quality=Best
+/build:Audio/SFX/slot_finish.wav;Audio/SFX/slot_finish
+
+#begin Audio/SFX/slot_lock.wav
+/importer:WavImporter
+/processor:SoundEffectProcessor
+/processorParam:Quality=Best
+/build:Audio/SFX/slot_lock.wav;Audio/SFX/slot_lock
+
 #begin Audio/UI/click_confirm.wav
 /importer:WavImporter
 /processor:SoundEffectProcessor

@@ -11,6 +11,20 @@
       "Path": "Audio/SFX/fireball_impact",
       "PoolSize": 5,
       "DefaultVolume": 0.2
+    },
+    {
+      "Id": "sfx_slot_lock",
+      "Path": "Audio/SFX/slot_lock",
+      "PoolSize": 6,
+      "DefaultVolume": 0.8,
+      "MinPitch": -0.2,
+      "MaxPitch": 0.2
+    },
+    {
+      "Id": "sfx_slot_finish",
+      "Path": "Audio/SFX/slot_finish",
+      "PoolSize": 2,
+      "DefaultVolume": 1.0
     }
   ],
   "Ui": [
