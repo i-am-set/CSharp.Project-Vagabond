@@ -50,5 +50,13 @@
     }
   ],
   "Ambient": [],
-  "Music": []
+  "Music": [
+    {
+      "Id": "music_main_menu",
+      "StemPaths": [
+        "Audio/Music/Seven_Loop"
+      ],
+      "DefaultVolume": 1.0
+    }
+  ]
 }

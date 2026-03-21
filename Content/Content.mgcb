@@ -15,6 +15,12 @@
 
 #---------------------------------- Content ---------------------------------#
 
+#begin Audio/Music/Seven_Loop.wav
+/importer:WavImporter
+/processor:SoundEffectProcessor
+/processorParam:Quality=Best
+/build:Audio/Music/Seven_Loop.wav;Audio/Music/Seven_Loop
+
 #begin Audio/SFX/fireball_cast.wav
 /importer:WavImporter
 /processor:SoundEffectProcessor

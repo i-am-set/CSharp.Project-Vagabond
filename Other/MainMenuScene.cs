@@ -125,6 +125,7 @@ namespace ProjectVagabond.Scenes
             {
                 _hapticsManager.TriggerZoomPulse(_global.LightHapticZoomPulseStrength, _global.HapticZoomPulseDuration);
                 newGameButton.ResetAnimationState();
+                ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().StopMusic(1.5f);
                 _sceneManager.ChangeScene(GameSceneState.NewGameIntro, _transitionManager.GetRandomTransition(), _transitionManager.GetRandomTransition());
             };
             _buttons.Add(newGameButton);
@@ -240,6 +241,8 @@ namespace ProjectVagabond.Scenes
             base.Enter();
             InitializeUI();
             ServiceLocator.Get<GeometricBackgroundManager>().Show(1.0f);
+
+            ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlayMusic("music_main_menu", 2.0f);
 
             _currentInputDelay = _inputDelay;
             _previousKeyboardState = Keyboard.GetState();

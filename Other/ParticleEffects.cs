@@ -13,12 +13,12 @@ namespace ProjectVagabond.Particles
             settings.EmitFrom = EmissionSource.Volume;
             settings.EmitterSize = new Vector2(Global.VIRTUAL_WIDTH + 100, Global.VIRTUAL_HEIGHT + 100);
             settings.EmissionRate = 1.5f;
-            settings.MaxParticles = 30;
+            settings.MaxParticles = 10;
             settings.Duration = float.PositiveInfinity;
 
             settings.VelocityPattern = EmissionPattern.Cartesian;
-            settings.InitialVelocityX = new FloatRange(-speed * 0.5f, speed * 0.5f);
-            settings.InitialVelocityY = new FloatRange(-speed, -speed * 0.2f);
+            settings.InitialVelocityX = new FloatRange(-speed * 0.2f, speed * 0.2f); // was 0.5f
+            settings.InitialVelocityY = new FloatRange(-speed * 0.4f, -speed * 0.08f); // was 1.0f / 0.2f
 
             settings.Lifetime = new FloatRange(15f, 25f);
             settings.InitialSize = new FloatRange(scale * 0.8f, scale * 1.2f);
@@ -26,7 +26,7 @@ namespace ProjectVagabond.Particles
             settings.InterpolateSize = false;
 
             settings.InitialRotation = new FloatRange(0, MathHelper.TwoPi);
-            settings.InitialRotationSpeed = new FloatRange(-0.5f, 0.5f);
+            settings.InitialRotationSpeed = new FloatRange(-0.15f, 0.15f);
 
             settings.StartColor = global.Palette_Black;
             settings.EndColor = global.Palette_Black;

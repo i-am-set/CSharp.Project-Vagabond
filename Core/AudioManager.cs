@@ -176,8 +176,8 @@ namespace ProjectVagabond.Audio
                         var sfx = content.Load<SoundEffect>(entry.StemPaths[i]);
                         stems[i] = sfx.CreateInstance();
                         stems[i].IsLooped = true;
-                        targetVols[i] = 0f;
-                        currentVols[i] = 0f;
+                        targetVols[i] = 1.0f;
+                        currentVols[i] = 1.0f;
                     }
 
                     _musicTracks[entry.Id] = new MusicTrack
@@ -321,30 +321,42 @@ namespace ProjectVagabond.Audio
             }
         }
 
-        public void Update(float dt)
+        public void StopMusic(float fadeDuration = 2.0f)
         {
             if (_currentMusic != null)
             {
-                if (_musicCrossfadeTimer < _musicCrossfadeDuration)
-                {
-                    _musicCrossfadeTimer += dt;
-                    float progress = Math.Clamp(_musicCrossfadeTimer / _musicCrossfadeDuration, 0f, 1f);
+                _fadingMusic = _currentMusic;
+                _fadingMusicMasterFade = _currentMusicMasterFade;
+                _currentMusic = null;
+                _musicCrossfadeDuration = fadeDuration > 0f ? fadeDuration : 0.01f;
+                _musicCrossfadeTimer = 0f;
+            }
+        }
+
+        public void Update(float dt)
+        {
+            if (_musicCrossfadeTimer < _musicCrossfadeDuration)
+            {
+                _musicCrossfadeTimer += dt;
+                float progress = Math.Clamp(_musicCrossfadeTimer / _musicCrossfadeDuration, 0f, 1f);
+
+                if (_currentMusic != null)
                     _currentMusicMasterFade = MathHelper.Lerp(0f, 1f, progress);
 
-                    if (_fadingMusic != null)
-                    {
-                        _fadingMusicMasterFade = MathHelper.Lerp(1f, 0f, progress);
-                    }
-                }
-                else if (_fadingMusic != null)
+                if (_fadingMusic != null)
+                    _fadingMusicMasterFade = MathHelper.Lerp(1f, 0f, progress);
+            }
+            else if (_fadingMusic != null)
+            {
+                foreach (var stem in _fadingMusic.Stems)
                 {
-                    foreach (var stem in _fadingMusic.Stems)
-                    {
-                        stem.Stop();
-                    }
-                    _fadingMusic = null;
+                    stem.Stop();
                 }
+                _fadingMusic = null;
+            }
 
+            if (_currentMusic != null)
+            {
                 UpdateMusicTrack(_currentMusic, _currentMusicMasterFade, dt);
             }
 

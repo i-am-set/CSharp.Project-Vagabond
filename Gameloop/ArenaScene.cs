@@ -940,7 +940,7 @@ namespace ProjectVagabond.Scenes
                 }
 
                 Vector2 finalNamePos = new Vector2(MathF.Round(w.Data.UI.HudNamePos.X + shakeX), MathF.Round(w.Data.UI.HudNamePos.Y + shakeY));
-                spriteBatch.DrawStringSnapped(secondaryFont, w.Data.Stats.Name.ToUpper(), finalNamePos, nameColor);
+                spriteBatch.DrawStringOutlinedSnapped(secondaryFont, w.Data.Stats.Name.ToUpper(), finalNamePos, nameColor, _global.Palette_Off);
 
                 float showSpellAlpha = 1f;
                 float showPlacementAlpha = 0f;
@@ -970,6 +970,9 @@ namespace ProjectVagabond.Scenes
                         float opacity = (cd > 0 ? 0.15f : 1.0f) * showSpellAlpha;
 
                         Vector2 spellPos = new Vector2(MathF.Round(centerX - 4.5f + shakeX), MathF.Round(4f + shakeY));
+
+                        // 11x11 Backing
+                        spriteBatch.Draw(_pixel, new Rectangle((int)spellPos.X - 1, (int)spellPos.Y - 1, 11, 11), _global.Palette_Off * showSpellAlpha);
 
                         spriteBatch.DrawSnapped(spellSheet, spellPos, sourceRect, Color.White * opacity);
 
@@ -1022,6 +1025,14 @@ namespace ProjectVagabond.Scenes
                         }
 
                         Vector2 finalHeartPos = new Vector2(MathF.Round(w.Data.UI.HudHeartStartPos.X + h * (heartWidth + heartSpacing) + shakeX), MathF.Round(heartsY) + yOffset);
+
+                        // Outline
+                        spriteBatch.DrawSnapped(sheet, finalHeartPos + new Vector2(-1, 0), sourceRect, _global.Palette_Off);
+                        spriteBatch.DrawSnapped(sheet, finalHeartPos + new Vector2(1, 0), sourceRect, _global.Palette_Off);
+                        spriteBatch.DrawSnapped(sheet, finalHeartPos + new Vector2(0, -1), sourceRect, _global.Palette_Off);
+                        spriteBatch.DrawSnapped(sheet, finalHeartPos + new Vector2(0, 1), sourceRect, _global.Palette_Off);
+
+                        // Main
                         spriteBatch.DrawSnapped(sheet, finalHeartPos, sourceRect, Color.White);
                     }
                 }
@@ -1055,7 +1066,7 @@ namespace ProjectVagabond.Scenes
 
                     Vector2 drawPos = new Vector2(MathF.Round(centerX + shakeX), MathF.Round(probY + pivot.Y));
 
-                    spriteBatch.DrawStringSnapped(probFont, probText, drawPos, probColor, pRot, probOrigin, pScale, SpriteEffects.None, 0f);
+                    spriteBatch.DrawStringOutlinedSnapped(probFont, probText, drawPos, probColor, _global.Palette_Off, pRot, probOrigin, pScale, SpriteEffects.None, 0f);
                 }
 
                 if (showPlacementAlpha > 0f && w.Data.Metrics.Placement > 0)
@@ -1074,9 +1085,10 @@ namespace ProjectVagabond.Scenes
 
                     Color placementColor = w.Data.Metrics.Placement == 1 ? _global.Palette_Sun : _global.Palette_Black;
                     placementColor *= showPlacementAlpha;
+                    Color outlineColor = _global.Palette_Off * showPlacementAlpha;
 
-                    spriteBatch.DrawStringSnapped(defaultFont, numText, new Vector2(MathF.Round(startX), MathF.Round(numY)), placementColor);
-                    spriteBatch.DrawStringSnapped(tertiaryFont, sufText, new Vector2(MathF.Round(startX + numSize.X) + 1, MathF.Round(sufY)), placementColor);
+                    spriteBatch.DrawStringOutlinedSnapped(defaultFont, numText, new Vector2(MathF.Round(startX), MathF.Round(numY)), placementColor, outlineColor);
+                    spriteBatch.DrawStringOutlinedSnapped(tertiaryFont, sufText, new Vector2(MathF.Round(startX + numSize.X) + 1, MathF.Round(sufY)), placementColor, outlineColor);
                 }
             }
         }
