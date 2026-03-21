@@ -33,6 +33,7 @@ namespace ProjectVagabond.Scenes
         private bool _uiInitialized = false;
 
         private const float BUTTON_STAGGER_DELAY = 0.15f;
+        private const float LOGO_SHADOW_OPACITY = 0.75f;
 
         private float _logoWaveTimer1 = 0f;
         private float _logoWaveCooldown1 = 2f;
@@ -41,6 +42,7 @@ namespace ProjectVagabond.Scenes
 
         private BasicEffect _logoEffect;
         private VertexPositionColorTexture[] _logoVertices;
+        private VertexPositionColorTexture[] _shadowVertices;
         private short[] _logoIndices;
 
         // Physics state for the interactive logo letters
@@ -77,6 +79,7 @@ namespace ProjectVagabond.Scenes
             };
 
             _logoVertices = new VertexPositionColorTexture[72];
+            _shadowVertices = new VertexPositionColorTexture[72];
             _logoIndices = new short[108];
 
             for (int i = 0; i < 18; i++)
@@ -267,9 +270,9 @@ namespace ProjectVagabond.Scenes
             ServiceLocator.Get<GeometricBackgroundManager>().Show(1.0f);
 
             var audio = ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>();
-            audio.PlayMusic("music_main_menu", 2.0f);
-            audio.SetMusicStemVolume("music_main_menu", 0, 1.0f);
-            audio.SetMusicStemVolume("music_main_menu", 1, 0.0f);
+            audio.PlayMusic("music_main_menu_pt1", 2.0f);
+            audio.SetMusicStemVolume("music_main_menu_pt1", 0, 1.0f);
+            audio.SetMusicStemVolume("music_main_menu_pt1", 1, 0.0f);
 
             _currentInputDelay = _inputDelay;
             _previousKeyboardState = Microsoft.Xna.Framework.Input.Keyboard.GetState();
@@ -474,12 +477,13 @@ namespace ProjectVagabond.Scenes
 
             int[] rowLengths = { 3, 6, 6, 3 };
             int[] centerToCenterSpacings = { 16, 24, 16, 24 };
-            float[] rowShifts = { -25f, 0f, 12f, 46f };
-            float rowVerticalSpacing = frameSize * 0.55f;
-            float baseY = 0f;
-            float baseX = 35f;
+            float[] rowShifts = { -25f, 0f, 10f, 26f };
+            float rowVerticalSpacing = frameSize * 0.60f;
+            float baseY = 10f;
+            float baseX = 55f;
 
             int letterIndex = 0;
+            Color shadowColor = _global.Palette_Off * LOGO_SHADOW_OPACITY;
 
             for (int row = 0; row < 4; row++)
             {
@@ -576,6 +580,12 @@ namespace ProjectVagabond.Scenes
                         float depthFactor = Math.Clamp(1.0f - (transformed.Z / 12f), 0.4f, 1.0f);
                         Color vertColor = new Color(depthFactor, depthFactor, depthFactor, 1.0f);
 
+                        _shadowVertices[vertIndex + v] = new VertexPositionColorTexture(
+                            new Vector3(finalX + transformed.X + 2, finalY + transformed.Y + 2, transformed.Z),
+                            shadowColor,
+                            uvs[v]
+                        );
+
                         _logoVertices[vertIndex + v] = new VertexPositionColorTexture(
                             new Vector3(finalX + transformed.X, finalY + transformed.Y, transformed.Z),
                             vertColor,
@@ -592,14 +602,29 @@ namespace ProjectVagabond.Scenes
             gd.RasterizerState = RasterizerState.CullNone;
             gd.SamplerStates[0] = SamplerState.PointClamp;
 
+            int[] rowStartIndex = { 0, 18, 54, 90 };
+            int[] rowPrimitiveCount = { 6, 12, 12, 6 };
+
             foreach (EffectPass pass in _logoEffect.CurrentTechnique.Passes)
             {
                 pass.Apply();
-                gd.DrawUserIndexedPrimitives(
-                    PrimitiveType.TriangleList,
-                    _logoVertices, 0, 72,
-                    _logoIndices, 0, 36
-                );
+
+                for (int row = 0; row < 4; row++)
+                {
+                    // Draw shadows first for this row
+                    gd.DrawUserIndexedPrimitives(
+                        PrimitiveType.TriangleList,
+                        _shadowVertices, 0, 72,
+                        _logoIndices, rowStartIndex[row], rowPrimitiveCount[row]
+                    );
+
+                    // Draw main logo for this row
+                    gd.DrawUserIndexedPrimitives(
+                        PrimitiveType.TriangleList,
+                        _logoVertices, 0, 72,
+                        _logoIndices, rowStartIndex[row], rowPrimitiveCount[row]
+                    );
+                }
             }
 
             gd.Viewport = oldViewport;

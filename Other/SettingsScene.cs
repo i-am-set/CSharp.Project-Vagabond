@@ -91,8 +91,8 @@ namespace ProjectVagabond.Scenes
             _navigationGroup.OnSelectionChanged += OnNavigationSelectionChanged;
 
             var audio = ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>();
-            audio.SetMusicStemVolume("music_main_menu", 0, 0.0f);
-            audio.SetMusicStemVolume("music_main_menu", 1, 1.0f);
+            audio.SetMusicStemVolume("music_main_menu_pt1", 0, 0.0f);
+            audio.SetMusicStemVolume("music_main_menu_pt1", 1, 1.0f);
 
             foreach (var item in _settingControls) item.ResetAnimationState();
             foreach (var item in _footerButtons) item.ResetAnimationState();
@@ -123,8 +123,8 @@ namespace ProjectVagabond.Scenes
             EventBus.Unsubscribe<GameEvents.UIThemeOrResolutionChanged>(OnResolutionChanged);
 
             var audio = ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>();
-            audio.SetMusicStemVolume("music_main_menu", 0, 1.0f);
-            audio.SetMusicStemVolume("music_main_menu", 1, 0.0f);
+            audio.SetMusicStemVolume("music_main_menu_pt1", 0, 1.0f);
+            audio.SetMusicStemVolume("music_main_menu_pt1", 1, 0.0f);
         }
 
         private void OnResolutionChanged(GameEvents.UIThemeOrResolutionChanged e)
