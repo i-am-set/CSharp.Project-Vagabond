@@ -137,7 +137,19 @@
       "MaxPitch": 0.2
     }
   ],
-  "Ambient": [],
+  "Ambient": [
+    {
+      "Id": "ambient_hdd_startup",
+      "Path": "Audio/Ambient/computer_hdd_start_up",
+      "DefaultVolume": 0.2,
+      "NextTrack": "ambient_hdd_idle"
+    },
+    {
+      "Id": "ambient_hdd_idle",
+      "Path": "Audio/Ambient/computer_hdd_idle",
+      "DefaultVolume": 0.2
+    }
+  ],
   "Music": [
     {
       "Id": "music_main_menu_pt1",

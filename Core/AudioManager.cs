@@ -55,6 +55,7 @@ namespace ProjectVagabond.Audio
             public float BaseVolume;
             public float TargetVolume;
             public float CurrentVolume;
+            public string NextTrackId;
         }
 
         private readonly Dictionary<string, PooledSound> _sfxPools = new Dictionary<string, PooledSound>(StringComparer.OrdinalIgnoreCase);
@@ -150,14 +151,15 @@ namespace ProjectVagabond.Audio
                 {
                     var sfx = content.Load<SoundEffect>(entry.Path);
                     var instance = sfx.CreateInstance();
-                    instance.IsLooped = true;
+                    instance.IsLooped = string.IsNullOrEmpty(entry.NextTrack);
 
                     _ambientTracks[entry.Id] = new AmbientTrack
                     {
                         Instance = instance,
                         BaseVolume = entry.DefaultVolume,
                         TargetVolume = 0f,
-                        CurrentVolume = 0f
+                        CurrentVolume = 0f,
+                        NextTrackId = entry.NextTrack
                     };
                 }
                 catch (Exception ex)
@@ -389,6 +391,24 @@ namespace ProjectVagabond.Audio
             }
         }
 
+        public void ForceTransitionAmbient(string currentId)
+        {
+            if (_ambientTracks.TryGetValue(currentId, out var track))
+            {
+                if (track.Instance.State == SoundState.Playing)
+                {
+                    track.Instance.Stop();
+                }
+                track.TargetVolume = 0f;
+                track.CurrentVolume = 0f;
+
+                if (!string.IsNullOrEmpty(track.NextTrackId))
+                {
+                    PlayAmbient(track.NextTrackId, 1.0f);
+                }
+            }
+        }
+
         public void StopMusic(float fadeDuration = 2.0f)
         {
             if (_currentMusic != null)
@@ -503,6 +523,18 @@ namespace ProjectVagabond.Audio
                 {
                     track.Instance.Volume = track.CurrentVolume * track.BaseVolume * _ambientVolume * _masterVolume;
                     if (track.Instance.State == SoundState.Playing) track.Instance.Pitch = pitchOffset;
+                }
+
+                // Check for NextTrack transition
+                if (!string.IsNullOrEmpty(track.NextTrackId) && track.TargetVolume > 0f)
+                {
+                    if (track.Instance.State == SoundState.Stopped && track.CurrentVolume > 0f)
+                    {
+                        // It finished playing naturally
+                        track.TargetVolume = 0f;
+                        track.CurrentVolume = 0f;
+                        PlayAmbient(track.NextTrackId, 1.0f);
+                    }
                 }
             }
 

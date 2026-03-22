@@ -66,8 +66,8 @@ namespace ProjectVagabond.UI
         {
             if (!IsActive) return;
 
-            var currentMouseState = Mouse.GetState();
             var inputManager = ServiceLocator.Get<InputManager>();
+            var currentMouseState = inputManager.GetEffectiveMouseState();
 
             _countdownTimer -= (float)gameTime.ElapsedGameTime.TotalSeconds;
             if (_countdownTimer <= 0)

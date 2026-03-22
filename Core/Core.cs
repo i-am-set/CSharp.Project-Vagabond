@@ -374,8 +374,8 @@ namespace ProjectVagabond
                 if (_screenFlashState != null) _screenFlashState.IsCurrentlyWhite = _screenFlashState.Timer < ScreenFlashState.FLASH_ON_DURATION;
             }
 
-            KeyboardState currentKeyboardState = Keyboard.GetState();
-            MouseState currentMouseState = Mouse.GetState();
+            KeyboardState currentKeyboardState = IsActive ? Keyboard.GetState() : new KeyboardState();
+            MouseState currentMouseState = IsActive ? Mouse.GetState() : new MouseState(_previousMouseState.X, _previousMouseState.Y, _previousMouseState.ScrollWheelValue, ButtonState.Released, ButtonState.Released, ButtonState.Released, ButtonState.Released, ButtonState.Released);
 
             if (currentKeyboardState.IsKeyDown(Keys.OemTilde) && _previousKeyboardState.IsKeyUp(Keys.OemTilde))
             {
@@ -532,7 +532,8 @@ namespace ProjectVagabond
                 }
             }
 
-            var rawMousePos = Mouse.GetState().Position;
+            var currentMouseState = _inputManager.GetEffectiveMouseState();
+            var rawMousePos = currentMouseState.Position;
             var virtualMousePos = TransformMouse(rawMousePos);
             var snappedScreenX = (virtualMousePos.X * _finalScale) + _finalRenderRectangle.X;
             var snappedScreenY = (virtualMousePos.Y * _finalScale) + _finalRenderRectangle.Y;
@@ -655,7 +656,7 @@ namespace ProjectVagabond
             if (_drawMouseDebugDot)
             {
                 _spriteBatch.Begin(blendState: BlendState.AlphaBlend, samplerState: SamplerState.PointClamp, transformMatrix: Matrix.Invert(_mouseTransformMatrix));
-                var debugVirtualMousePos = TransformMouse(Mouse.GetState().Position);
+                var debugVirtualMousePos = TransformMouse(_inputManager.GetEffectiveMouseState().Position);
                 _spriteBatch.Draw(_pixel, debugVirtualMousePos, Color.Red);
                 var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
                 _spriteBatch.DrawStringSnapped(secondaryFont, $"({debugVirtualMousePos.X}, {debugVirtualMousePos.Y})", debugVirtualMousePos + new Vector2(3, -secondaryFont.LineHeight / 2), Color.Red);

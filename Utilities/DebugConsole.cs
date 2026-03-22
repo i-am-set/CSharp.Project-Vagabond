@@ -123,8 +123,11 @@ namespace ProjectVagabond.Utils
 
             if (!IsVisible) return;
 
-            var currentKeyboardState = Keyboard.GetState();
-            var currentMouseState = Mouse.GetState();
+            bool isActive = true;
+            try { isActive = ServiceLocator.Get<Core>().IsActive; } catch { }
+
+            var currentKeyboardState = isActive ? Keyboard.GetState() : new KeyboardState();
+            var currentMouseState = isActive ? Mouse.GetState() : new MouseState(_previousMouseState.X, _previousMouseState.Y, _previousMouseState.ScrollWheelValue, ButtonState.Released, ButtonState.Released, ButtonState.Released, ButtonState.Released, ButtonState.Released);
 
             if (KeyPressed(Keys.Escape, currentKeyboardState, _previousKeyboardState))
             {

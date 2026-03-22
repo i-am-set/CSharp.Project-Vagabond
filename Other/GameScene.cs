@@ -112,8 +112,11 @@ namespace ProjectVagabond.Scenes
                 _inputBlockTimer -= (float)gameTime.ElapsedGameTime.TotalSeconds;
             }
 
-            var currentMouseState = Mouse.GetState();
-            var currentKeyboardState = Keyboard.GetState();
+            bool isActive = true;
+            try { isActive = ServiceLocator.Get<Core>().IsActive; } catch { }
+
+            var currentMouseState = isActive ? Mouse.GetState() : new MouseState(previousMouseState.X, previousMouseState.Y, previousMouseState.ScrollWheelValue, ButtonState.Released, ButtonState.Released, ButtonState.Released, ButtonState.Released, ButtonState.Released);
+            var currentKeyboardState = isActive ? Keyboard.GetState() : new KeyboardState();
 
             if (keyboardNavigatedLastFrame)
             {

@@ -203,7 +203,7 @@ namespace ProjectVagabond
         public void LoadEssentialContent()
         {
             _logoSprite = LoadTex("Sprites/logo", 8, 8, Color.Red);
-            TitleLogoSpriteSheet = LoadTex("Sprites/UI/Logo/cwwc_logo_spritesheet", 240, 160, Color.Magenta);
+            TitleLogoSpriteSheet = LoadTex("Sprites/UI/Splash/cwwc_logo_spritesheet", 240, 160, Color.Magenta);
             _mapMarkerSprite = LoadTex("Sprites/map_marker", 8, 8, Color.Magenta);
 
             try { _circleTextureSprite = _textureFactory.CreateCircleTexture(); }

@@ -115,7 +115,7 @@ namespace ProjectVagabond.UI
                 return;
             }
 
-            var mouseState = Mouse.GetState();
+            var mouseState = ServiceLocator.Get<InputManager>().GetEffectiveMouseState();
 
             var drawPosition = screenPosition + (VisualOffset * scale);
 

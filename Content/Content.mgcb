@@ -15,6 +15,18 @@
 
 #---------------------------------- Content ---------------------------------#
 
+#begin Audio/Ambient/computer_hdd_idle.wav
+/importer:WavImporter
+/processor:SoundEffectProcessor
+/processorParam:Quality=Best
+/build:Audio/Ambient/computer_hdd_idle.wav;Audio/Ambient/computer_hdd_idle
+
+#begin Audio/Ambient/computer_hdd_start_up.wav
+/importer:WavImporter
+/processor:SoundEffectProcessor
+/processorParam:Quality=Best
+/build:Audio/Ambient/computer_hdd_start_up.wav;Audio/Ambient/computer_hdd_start_up
+
 #begin Audio/Music/1_Voltz_Supreme_-_Analog_Ambience_-_Analog_Random_Ambience_Muffled.wav
 /importer:WavImporter
 /processor:SoundEffectProcessor
@@ -2598,18 +2610,6 @@
 /processorParam:TextureFormat=Color
 /build:Sprites/UI/KeyPrompts/ui_key_up.png;Sprites/UI/KeyPrompts/ui_key_up
 
-#begin Sprites/UI/Logo/cwwc_logo_spritesheet.png
-/importer:TextureImporter
-/processor:TextureProcessor
-/processorParam:ColorKeyColor=255,0,255,255
-/processorParam:ColorKeyEnabled=True
-/processorParam:GenerateMipmaps=False
-/processorParam:PremultiplyAlpha=True
-/processorParam:ResizeToPowerOfTwo=False
-/processorParam:MakeSquare=False
-/processorParam:TextureFormat=Color
-/build:Sprites/UI/Logo/cwwc_logo_spritesheet.png;Sprites/UI/Logo/cwwc_logo_spritesheet
-
 #begin Sprites/UI/Rest/rest_action_icons.png
 /importer:TextureImporter
 /processor:TextureProcessor
@@ -2645,4 +2645,16 @@
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
 /build:Sprites/UI/Shop/shop_border_main.png;Sprites/UI/Shop/shop_border_main
+
+#begin Sprites/UI/Splash/cwwc_logo_spritesheet.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Sprites/UI/Splash/cwwc_logo_spritesheet.png;Sprites/UI/Splash/cwwc_logo_spritesheet
 

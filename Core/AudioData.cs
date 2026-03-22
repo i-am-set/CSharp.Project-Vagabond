@@ -18,6 +18,7 @@ namespace ProjectVagabond.Audio
         public float DefaultVolume { get; set; } = 1.0f;
         public float MinPitch { get; set; } = 0.0f;
         public float MaxPitch { get; set; } = 0.0f;
+        public string NextTrack { get; set; }
     }
 
     public class MusicEntry

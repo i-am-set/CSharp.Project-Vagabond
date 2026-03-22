@@ -72,6 +72,16 @@ namespace ProjectVagabond
             _previousMouseState = _currentMouseState;
             _currentMouseState = Mouse.GetState();
 
+            bool isActive = true;
+            try { isActive = ServiceLocator.Get<Core>().IsActive; } catch { }
+
+            if (!isActive)
+            {
+                _currentKeyboardState = new KeyboardState();
+                _currentGamePadState = new GamePadState();
+                _currentMouseState = new MouseState(_previousMouseState.X, _previousMouseState.Y, _previousMouseState.ScrollWheelValue, ButtonState.Released, ButtonState.Released, ButtonState.Released, ButtonState.Released, ButtonState.Released);
+            }
+
             float mouseDistance = Vector2.Distance(new Vector2(_currentMouseState.X, _currentMouseState.Y), new Vector2(_previousMouseState.X, _previousMouseState.Y));
             MouseMovedThisFrame = mouseDistance > MOUSE_MOVE_THRESHOLD;
 
@@ -199,7 +209,8 @@ namespace ProjectVagabond
             ActiveSpellTriggered = IsKeyPressed(Keys.Space) || (_currentMouseState.RightButton == ButtonState.Pressed && _previousMouseState.RightButton == ButtonState.Released);
 
             // Continuous input check for fast-forwarding/speeding up time
-            IsSpeedUpHeld = _currentKeyboardState.IsKeyDown(Keys.Enter) ||
+            IsSpeedUpHeld = _currentKeyboardState.IsKeyDown(Keys.LeftAlt) ||
+                            _currentKeyboardState.IsKeyDown(Keys.RightAlt) ||
                             _currentKeyboardState.IsKeyDown(Keys.Tab) ||
                             _currentMouseState.MiddleButton == ButtonState.Pressed ||
                             _currentGamePadState.IsButtonDown(Buttons.A);
