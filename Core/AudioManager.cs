@@ -309,6 +309,14 @@ namespace ProjectVagabond.Audio
 
             if (_currentMusic != null)
             {
+                if (_fadingMusic != null && _fadingMusic != _currentMusic)
+                {
+                    foreach (var stem in _fadingMusic.Stems)
+                    {
+                        stem.Stop();
+                    }
+                }
+
                 _fadingMusic = _currentMusic;
                 _fadingMusicMasterFade = _currentMusicMasterFade;
                 _fadingMusicStartFade = _currentMusicMasterFade;
@@ -385,10 +393,24 @@ namespace ProjectVagabond.Audio
         {
             if (_currentMusic != null)
             {
+                if (_fadingMusic != null && _fadingMusic != _currentMusic)
+                {
+                    foreach (var stem in _fadingMusic.Stems)
+                    {
+                        stem.Stop();
+                    }
+                }
+
                 _fadingMusic = _currentMusic;
                 _fadingMusicMasterFade = _currentMusicMasterFade;
                 _fadingMusicStartFade = _currentMusicMasterFade;
                 _currentMusic = null;
+                _musicCrossfadeDuration = fadeDuration > 0f ? fadeDuration : 0.01f;
+                _musicCrossfadeTimer = 0f;
+            }
+            else if (_fadingMusic != null)
+            {
+                _fadingMusicStartFade = _fadingMusicMasterFade;
                 _musicCrossfadeDuration = fadeDuration > 0f ? fadeDuration : 0.01f;
                 _musicCrossfadeTimer = 0f;
             }
