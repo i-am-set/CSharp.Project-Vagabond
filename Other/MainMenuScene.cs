@@ -271,7 +271,7 @@ namespace ProjectVagabond.Scenes
             ServiceLocator.Get<GeometricBackgroundManager>().Show(1.0f);
 
             var audio = ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>();
-            audio.PlayMusic("music_main_menu_pt1", 5.0f);
+            audio.PlayMusic("music_main_menu_pt1", 1.0f);
             audio.SetCurrentMusicStemVolume(0, 1.0f);
             audio.SetCurrentMusicStemVolume(1, 0.0f);
 
@@ -530,7 +530,7 @@ namespace ProjectVagabond.Scenes
 
                     Vector2 toMouse = currentPos - mousePos;
                     float dist = toMouse.Length();
-                    float repelRadius = 45f;
+                    float repelRadius = 35f;
 
                     // Apply repulsion force if mouse is close
                     if (dist < repelRadius && dist > 0.001f)

@@ -39,6 +39,12 @@
 /processorParam:Quality=Best
 /build:Audio/Music/2_Voltz_Supreme_-_Analog_Ambience_-_Analog_Random_Ambience.wav;Audio/Music/2_Voltz_Supreme_-_Analog_Ambience_-_Analog_Random_Ambience
 
+#begin Audio/Music/battle_commences_loopable_Muffled.wav
+/importer:WavImporter
+/processor:SoundEffectProcessor
+/processorParam:Quality=Best
+/build:Audio/Music/battle_commences_loopable_Muffled.wav;Audio/Music/battle_commences_loopable_Muffled
+
 #begin Audio/Music/battle_commences_loopable.wav
 /importer:WavImporter
 /processor:SoundEffectProcessor

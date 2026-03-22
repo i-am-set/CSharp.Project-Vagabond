@@ -188,7 +188,10 @@ namespace ProjectVagabond.Scenes
             _lastCountdownSecond = 10;
             _hasPlayedBetSound = false;
 
-            ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlayMusic("music_battle", 10.0f);
+            var audio = ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>();
+            audio.PlayMusic("music_battle", 1.0f);
+            audio.SetCurrentMusicStemVolume(0, 0.0f, instant: true); // Normal muted instantly
+            audio.SetCurrentMusicStemVolume(1, 1.0f, instant: true); // Muffled active instantly
 
             IsOvertime = false;
             _matchTimer = 120f;
@@ -327,6 +330,10 @@ namespace ProjectVagabond.Scenes
                     _phaseTimer = 3.0f;
                     _lastCountdownSecond = 3;
                     _plinkBetCountdown.Start(0f, 0.2f);
+
+                    var audio = ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>();
+                    audio.SetCurrentMusicStemVolume(0, 1.0f, fadeSpeed: 0.3f); // Normal active (slow fade)
+                    audio.SetCurrentMusicStemVolume(1, 0.0f, fadeSpeed: 0.3f); // Muffled muted (slow fade)
                 }
             }
             else if (_arenaState == ArenaState.Countdown)

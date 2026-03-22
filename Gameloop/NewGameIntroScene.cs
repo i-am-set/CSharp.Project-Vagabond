@@ -82,6 +82,9 @@ namespace ProjectVagabond.Scenes
         private float _spinSoundTimer = 0f;
         private bool _hasPlayedFinishEffect = false;
 
+        private float _successWipeTimer = 0f;
+        private const float SUCCESS_WIPE_DURATION = 0.8f;
+
         public NewGameIntroScene()
         {
             _spriteManager = ServiceLocator.Get<SpriteManager>();
@@ -114,6 +117,7 @@ namespace ProjectVagabond.Scenes
             _state = IntroState.Spinning;
             _slots.Clear();
             _hasPlayedFinishEffect = false;
+            _successWipeTimer = 0f;
 
             _isPlinkingIn = true;
             _allPlinks.Clear();
@@ -376,10 +380,14 @@ namespace ProjectVagabond.Scenes
                 if (!_hasPlayedFinishEffect && _spinTimer >= SLOT_SHAKE_DURATION)
                 {
                     _hasPlayedFinishEffect = true;
-                    _hapticsManager.TriggerZoomPulse(1.07f, 0.1f);
-                    ServiceLocator.Get<Core>().TriggerFullscreenFlash(_global.Palette_Off, 0.5f); 
-                        ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlaySfx("sfx_explosion");
+                    _hapticsManager.TriggerZoomPulse(1.1f, 0.15f);
+                    ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlaySfx("sfx_explosion");
                     ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlaySfx("sfx_slot_finish");
+                }
+
+                if (_hasPlayedFinishEffect)
+                {
+                    _successWipeTimer += dt;
                 }
 
                 if (_spinTimer > 1.5f + SLOT_SHAKE_DURATION)
@@ -537,6 +545,27 @@ namespace ProjectVagabond.Scenes
             _particleSystemManager.Draw(spriteBatch, transform, 1); // Foreground particles (Plinks)
 
             spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp, null, null, null, transform);
+
+            if (_hasPlayedFinishEffect && _successWipeTimer < SUCCESS_WIPE_DURATION)
+            {
+                float wipeProgress = _successWipeTimer / SUCCESS_WIPE_DURATION;
+                float easedProgress = Easing.EaseInOutQuad(wipeProgress);
+
+                Vector2 startPos = new Vector2(-200, -200);
+                Vector2 endPos = new Vector2(Global.VIRTUAL_WIDTH + 200, Global.VIRTUAL_HEIGHT + 200);
+                Vector2 currentPos = Vector2.Lerp(startPos, endPos, easedProgress);
+
+                float angle = -MathHelper.PiOver4;
+                Vector2 origin = new Vector2(0.5f, 0.5f);
+
+                spriteBatch.Draw(pixel, currentPos + new Vector2(100, 100), null, _global.Palette_Sun * 0.2f, angle, origin, new Vector2(1000, 80), SpriteEffects.None, 0f);
+                spriteBatch.Draw(pixel, currentPos + new Vector2(50, 50), null, _global.Palette_Sun * 0.6f, angle, origin, new Vector2(1000, 80), SpriteEffects.None, 0f);
+
+                spriteBatch.Draw(pixel, currentPos, null, Color.White, angle, origin, new Vector2(1000, 100), SpriteEffects.None, 0f);
+
+                spriteBatch.Draw(pixel, currentPos - new Vector2(50, 50), null, _global.Palette_Sky * 0.6f, angle, origin, new Vector2(1000, 80), SpriteEffects.None, 0f);
+                spriteBatch.Draw(pixel, currentPos - new Vector2(100, 100), null, _global.Palette_Sky * 0.2f, angle, origin, new Vector2(1000, 80), SpriteEffects.None, 0f);
+            }
         }
     }
 }
