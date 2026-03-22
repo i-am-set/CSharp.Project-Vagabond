@@ -409,6 +409,22 @@ namespace ProjectVagabond.Audio
             }
         }
 
+        public void StopAmbient(string id, bool instant = false)
+        {
+            if (_ambientTracks.TryGetValue(id, out var track))
+            {
+                track.TargetVolume = 0f;
+                if (instant)
+                {
+                    track.CurrentVolume = 0f;
+                    if (track.Instance.State == Microsoft.Xna.Framework.Audio.SoundState.Playing)
+                    {
+                        track.Instance.Stop();
+                    }
+                }
+            }
+        }
+
         public void StopMusic(float fadeDuration = 2.0f)
         {
             if (_currentMusic != null)

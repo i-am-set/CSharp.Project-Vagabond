@@ -325,6 +325,11 @@ namespace ProjectVagabond
 
             _gameState.Reset();
             PoolManager.ClearAll();
+
+            var audio = ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>();
+            audio.StopMusic(0f);
+            audio.StopAmbient("ambient_hdd_idle", true);
+            audio.StopAmbient("ambient_hdd_startup", true);
         }
 
         protected override void Update(GameTime gameTime)
@@ -390,7 +395,7 @@ namespace ProjectVagabond
                 _global.ShowDebugOverlays = !_global.ShowDebugOverlays;
             }
 
-            if (KeyPressed(Keys.F5, currentKeyboardState, _previousKeyboardState)) { ResetGame(); _sceneManager.ChangeScene(GameSceneState.MainMenu, TransitionType.None, TransitionType.None); }
+            if (KeyPressed(Keys.F5, currentKeyboardState, _previousKeyboardState)) { ResetGame(); _sceneManager.ChangeScene(GameSceneState.Startup, TransitionType.None, TransitionType.None); }
             if (KeyPressed(Keys.F10, currentKeyboardState, _previousKeyboardState)) MaximizeWindow();
             if (KeyPressed(Keys.F12, currentKeyboardState, _previousKeyboardState)) _sceneManager.ChangeScene(GameSceneState.AnimationEditor);
 

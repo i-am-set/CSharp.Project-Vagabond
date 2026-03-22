@@ -45,12 +45,70 @@ namespace ProjectVagabond.Scenes
         {
             base.Initialize();
 
-            // Future proofing: Add slides here. 
-            // For now, just one empty slide that lasts 2 seconds.
+            var core = ServiceLocator.Get<Core>();
+            var pixel = ServiceLocator.Get<Texture2D>();
+
             _slides.Add(new StartupSlide
             {
-                Duration = 2.0f,
+                Duration = 1.0f,
                 DrawAction = (sb, font, gt, transform) => { }
+            });
+
+            _slides.Add(new StartupSlide
+            {
+                Duration = 4.0f,
+                DrawAction = (sb, font, gt, transform) =>
+                {
+                    sb.DrawStringSnapped(core.TertiaryFont, "WAIT", new Vector2(16, 16), _global.Palette_LightPale);
+                }
+            });
+
+            _slides.Add(new StartupSlide
+            {
+                Duration = 6.0f,
+                DrawAction = (sb, font, gt, transform) =>
+                {
+                    var defFont = core.DefaultFont;
+                    var secFont = core.SecondaryFont;
+                    var tertFont = core.TertiaryFont;
+
+                    string statusText = "STATUS ";
+                    string okText = "OK";
+                    Vector2 statusSize = secFont.MeasureString(statusText);
+                    Vector2 okSize = secFont.MeasureString(okText);
+
+                    int rectW = (int)(statusSize.X + okSize.X) + 32;
+                    int rectH = (int)Math.Max(statusSize.Y, okSize.Y) + 6;
+                    int rectX = (Global.VIRTUAL_WIDTH - rectW) / 2;
+                    int rectY = (Global.VIRTUAL_HEIGHT - rectH) / 2;
+
+                    Vector2 statusPos = new Vector2(
+                        rectX + 16,
+                        (Global.VIRTUAL_HEIGHT - statusSize.Y) / 2f
+                    );
+                    sb.DrawStringSnapped(secFont, statusText, statusPos, _global.Palette_LightPale);
+
+                    float cycle = (float)gt.TotalGameTime.TotalSeconds % 2.0f;
+                    float okAlpha = cycle < 1.0f ? 1.0f : 0.0f;
+
+                    Vector2 okPos = new Vector2(statusPos.X + statusSize.X, statusPos.Y - 1);
+                    sb.DrawStringSnapped(defFont, okText, okPos, _global.Palette_Leaf * okAlpha);
+
+                    string copy1 = "Firmware and Set-Up Screens Copyright @ 1991";
+                    string copy2 = "Station Computing Corporation";
+
+                    Vector2 copy1Size = tertFont.MeasureString(copy1);
+                    Vector2 copy2Size = tertFont.MeasureString(copy2);
+
+                    float copy1Y = Global.VIRTUAL_HEIGHT * 0.9f;
+                    float copy2Y = copy1Y + tertFont.LineHeight + 2;
+
+                    Vector2 copy1Pos = new Vector2((Global.VIRTUAL_WIDTH - copy1Size.X) / 2f, copy1Y);
+                    Vector2 copy2Pos = new Vector2((Global.VIRTUAL_WIDTH - copy2Size.X) / 2f, copy2Y);
+
+                    sb.DrawStringSnapped(tertFont, copy1, copy1Pos, _global.Palette_LightPale);
+                    sb.DrawStringSnapped(tertFont, copy2, copy2Pos, _global.Palette_LightPale);
+                }
             });
         }
 
@@ -62,7 +120,6 @@ namespace ProjectVagabond.Scenes
             _transitionTriggered = false;
             _lastMouseState = _inputManager.GetEffectiveMouseState();
 
-            // Start the ambient startup sound
             ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlayAmbient("ambient_hdd_startup", 1.0f);
         }
 
@@ -115,14 +172,13 @@ namespace ProjectVagabond.Scenes
         private void FinishStartup()
         {
             _transitionTriggered = true;
-            // Do NOT force transition the audio here, let it play out naturally and transition on its own
             _sceneManager.ChangeScene(GameSceneState.MainMenu, TransitionType.FadeOff, TransitionType.FadeOff);
         }
 
         protected override void DrawSceneContent(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Matrix transform)
         {
             var pixel = ServiceLocator.Get<Texture2D>();
-            spriteBatch.Draw(pixel, new Rectangle(0, 0, Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT), _global.Palette_Off);
+            spriteBatch.DrawSnapped(pixel, new Rectangle(0, 0, Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT), _global.Palette_Off);
 
             if (_currentSlideIndex < _slides.Count)
             {
