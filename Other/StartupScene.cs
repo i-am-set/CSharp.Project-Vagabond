@@ -56,7 +56,7 @@ namespace ProjectVagabond.Scenes
 
             _slides.Add(new StartupSlide
             {
-                Duration = 4.0f,
+                Duration = 2.0f,
                 DrawAction = (sb, font, gt, transform) =>
                 {
                     sb.DrawStringSnapped(core.TertiaryFont, "WAIT", new Vector2(16, 16), _global.Palette_LightPale);
@@ -65,7 +65,7 @@ namespace ProjectVagabond.Scenes
 
             _slides.Add(new StartupSlide
             {
-                Duration = 6.0f,
+                Duration = 4.0f,
                 DrawAction = (sb, font, gt, transform) =>
                 {
                     var defFont = core.DefaultFont;
@@ -91,7 +91,7 @@ namespace ProjectVagabond.Scenes
                     float cycle = (float)gt.TotalGameTime.TotalSeconds % 2.0f;
                     float okAlpha = cycle < 1.0f ? 1.0f : 0.0f;
 
-                    Vector2 okPos = new Vector2(statusPos.X + statusSize.X, statusPos.Y - 1);
+                    Vector2 okPos = new Vector2(statusPos.X + statusSize.X, statusPos.Y);
                     sb.DrawStringSnapped(defFont, okText, okPos, _global.Palette_Leaf * okAlpha);
 
                     string copy1 = "Firmware and Set-Up Screens Copyright @ 1991";

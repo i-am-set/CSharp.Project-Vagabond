@@ -16,7 +16,7 @@
       "Id": "sfx_slot_lock",
       "Path": "Audio/SFX/slot_lock",
       "PoolSize": 6,
-      "DefaultVolume": 0.8,
+      "DefaultVolume": 0.5,
       "MinPitch": -0.2,
       "MaxPitch": 0.2
     },
