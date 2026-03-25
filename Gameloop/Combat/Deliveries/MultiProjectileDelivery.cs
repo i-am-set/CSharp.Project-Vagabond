@@ -67,7 +67,6 @@ namespace ProjectVagabond.Deliveries
                     Name = attack.Move.Name + " (Missile)",
                     BasePower = attack.Move.BasePower,
                     ChargeTime = ProjectileTravelTime > 0 ? ProjectileTravelTime : 0.4f,
-                    Weight = 0,
                     Knockback = attack.Move.Knockback,
                     TargetSelf = false,
                     CanEffectSelf = attack.Move.CanEffectSelf,

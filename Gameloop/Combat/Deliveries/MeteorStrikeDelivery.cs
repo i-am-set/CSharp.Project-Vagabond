@@ -72,7 +72,6 @@ namespace ProjectVagabond.Deliveries
                     Name = attack.Move.Name + " (Meteor)",
                     BasePower = attack.Move.BasePower,
                     ChargeTime = FallTime,
-                    Weight = 0,
                     Knockback = attack.Move.Knockback,
                     TargetSelf = false,
                     CanEffectSelf = attack.Move.CanEffectSelf,

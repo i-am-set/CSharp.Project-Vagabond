@@ -328,7 +328,7 @@ namespace ProjectVagabond.Animations
                 }
                 else if (attack.DeliveryInstance is TickingBeamDelivery beam)
                 {
-                    _targetPositions.Add(attack.Origin + attack.Direction * (beam.Length / 2f));
+                    _targetPositions.Add(attack.Origin + attack.Direction * (beam.CurrentLength / 2f));
                 }
                 else
                 {
@@ -348,7 +348,7 @@ namespace ProjectVagabond.Animations
                 }
                 else if (attack.DeliveryInstance is TickingBeamDelivery beam)
                 {
-                    var targets = context.Arena.GetWizardsInOBB(attack.Origin, attack.Direction, beam.Width, beam.Length);
+                    var targets = context.Arena.GetWizardsInOBB(attack.Origin, attack.Direction, beam.Width, beam.CurrentLength);
                     foreach (var t in targets)
                     {
                         if (!attack.Move.CanEffectSelf && t == attack.Caster) continue;
@@ -584,9 +584,9 @@ namespace ProjectVagabond.Animations
                     if (attack.DeliveryInstance is TickingBeamDelivery beam)
                     {
                         emitter.Settings.Shape = EmitterShape.Rectangle;
-                        emitter.Settings.EmitterSize = new Vector2(beam.Length, beam.Width);
+                        emitter.Settings.EmitterSize = new Vector2(beam.CurrentLength, beam.Width);
                         emitter.Settings.EmitterRotation = MathF.Atan2(attack.Direction.Y, attack.Direction.X);
-                        emitter.Position = attack.Origin + attack.Direction * (beam.Length / 2f) + new Vector2(layer.Emitter.OffsetX, layer.Emitter.OffsetY);
+                        emitter.Position = attack.Origin + attack.Direction * (beam.CurrentLength / 2f) + new Vector2(layer.Emitter.OffsetX, layer.Emitter.OffsetY);
                     }
                     else if (attack.DeliveryInstance is InstantAOEDelivery aoe)
                     {

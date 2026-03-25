@@ -11,7 +11,7 @@ namespace ProjectVagabond.Battle
                 Name = data.Name,
                 BasePower = data.BasePower,
                 ChargeTime = data.ChargeTime,
-                Weight = data.Weight,
+                IsRare = data.IsRare,
                 Knockback = data.Knockback,
                 TargetSelf = data.TargetSelf,
                 CanEffectSelf = data.CanEffectSelf,

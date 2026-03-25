@@ -15,6 +15,8 @@ namespace ProjectVagabond.Deliveries
         public float Lifetime { get; set; }
         public float TickRate { get; set; }
 
+        public float CurrentLength { get; private set; }
+
         private float _lifeTimer;
         private float _tickTimer;
         private Guid _loopSoundHandle = Guid.Empty;
@@ -26,6 +28,7 @@ namespace ProjectVagabond.Deliveries
         {
             _lifeTimer = 0f;
             _tickTimer = 0f;
+            CurrentLength = 0f;
             if (_loopSoundHandle != Guid.Empty)
             {
                 ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().StopLoopingSfx(_loopSoundHandle);
@@ -59,6 +62,16 @@ namespace ProjectVagabond.Deliveries
             _lifeTimer = 0f;
             _tickTimer = TickRate;
 
+            if (Length <= 0f)
+            {
+                float distToEdge = CollisionMath.RaycastAABB(attack.Origin, attack.Direction, attack.Context.Arena.ArenaBounds);
+                CurrentLength = distToEdge > 0 ? distToEdge : 1000f;
+            }
+            else
+            {
+                CurrentLength = Length;
+            }
+
             if (!string.IsNullOrEmpty(attack.Move.LoopSoundCue))
             {
                 _loopSoundHandle = ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlayLoopingSfx(attack.Move.LoopSoundCue);
@@ -77,7 +90,7 @@ namespace ProjectVagabond.Deliveries
 
         private void ApplyTick(BattleContext context, ActiveAttack attack)
         {
-            foreach (var target in context.Arena.GetWizardsInOBB(attack.Origin, attack.Direction, Width, Length))
+            foreach (var target in context.Arena.GetWizardsInOBB(attack.Origin, attack.Direction, Width, CurrentLength))
             {
                 if (!attack.Move.CanEffectSelf && target == attack.Caster) continue;
 
@@ -119,7 +132,7 @@ namespace ProjectVagabond.Deliveries
             var pixel = attack.Context.Pixel;
             float angle = (float)Math.Atan2(attack.Direction.Y, attack.Direction.X);
 
-            spriteBatch.Draw(pixel, attack.Origin, null, Color.Red * 0.3f, angle, new Vector2(0, 0.5f), new Vector2(Length, Width), SpriteEffects.None, 0f);
+            spriteBatch.Draw(pixel, attack.Origin, null, Color.Red * 0.3f, angle, new Vector2(0, 0.5f), new Vector2(CurrentLength, Width), SpriteEffects.None, 0f);
         }
 
         public void DrawTelegraph(SpriteBatch spriteBatch, Vector2 origin, Vector2 direction, Vector2 targetPos, BattleContext context)
@@ -127,7 +140,15 @@ namespace ProjectVagabond.Deliveries
             if (!context.Global.ShowDebugOverlays) return;
 
             float angle = (float)Math.Atan2(direction.Y, direction.X);
-            spriteBatch.Draw(context.Pixel, origin, null, Color.Blue * 0.3f, angle, new Vector2(0, 0.5f), new Vector2(Length, Width), SpriteEffects.None, 0f);
+
+            float drawLength = Length;
+            if (drawLength <= 0f)
+            {
+                float distToEdge = CollisionMath.RaycastAABB(origin, direction, context.Arena.ArenaBounds);
+                drawLength = distToEdge > 0 ? distToEdge : 1000f;
+            }
+
+            spriteBatch.Draw(context.Pixel, origin, null, Color.Blue * 0.3f, angle, new Vector2(0, 0.5f), new Vector2(drawLength, Width), SpriteEffects.None, 0f);
         }
     }
 }

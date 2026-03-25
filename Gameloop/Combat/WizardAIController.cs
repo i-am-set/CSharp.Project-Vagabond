@@ -11,9 +11,9 @@ namespace ProjectVagabond.Battle
     public class WizardAIController
     {
         public float MinReactionTime { get; set; } = 0.2f;
-        public float MaxReactionTime { get; set; } = 0.6f;
+        public float MaxReactionTime { get; set; } = 0.4f;
 
-        public float ReactionChance { get; set; } = 0.65f;
+        public float ReactionChance { get; set; } = 0.35f;
 
         public float OpportunityCheckInterval { get; set; } = 0.5f;
 
@@ -141,7 +141,7 @@ namespace ProjectVagabond.Battle
             {
                 if (context.Arena.Wizards.Any(w => w != self && w.Data.Stats.CurrentHP > 0))
                 {
-                    if (_random.NextDouble() < 0.3f)
+                    if (_random.NextDouble() < 0.2f)
                     {
                         _reactionTimer = MinReactionTime;
                         _plannedAction = () => self.Controller.TriggerActiveSpell(context);
@@ -153,8 +153,11 @@ namespace ProjectVagabond.Battle
                 int closeEnemies = context.Arena.Wizards.Count(w => w != self && w.Data.Stats.CurrentHP > 0 && Vector2.Distance(self.Data.Combat.Position, w.Data.Combat.Position) < 40f);
                 if (closeEnemies >= 3)
                 {
-                    _reactionTimer = MinReactionTime;
-                    _plannedAction = () => self.Controller.TriggerActiveSpell(context);
+                    if (_random.NextDouble() < 0.2f)
+                    {
+                        _reactionTimer = MinReactionTime;
+                        _plannedAction = () => self.Controller.TriggerActiveSpell(context);
+                    }
                 }
             }
         }

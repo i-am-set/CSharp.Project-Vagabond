@@ -621,8 +621,8 @@ namespace ProjectVagabond.Particles
 
             settings.Gravity = new Vector2(0, -5f);
             settings.Drag = 0.3f;
-            settings.StartColor = global.Palette_Leaf;
-            settings.EndColor = global.Palette_Sun;
+            settings.StartColor = global.Palette_Rust;
+            settings.EndColor = global.Palette_DarkRust;
             settings.StartAlpha = 1.0f;
             settings.EndAlpha = 0.0f;
 

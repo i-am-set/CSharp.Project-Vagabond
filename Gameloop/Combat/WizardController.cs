@@ -672,7 +672,7 @@ namespace ProjectVagabond.Battle
             int totalWeight = 0;
             foreach (var move in validMoves)
             {
-                totalWeight += move.Weight;
+                totalWeight += move.IsRare ? 1 : 4;
             }
 
             int roll = _random.Next(totalWeight);
@@ -680,7 +680,7 @@ namespace ProjectVagabond.Battle
 
             for (int i = 0; i < validMoves.Count; i++)
             {
-                currentWeight += validMoves[i].Weight;
+                currentWeight += validMoves[i].IsRare ? 1 : 4;
                 if (roll < currentWeight)
                 {
                     combat.QueuedMove = validMoves[i];

@@ -1,20 +1,6 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
-using Microsoft.Xna.Framework.Input;
-using MonoGame.Extended.BitmapFonts;
-using ProjectVagabond;
-using ProjectVagabond.Battle;
-using ProjectVagabond.Particles;
-using ProjectVagabond.Scenes;
-using ProjectVagabond.Transitions;
-using ProjectVagabond.UI;
-using ProjectVagabond.Utils;
 using System;
-using System.Collections;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
-using System.Security.Cryptography;
 
 namespace ProjectVagabond
 {
@@ -30,6 +16,34 @@ namespace ProjectVagabond
             {
                 colorData[i] = color;
             }
+            texture.SetData(colorData);
+            return texture;
+        }
+
+        public Texture2D CreateHeartParticleTexture()
+        {
+            var graphicsDevice = ServiceLocator.Get<GraphicsDevice>();
+            const int size = 5;
+            var texture = new Texture2D(graphicsDevice, size, size);
+            var colorData = new Color[size * size];
+
+            bool[,] pattern = new bool[5, 5]
+            {
+                { false, true,  false, true,  false },
+                { true,  true,  true,  true,  true  },
+                { true,  true,  true,  true,  true  },
+                { false, true,  true,  true,  false },
+                { false, false, true,  false, false }
+            };
+
+            for (int y = 0; y < size; y++)
+            {
+                for (int x = 0; x < size; x++)
+                {
+                    colorData[y * size + x] = pattern[y, x] ? Color.White : Color.Transparent;
+                }
+            }
+
             texture.SetData(colorData);
             return texture;
         }

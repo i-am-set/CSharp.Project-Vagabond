@@ -56,6 +56,7 @@ namespace ProjectVagabond.Scenes
         private MouseState _lastMouseState;
 
         private Rectangle _arenaBounds;
+        public Rectangle ArenaBounds => _arenaBounds;
         private Vector2 _arenaCenter;
 
         private float _matchOverTimer = 0f;

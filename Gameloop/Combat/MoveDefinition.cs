@@ -17,7 +17,7 @@ namespace ProjectVagabond.Battle
 
         public int BasePower { get; set; }
         public float ChargeTime { get; set; }
-        public int Weight { get; set; }
+        public bool IsRare { get; set; }
         public float Knockback { get; set; }
         public bool TargetSelf { get; set; }
         public bool CanEffectSelf { get; set; }

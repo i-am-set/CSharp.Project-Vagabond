@@ -318,8 +318,8 @@ namespace ProjectVagabond
             try { NoiseTexture = _textureFactory.CreateNoiseTexture(256, 256); }
             catch { NoiseTexture = _textureFactory.CreateColoredTexture(256, 256, Color.Gray); }
 
-            try { HealParticleSprite = _core.Content.Load<Texture2D>("Sprites/Particles/heal_plus"); }
-            catch { HealParticleSprite = _textureFactory.CreatePlusParticleTexture(); }
+            try { HealParticleSprite = _core.Content.Load<Texture2D>("Sprites/Particles/heal_heart"); }
+            catch { HealParticleSprite = _textureFactory.CreateHeartParticleTexture(); }
 
             InventorySpellSlotButtonSpriteSheet = LoadTex("Sprites/UI/Inventory/inventory_spell_slot_button", 192, 8, Color.Magenta);
             StunnedIconSpriteSheet = LoadTex("Sprites/UI/BattleUI/stunned_16x16_spritesheet", 48, 16, Color.Magenta);
