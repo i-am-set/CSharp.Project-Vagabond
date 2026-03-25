@@ -92,6 +92,7 @@ namespace ProjectVagabond.Scenes
         private readonly List<Button> _pauseButtons = new List<Button>();
         private readonly NavigationGroup _pauseNavGroup = new NavigationGroup(wrapNavigation: true);
         private ArenaState _prePauseState;
+        private readonly ConfirmationDialog _confirmationDialog;
 
         // --- Betting State ---
         private Button _skipButton = null!;
@@ -110,6 +111,7 @@ namespace ProjectVagabond.Scenes
             _particleSystemManager = ServiceLocator.Get<ParticleSystemManager>();
             _textureFactory = ServiceLocator.Get<TextureFactory>();
             _cursorManager = ServiceLocator.Get<CursorManager>();
+            _confirmationDialog = new ConfirmationDialog(this);
         }
 
         public override Rectangle GetAnimatedBounds()
@@ -185,6 +187,7 @@ namespace ProjectVagabond.Scenes
                 int w = (int)size.X + 8;
                 int h = (int)size.Y + 4;
 
+                // Shift bounds down by 1, text up by 1 to effectively move the border down relative to the text.
                 var btn = new Button(new Rectangle(Global.VIRTUAL_WIDTH / 2 - w / 2, y + 1, w, h), text, font: font)
                 {
                     DrawBorderOnHover = true,
@@ -207,16 +210,33 @@ namespace ProjectVagabond.Scenes
 
             var mainMenuBtn = CreatePauseButton("MAIN MENU", startY + spacing * 2);
             mainMenuBtn.OnClick += () => {
-                _particleSystemManager.IsPaused = false;
-                _particleSystemManager.ClearAllEmitters();
-                ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().ResumeGameAudio();
-                ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().StopAll();
-                PoolManager.ClearAll();
-                _sceneManager.ChangeScene(GameSceneState.MainMenu, TransitionType.FadeOff, TransitionType.FadeOff);
+                _confirmationDialog.Show("Return to Main Menu?\n\n[cemphasis]Current match progress will be lost.[/]", new List<Tuple<string, Action>> {
+                    Tuple.Create("YES", new Action(() => {
+                        _particleSystemManager.IsPaused = false;
+                        _particleSystemManager.ClearAllEmitters();
+                        ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().ResumeGameAudio();
+                        ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().StopAll();
+                        PoolManager.ClearAll();
+                        _sceneManager.ChangeScene(GameSceneState.MainMenu, TransitionType.FadeOff, TransitionType.FadeOff);
+                        _confirmationDialog.Hide();
+                    })),
+                    Tuple.Create("[chighlight]NO", new Action(() => {
+                        _confirmationDialog.Hide();
+                    }))
+                });
             };
 
             var desktopBtn = CreatePauseButton("EXIT TO DESKTOP", startY + spacing * 3);
-            desktopBtn.OnClick += () => { _core.ExitApplication(); };
+            desktopBtn.OnClick += () => {
+                _confirmationDialog.Show("Exit to Desktop?\n\n[cemphasis]Current match progress will be lost.[/]", new List<Tuple<string, Action>> {
+                    Tuple.Create("YES", new Action(() => {
+                        _core.ExitApplication();
+                    })),
+                    Tuple.Create("[chighlight]NO", new Action(() => {
+                        _confirmationDialog.Hide();
+                    }))
+                });
+            };
 
             _pauseButtons.Add(resumeBtn);
             _pauseButtons.Add(settingsBtn);
@@ -359,6 +379,12 @@ namespace ProjectVagabond.Scenes
             if (_arenaState == ArenaState.Paused)
             {
                 if (_sceneManager.IsModalActive) return; // Don't update pause menu if settings is open
+
+                if (_confirmationDialog.IsActive)
+                {
+                    _confirmationDialog.Update(gameTime);
+                    return;
+                }
 
                 var pMouseState = _inputManager.GetEffectiveMouseState();
                 foreach (var btn in _pauseButtons) btn.Update(pMouseState);
@@ -1028,6 +1054,11 @@ namespace ProjectVagabond.Scenes
                 foreach (var btn in _pauseButtons)
                 {
                     btn.Draw(spriteBatch, secondaryFont, effectiveGameTime, transform);
+                }
+
+                if (_confirmationDialog.IsActive)
+                {
+                    _confirmationDialog.DrawContent(spriteBatch, font, gameTime, transform);
                 }
             }
         }

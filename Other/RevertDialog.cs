@@ -44,18 +44,26 @@ namespace ProjectVagabond.UI
                 dialogHeight
             );
 
-            int buttonWidth = 80;
-            int buttonHeight = 20;
+            var font = ServiceLocator.Get<BitmapFont>();
+            int confirmW = (int)font.MeasureString("Confirm").Width + 8;
+            int revertW = (int)font.MeasureString("Revert").Width + 8;
+            int buttonHeight = 12;
             int buttonY = _dialogBounds.Bottom - buttonHeight - 10;
             int buttonGap = 10;
 
-            _confirmButton = new Button(new Rectangle(_dialogBounds.Center.X - buttonWidth - buttonGap / 2, buttonY, buttonWidth, buttonHeight), "Confirm");
+            _confirmButton = new Button(new Rectangle(_dialogBounds.Center.X - confirmW - buttonGap / 2, buttonY, confirmW, buttonHeight), "Confirm")
+            {
+                TextRenderOffset = new Vector2(0, 1)
+            };
             _confirmButton.OnClick += () => {
                 _onConfirm?.Invoke();
                 Hide();
             };
 
-            _revertButton = new Button(new Rectangle(_dialogBounds.Center.X + buttonGap / 2, buttonY, buttonWidth, buttonHeight), "Revert");
+            _revertButton = new Button(new Rectangle(_dialogBounds.Center.X + buttonGap / 2, buttonY, revertW, buttonHeight), "Revert")
+            {
+                TextRenderOffset = new Vector2(0, 1)
+            };
             _revertButton.OnClick += () => {
                 _onRevert?.Invoke();
                 Hide();

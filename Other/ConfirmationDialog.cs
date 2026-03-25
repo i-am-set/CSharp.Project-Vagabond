@@ -90,8 +90,8 @@ namespace ProjectVagabond.UI
                 var (text, color) = ParseButtonTextAndColor(taggedText);
                 Vector2 size = defaultFont.MeasureString(text);
 
-                int bW = (int)size.X + 15;
-                int bH = (int)size.Y + 7; // Base height calculation
+                int bW = (int)size.X + 9;
+                int bH = 12;
 
                 buttonGeometries.Add((text, color, action, bW, bH));
 
@@ -128,7 +128,11 @@ namespace ProjectVagabond.UI
                 {
                     float yOffset = (maxButtonHeight - b.height) / 2f;
 
-                    var button = new Button(new Rectangle((int)currentX, (int)(buttonY + yOffset) - 4, b.width, b.height + 5), b.text) { CustomDefaultTextColor = b.color };
+                    var button = new Button(new Rectangle((int)currentX, (int)(buttonY + yOffset), b.width, b.height), b.text)
+                    {
+                        CustomDefaultTextColor = b.color,
+                        TextRenderOffset = new Vector2(1, 1)
+                    };
 
                     button.OnClick += b.action;
                     _buttons.Add(button);
@@ -141,7 +145,11 @@ namespace ProjectVagabond.UI
                 float currentButtonY = buttonAreaTopY;
                 foreach (var b in buttonGeometries)
                 {
-                    var button = new Button(new Rectangle(_dialogBounds.Center.X - b.width / 2, (int)currentButtonY - 4, b.width, b.height + 5), b.text) { CustomDefaultTextColor = b.color };
+                    var button = new Button(new Rectangle(_dialogBounds.Center.X - b.width / 2, (int)currentButtonY, b.width, b.height), b.text)
+                    {
+                        CustomDefaultTextColor = b.color,
+                        TextRenderOffset = new Vector2(0, 1)
+                    };
 
                     button.OnClick += b.action;
                     _buttons.Add(button);
