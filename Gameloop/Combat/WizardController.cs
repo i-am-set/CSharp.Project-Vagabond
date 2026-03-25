@@ -18,8 +18,8 @@ namespace ProjectVagabond.Battle
         private const float HUD_SHAKE_DURATION = 0.4f;
         private const float FLOATING_TEXT_FLOAT_SPEED = 8f;
         private const float FLOATING_TEXT_DURATION = 1.0f;
-        private const float KNOCKBACK_DURATION_BASE = 0.5f;
-        private const float KNOCKBACK_DISTANCE_DIVISOR = 80f;
+        private const float KNOCKBACK_DURATION_BASE = 0.25f;
+        private const float KNOCKBACK_DISTANCE_DIVISOR = 250f;
 
         private const float MIN_ACTION_TIME = 2.0f;
         private const float ACTION_TIME_VARIANCE = 14.0f;
@@ -424,7 +424,7 @@ namespace ProjectVagabond.Battle
                     combat.TargetPosition = combat.Position;
 
                     ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlayRoutedSfx("proc:wave=4;atk=0.05;sus=0.1;dec=0.4;freq=600;slide=-200;vibdepth=50;vibspeed=15;vol=0.15", 0f, null, combat.Position);
-                   
+
 
                     var emitter = _particleSystemManager.CreateEmitter(ParticleEffects.CreateTeleportParticles());
                     emitter.Position = combat.Position;
@@ -479,7 +479,7 @@ namespace ProjectVagabond.Battle
                 combat.KnockbackTimer -= dt;
                 float progress = 1f - Math.Max(0, combat.KnockbackTimer) / combat.KnockbackDuration;
 
-                float eased = Easing.EaseOutQuad(progress);
+                float eased = Easing.EaseOutCubic(progress);
 
                 combat.Position = Vector2.Lerp(combat.KnockbackStartPos, combat.KnockbackTargetPos, eased);
                 combat.Position = context.Arena.ClampToArena(combat.Position, ARENA_CLAMP_MARGIN);

@@ -259,7 +259,7 @@
     "ID": "arcane_barrage",
     "Name": "Arcane Barrage",
     "AnimationID": "anim_magic_missile_cast",
-    "CastSoundCue": "proc:wave=3;atk=0.0;sus=0.02;dec=0.15;freq=800;slide=-4000;exp=1;vol=0.02",
+    "CastSoundCue": "proc:wave=3;atk=0.0;sus=0.02;dec=0.15;freq=800;slide=-4000;exp=1;vol=0.05",
     "BasePower": 5,
     "ChargeTime": 0.5,
     "IsRare": false,
