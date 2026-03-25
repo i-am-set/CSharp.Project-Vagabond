@@ -302,7 +302,7 @@ namespace ProjectVagabond.Battle
                     ui.IsMoveCanceled = true;
                     ui.MoveTextTimer = 1.0f;
                     ui.MoveTextDuration = 1.0f;
-                    ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlayRoutedSfx("proc:wave=0;atk=0.01;sus=0.05;dec=0.25;freq=120;slide=-60;vol=0.15", 0f, null, combat.Position);
+                    ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlayRoutedSfx("proc:wave=0;atk=0.01;sus=0.05;dec=0.25;freq=120;slide=-60;vol=0.05", 0f, null, combat.Position);
                 }
             }
 

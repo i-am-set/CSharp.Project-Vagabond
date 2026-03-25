@@ -166,6 +166,7 @@ namespace ProjectVagabond
         public Texture2D MousePromptMiddleClickSilhouette { get; private set; }
         public Texture2D MousePromptDisabled { get; private set; }
         public Texture2D MousePromptDisabledSilhouette { get; private set; }
+        public Texture2D CountdownNumbersSpriteSheet { get; private set; }
 
         public Texture2D LogoSprite => _logoSprite;
         public Texture2D PlayerSprite => _playerSprite;
@@ -262,6 +263,8 @@ namespace ProjectVagabond
 
             MousePromptDisabled = LoadTexWithSilhouette("Sprites/UI/KeyPrompts/mouse/ui_mouse_disabled", 5, 7, Color.Magenta, out var mpdSil);
             MousePromptDisabledSilhouette = mpdSil;
+
+            CountdownNumbersSpriteSheet = LoadTex("Sprites/UI/BasicIcons/Countdown_3_2_1_Numbers", 96, 32, Color.Magenta);
 
             SpellbookPageSprite = LoadTex("Sprites/SpellBook/spellbook_page", 35, 35, Color.Magenta);
             SpellbookClosedSprite = LoadTex("Sprites/SpellBook/spellbook_closed", 64, 64, Color.Magenta);

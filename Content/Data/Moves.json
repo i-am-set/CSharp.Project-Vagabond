@@ -239,7 +239,7 @@
     "BasePower": 0,
     "ChargeTime": 0.0,
     "IsRare": true,
-    "Knockback": 200.0,
+    "Knockback": 70.0,
     "DeliveryType": "InstantAOE",
     "DeliveryRadius": 35.0,
     "DeliveryWidth": 0.0,

@@ -85,6 +85,12 @@
       "DefaultVolume": 0.05,
       "MinPitch": -0.2,
       "MaxPitch": 0.2
+    },
+    {
+      "Id": "voice_fight",
+      "Path": "Audio/SFX/voice_fight",
+      "PoolSize": 1,
+      "DefaultVolume": 0.5
     }
   ],
   "Ui": [

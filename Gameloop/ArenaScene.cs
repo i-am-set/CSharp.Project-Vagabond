@@ -275,8 +275,8 @@ namespace ProjectVagabond.Scenes
             };
 
             _arenaState = ArenaState.Betting;
-            _phaseTimer = 10.0f;
-            _lastCountdownSecond = 10;
+            _phaseTimer = 15.0f;
+            _lastCountdownSecond = 15;
             _hasPlayedBetSound = false;
 
             var audio = ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>();
@@ -319,8 +319,11 @@ namespace ProjectVagabond.Scenes
             _skipButton.OnClick += () => {
                 if (_arenaState == ArenaState.Betting)
                 {
-                    _phaseTimer = 0f; // Instantly end betting phase
-                    ServiceLocator.Get<HapticsManager>().TriggerZoomPulse(_global.LightHapticZoomPulseStrength, _global.HapticZoomPulseDuration);
+                    if (_phaseTimer > 3.0f)
+                    {
+                        _phaseTimer = 3.0f; // Skip to the 3-second countdown
+                        ServiceLocator.Get<HapticsManager>().TriggerZoomPulse(_global.LightHapticZoomPulseStrength, _global.HapticZoomPulseDuration);
+                    }
                 }
             };
             _bettingNavGroup.Clear();
@@ -467,7 +470,7 @@ namespace ProjectVagabond.Scenes
                 else
                     _bettingNavGroup.UpdateInput(_inputManager);
 
-                if (!_hasPlayedBetSound && _phaseTimer <= 9.0f)
+                if (!_hasPlayedBetSound && _phaseTimer <= 29.0f)
                 {
                     ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlaySfx("sfx_voice_place_your_bets");
                     _hasPlayedBetSound = true;
@@ -478,6 +481,16 @@ namespace ProjectVagabond.Scenes
                 {
                     _lastCountdownSecond = currentSecond;
                     _plinkBetCountdown.Start(0f, 0.2f);
+
+                    if (currentSecond <= 3)
+                    {
+                        ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlayRoutedSfx("proc:wave=2;atk=0.01;sus=0.05;dec=0.1;freq=600;vol=0.15|wave=2;atk=0.01;sus=0.05;dec=0.2;freq=150;vol=0.25");
+                        ServiceLocator.Get<HapticsManager>().TriggerZoomPulse(1.01f, 0.1f);
+                    }
+                    else if (currentSecond <= 10)
+                    {
+                        ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlayRoutedSfx("proc:wave=2;atk=0.01;sus=0.05;dec=0.1;freq=600;vol=0.05");
+                    }
                 }
 
                 if (_phaseTimer <= 0)
@@ -485,6 +498,8 @@ namespace ProjectVagabond.Scenes
                     _arenaState = ArenaState.Fighting;
                     _phaseTimer = 0f;
                     _plinkFight.Start(0f, 0.3f);
+                    ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlaySfx("voice_fight");
+                    ServiceLocator.Get<HapticsManager>().TriggerZoomPulse(1.03f, 0.05f);
 
                     var audio = ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>();
                     audio.SetCurrentMusicStemVolume(0, 1.0f, fadeSpeed: 0.3f); // Normal active
@@ -982,19 +997,48 @@ namespace ProjectVagabond.Scenes
                 int currentSecond = (int)Math.Ceiling(_phaseTimer);
                 if (currentSecond > 0)
                 {
-                    string countText = currentSecond.ToString();
-                    Vector2 countSize = mainFont.MeasureString(countText);
-                    Vector2 countPos = new Vector2(MathF.Round(_arenaCenter.X - countSize.X / 2f), MathF.Round(_arenaCenter.Y - countSize.Y / 2f));
-                    Vector2 countOrigin = new Vector2(MathF.Round(countSize.X / 2f), MathF.Round(countSize.Y / 2f));
                     float countScale = _plinkBetCountdown.IsActive ? _plinkBetCountdown.Scale : 1f;
                     float countRot = _plinkBetCountdown.IsActive ? _plinkBetCountdown.Rotation : 0f;
-                    Color countColor = currentSecond <= 3 ? _global.Palette_Rust : _global.Palette_Sun;
 
-                    spriteBatch.DrawStringOutlinedSnapped(mainFont, countText, countPos + countOrigin, countColor, _global.Palette_Off, countRot, countOrigin, countScale, SpriteEffects.None, 0f);
+                    Vector2 betPos;
+
+                    if (currentSecond <= 3 && _spriteManager.CountdownNumbersSpriteSheet != null)
+                    {
+                        var sheet = _spriteManager.CountdownNumbersSpriteSheet;
+                        int frameIndex = 3 - currentSecond;
+                        Rectangle sourceRect = new Rectangle(frameIndex * 32, 0, 32, 32);
+                        Vector2 origin = new Vector2(16, 16);
+                        Vector2 pos = new Vector2(MathF.Round(_arenaCenter.X), MathF.Round(_arenaCenter.Y));
+
+                        float timeSinceTick = currentSecond - _phaseTimer;
+                        float popProgress = Math.Clamp(timeSinceTick / 0.35f, 0f, 1f);
+                        float popScale = Easing.EaseOutBackBig(popProgress);
+                        float popRot = (1f - popProgress) * 0.3f * (currentSecond % 2 == 0 ? 1 : -1);
+
+                        float finalScale = popScale;
+                        float finalRot = countRot + popRot;
+
+                        spriteBatch.DrawSnapped(sheet, pos, sourceRect, _global.Palette_Rust, finalRot, origin, finalScale, SpriteEffects.None, 0f);
+
+                        betPos = new Vector2(MathF.Round(_arenaCenter.X), MathF.Round(pos.Y - 16 - 10));
+                    }
+                    else
+                    {
+                        string countText = currentSecond.ToString();
+                        Vector2 countSize = mainFont.MeasureString(countText);
+                        Vector2 countPos = new Vector2(MathF.Round(_arenaCenter.X - countSize.X / 2f), MathF.Round(_arenaCenter.Y - countSize.Y / 2f));
+                        Vector2 countOrigin = new Vector2(MathF.Round(countSize.X / 2f), MathF.Round(countSize.Y / 2f));
+                        Color countColor = _global.Palette_Sun;
+
+                        spriteBatch.DrawStringOutlinedSnapped(mainFont, countText, countPos + countOrigin, countColor, _global.Palette_Off, countRot, countOrigin, countScale, SpriteEffects.None, 0f);
+
+                        betPos = new Vector2(MathF.Round(_arenaCenter.X), MathF.Round(countPos.Y - 10));
+                    }
 
                     string betText = "PLACE YOUR BETS";
                     Vector2 betSize = mainFont.MeasureString(betText);
-                    Vector2 betPos = new Vector2(MathF.Round(_arenaCenter.X - betSize.X / 2f), MathF.Round(countPos.Y - betSize.Y - 10));
+                    betPos.X -= betSize.X / 2f;
+                    betPos.Y -= betSize.Y;
 
                     TextAnimator.DrawTextWithEffectOutlined(
                         spriteBatch,
