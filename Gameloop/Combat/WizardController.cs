@@ -18,11 +18,12 @@ namespace ProjectVagabond.Battle
         private const float HUD_SHAKE_DURATION = 0.4f;
         private const float FLOATING_TEXT_FLOAT_SPEED = 8f;
         private const float FLOATING_TEXT_DURATION = 1.0f;
-        private const float KNOCKBACK_DURATION_BASE = 0.25f;
+
+        private const float KNOCKBACK_DURATION_BASE = 0.15f;
         private const float KNOCKBACK_DISTANCE_DIVISOR = 250f;
 
-        private const float MIN_ACTION_TIME = 2.0f;
-        private const float ACTION_TIME_VARIANCE = 14.0f;
+        private const float MIN_ACTION_TIME = 4.0f;
+        private const float ACTION_TIME_VARIANCE = 16.0f;
 
         private const float MIN_SPEED_MULTIPLIER = 0.1f;
         private const float MAX_SPEED_MULTIPLIER = 3.0f;
@@ -252,6 +253,10 @@ namespace ProjectVagabond.Battle
             if (actualHeal > 0)
             {
                 ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlaySfx("sfx_combatant_heal", 0f, null, combat.Position);
+
+                // Show health bar on heal
+                ui.HealthBarVisibilityTimer = ui.HealthBarLingerDuration;
+                ui.HealthBarAlpha = 1.0f;
 
                 var hitbox = GetHitbox(_spriteManager);
                 Vector2 centerOffset = new Vector2(hitbox.Center.X - combat.Position.X, hitbox.Center.Y - combat.Position.Y);

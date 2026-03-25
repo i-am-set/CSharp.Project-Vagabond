@@ -1,12 +1,24 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Audio;
 using Microsoft.Xna.Framework.Content;
+using Microsoft.Xna.Framework.Graphics;
+using Microsoft.Xna.Framework.Input;
+using MonoGame.Extended.BitmapFonts;
+using ProjectVagabond;
+using ProjectVagabond.Battle;
+using ProjectVagabond.Particles;
+using ProjectVagabond.Scenes;
+using ProjectVagabond.Transitions;
+using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Text.Json;
+using System.Threading;
 using static ProjectVagabond.GameEvents;
 
 namespace ProjectVagabond.Audio
@@ -547,6 +559,40 @@ namespace ProjectVagabond.Audio
                 _musicCrossfadeDuration = fadeDuration > 0f ? fadeDuration : 0.01f;
                 _musicCrossfadeTimer = 0f;
             }
+        }
+
+        public void StopAll()
+        {
+            StopMusic(0f);
+
+            foreach (var track in _ambientTracks.Values)
+            {
+                track.TargetVolume = 0f;
+                track.CurrentVolume = 0f;
+                if (track.Instance.State == SoundState.Playing) track.Instance.Stop();
+            }
+
+            foreach (var pool in _sfxPools.Values)
+            {
+                foreach (var inst in pool.Instances)
+                {
+                    if (inst.State == SoundState.Playing) inst.Stop();
+                }
+            }
+
+            foreach (var pool in _uiPools.Values)
+            {
+                foreach (var inst in pool.Instances)
+                {
+                    if (inst.State == SoundState.Playing) inst.Stop();
+                }
+            }
+
+            foreach (var inst in _activeLoops.Values)
+            {
+                if (inst.State == SoundState.Playing) inst.Stop();
+            }
+            _activeLoops.Clear();
         }
 
         public void Update(float dt)

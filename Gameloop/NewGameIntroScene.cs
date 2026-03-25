@@ -252,6 +252,43 @@ namespace ProjectVagabond.Scenes
 
             if (_state == IntroState.Spinning)
             {
+                // --- SKIP LOGIC ---
+                if (_inputManager.Back)
+                {
+                    for (int i = 0; i < _slots.Count; i++)
+                    {
+                        var slot = _slots[i];
+                        if (slot.State != SlotState.Stopped)
+                        {
+                            float currentMod = slot.VirtualIndex % _characterIds.Count;
+                            if (currentMod < 0) currentMod += _characterIds.Count;
+
+                            float diff = slot.TargetIdIndex - currentMod;
+                            if (diff < 0) diff += _characterIds.Count;
+
+                            slot.VirtualIndex += diff;
+                            slot.Speed = 0f;
+                            slot.State = SlotState.Stopped;
+                            slot.ShakeTimer = SLOT_SHAKE_DURATION;
+                            slot.Plink.Start(0f, 0.3f);
+                            _selectedWizards[slot.TargetId] = (0f, 0f);
+
+                            var emitter = _particleSystemManager.CreateEmitter(ParticleEffects.CreateUIPlink());
+                            int slotWidth = (Global.VIRTUAL_WIDTH - 40) / _randomCount;
+                            int startX = 20 + (i * slotWidth);
+                            int centerX = startX + (slotWidth / 2);
+                            emitter.Position = new Vector2(centerX, Global.VIRTUAL_HEIGHT / 2f + 10);
+                            emitter.EmitBurst(15);
+                        }
+                    }
+                    _slotsStopped = _randomCount;
+                    _state = IntroState.Transitioning;
+                    _spinTimer = 0f;
+                    _hapticsManager.TriggerZoomPulse(_global.HapticZoomPulseStrength, _global.HapticZoomPulseDuration);
+                    ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlaySfx("sfx_slot_lock", 0.1f);
+                    return;
+                }
+
                 _spinTimer += dt;
 
                 if (_slotsStopped < _randomCount)

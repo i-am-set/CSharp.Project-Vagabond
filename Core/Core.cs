@@ -327,9 +327,7 @@ namespace ProjectVagabond
             PoolManager.ClearAll();
 
             var audio = ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>();
-            audio.StopMusic(0f);
-            audio.StopAmbient("ambient_hdd_idle", true);
-            audio.StopAmbient("ambient_hdd_startup", true);
+            audio.StopAll();
         }
 
         protected override void Update(GameTime gameTime)

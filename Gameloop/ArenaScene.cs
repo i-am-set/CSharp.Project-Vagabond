@@ -3,6 +3,7 @@ using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
+using ProjectVagabond.Animations;
 using ProjectVagabond.Battle;
 using ProjectVagabond.Particles;
 using ProjectVagabond.Transitions;
@@ -19,9 +20,9 @@ namespace ProjectVagabond.Scenes
         private enum ArenaState
         {
             Betting,
-            Countdown,
             Fighting,
-            MatchOver
+            MatchOver,
+            Paused
         }
 
         private readonly Global _global;
@@ -85,6 +86,15 @@ namespace ProjectVagabond.Scenes
         private float _suddenDeathTimer;
 
         private readonly HashSet<ArenaWizard> _printedTickets = new HashSet<ArenaWizard>();
+
+        // --- Pause Menu State ---
+        private readonly List<Button> _pauseButtons = new List<Button>();
+        private readonly NavigationGroup _pauseNavGroup = new NavigationGroup(wrapNavigation: true);
+        private ArenaState _prePauseState;
+
+        // --- Betting State ---
+        private Button _skipButton = null!;
+        private readonly NavigationGroup _bettingNavGroup = new NavigationGroup(wrapNavigation: true);
 
         public ArenaScene()
         {
@@ -159,6 +169,56 @@ namespace ProjectVagabond.Scenes
             _activeAttacks.Add(attack);
         }
 
+        private void InitializePauseMenu()
+        {
+            _pauseButtons.Clear();
+            _pauseNavGroup.Clear();
+
+            var font = _core.SecondaryFont;
+            int startY = Global.VIRTUAL_HEIGHT / 2 - 25;
+            int spacing = 14;
+
+            Button CreatePauseButton(string text, int y)
+            {
+                Vector2 size = font.MeasureString(text);
+                int w = (int)size.X + 8;
+                int h = (int)size.Y + 4;
+
+                // Shift bounds down by 1, text up by 1 to effectively move the border down relative to the text.
+                var btn = new Button(new Rectangle(Global.VIRTUAL_WIDTH / 2 - w / 2, y + 1, w, h), text, font: font)
+                {
+                    DrawBorderOnHover = true,
+                    HoverAnimation = HoverAnimationType.Hop,
+                    TextRenderOffset = new Vector2(0, -1)
+                };
+                return btn;
+            }
+
+            var resumeBtn = CreatePauseButton("RESUME", startY);
+            resumeBtn.OnClick += () => { _arenaState = _prePauseState; };
+
+            var settingsBtn = CreatePauseButton("SETTINGS", startY + spacing);
+            settingsBtn.OnClick += () => { _sceneManager.ShowModal(GameSceneState.Settings); };
+
+            var mainMenuBtn = CreatePauseButton("MAIN MENU", startY + spacing * 2);
+            mainMenuBtn.OnClick += () => {
+                _particleSystemManager.ClearAllEmitters();
+                ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().StopAll();
+                PoolManager.ClearAll();
+                _sceneManager.ChangeScene(GameSceneState.MainMenu, TransitionType.FadeOff, TransitionType.FadeOff);
+            };
+
+            var desktopBtn = CreatePauseButton("EXIT TO DESKTOP", startY + spacing * 3);
+            desktopBtn.OnClick += () => { _core.ExitApplication(); };
+
+            _pauseButtons.Add(resumeBtn);
+            _pauseButtons.Add(settingsBtn);
+            _pauseButtons.Add(mainMenuBtn);
+            _pauseButtons.Add(desktopBtn);
+
+            foreach (var b in _pauseButtons) _pauseNavGroup.Add(b);
+        }
+
         public override void Enter()
         {
             base.Enter();
@@ -170,6 +230,8 @@ namespace ProjectVagabond.Scenes
             _probPlinks.Clear();
             _winProbabilities.Clear();
             _printedTickets.Clear();
+
+            InitializePauseMenu();
 
             ServiceLocator.Get<GeometricBackgroundManager>().Show(0.5f);
 
@@ -212,6 +274,29 @@ namespace ProjectVagabond.Scenes
             _arenaBounds = new Rectangle(8, 45, Global.VIRTUAL_WIDTH - 16, Global.VIRTUAL_HEIGHT - 48);
             _arenaCenter = new Vector2(_arenaBounds.Center.X, _arenaBounds.Center.Y);
             _ticketManager.DispenseTargetX = Global.VIRTUAL_WIDTH / 2f;
+
+            // Initialize Skip Button
+            var tertFont = _core.TertiaryFont;
+            Vector2 skipSize = tertFont.MeasureString("SKIP");
+            int skipW = (int)skipSize.X + 8;
+            int skipH = (int)skipSize.Y + 4;
+            int skipY = Global.VIRTUAL_HEIGHT - 10 - skipH; // Exactly 10px above bottom
+
+            _skipButton = new Button(new Rectangle((int)(_arenaCenter.X - skipW / 2f), skipY, skipW, skipH), "SKIP", font: tertFont)
+            {
+                DrawBorderOnHover = true,
+                HoverAnimation = HoverAnimationType.Hop,
+                CustomDefaultTextColor = _global.Palette_DarkestPale // Stealthy until hovered
+            };
+            _skipButton.OnClick += () => {
+                if (_arenaState == ArenaState.Betting)
+                {
+                    _phaseTimer = 0f; // Instantly end betting phase
+                    ServiceLocator.Get<HapticsManager>().TriggerZoomPulse(_global.LightHapticZoomPulseStrength, _global.HapticZoomPulseDuration);
+                }
+            };
+            _bettingNavGroup.Clear();
+            _bettingNavGroup.Add(_skipButton);
 
             var selectedIds = _gameState.SelectedRoster;
             int count = selectedIds.Count;
@@ -261,6 +346,27 @@ namespace ProjectVagabond.Scenes
             GameTime effectiveGameTime = _inputManager.GetEffectiveGameTime(gameTime, true);
             float dt = (float)effectiveGameTime.ElapsedGameTime.TotalSeconds;
 
+            if (_transitionManager.IsTransitioning) return;
+
+            if (_arenaState == ArenaState.Paused)
+            {
+                if (_sceneManager.IsModalActive) return; // Don't update pause menu if settings is open
+
+                var pMouseState = _inputManager.GetEffectiveMouseState();
+                foreach (var btn in _pauseButtons) btn.Update(pMouseState);
+
+                if (_inputManager.CurrentInputDevice == InputDeviceType.Mouse)
+                    _pauseNavGroup.DeselectAll();
+                else
+                    _pauseNavGroup.UpdateInput(_inputManager);
+
+                if (_inputManager.Back)
+                {
+                    _arenaState = _prePauseState;
+                }
+                return;
+            }
+
             _plinkBetCountdown?.Update(effectiveGameTime, _arenaCenter);
             _plinkFight?.Update(effectiveGameTime, _arenaCenter);
             _plinkTimerText?.Update(effectiveGameTime, new Vector2(_arenaCenter.X, 12));
@@ -282,7 +388,7 @@ namespace ProjectVagabond.Scenes
             int aliveCount = _wizards.Count(w => w.Data.Combat.State != WizardState.Dead);
 
             _hoveredHudWizard = null;
-            bool canHover = _arenaState == ArenaState.Betting || _arenaState == ArenaState.Countdown || (_arenaState == ArenaState.Fighting && aliveCount > 1);
+            bool canHover = _arenaState == ArenaState.Betting || (_arenaState == ArenaState.Fighting && aliveCount > 1);
 
             if (canHover)
             {
@@ -312,6 +418,12 @@ namespace ProjectVagabond.Scenes
             {
                 _phaseTimer -= dt;
 
+                _skipButton.Update(mouseState);
+                if (_inputManager.CurrentInputDevice == InputDeviceType.Mouse)
+                    _bettingNavGroup.DeselectAll();
+                else
+                    _bettingNavGroup.UpdateInput(_inputManager);
+
                 if (!_hasPlayedBetSound && _phaseTimer <= 9.0f)
                 {
                     ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlaySfx("sfx_voice_place_your_bets");
@@ -327,31 +439,13 @@ namespace ProjectVagabond.Scenes
 
                 if (_phaseTimer <= 0)
                 {
-                    _arenaState = ArenaState.Countdown;
-                    _phaseTimer = 3.0f;
-                    _lastCountdownSecond = 3;
-                    _plinkBetCountdown.Start(0f, 0.2f);
-
-                    var audio = ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>();
-                    audio.SetCurrentMusicStemVolume(0, 1.0f, fadeSpeed: 0.3f); // Normal active (slow fade)
-                    audio.SetCurrentMusicStemVolume(1, 0.0f, fadeSpeed: 0.3f); // Muffled muted (slow fade)
-                }
-            }
-            else if (_arenaState == ArenaState.Countdown)
-            {
-                _phaseTimer -= dt;
-                int currentSecond = (int)Math.Ceiling(_phaseTimer);
-                if (currentSecond != _lastCountdownSecond && currentSecond > 0)
-                {
-                    _lastCountdownSecond = currentSecond;
-                    _plinkBetCountdown.Start(0f, 0.2f);
-                }
-
-                if (_phaseTimer <= 0)
-                {
                     _arenaState = ArenaState.Fighting;
                     _phaseTimer = 0f;
                     _plinkFight.Start(0f, 0.3f);
+
+                    var audio = ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>();
+                    audio.SetCurrentMusicStemVolume(0, 1.0f, fadeSpeed: 0.3f); // Normal active
+                    audio.SetCurrentMusicStemVolume(1, 0.0f, fadeSpeed: 0.3f); // Muffled muted
                 }
             }
 
@@ -539,20 +633,9 @@ namespace ProjectVagabond.Scenes
 
             if (_inputManager.Back)
             {
-                if (_arenaState == ArenaState.Betting || _arenaState == ArenaState.Countdown)
-                {
-                    _arenaState = ArenaState.Fighting;
-                    _phaseTimer = 0f;
-                    _plinkFight.Start(0f, 0.3f);
-
-                    var audio = ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>();
-                    audio.SetCurrentMusicStemVolume(0, 1.0f, fadeSpeed: 2.0f);
-                    audio.SetCurrentMusicStemVolume(1, 0.0f, fadeSpeed: 2.0f);
-                }
-                else
-                {
-                    _sceneManager.ChangeScene(GameSceneState.MainMenu, TransitionType.FadeOff, TransitionType.FadeOff);
-                }
+                _prePauseState = _arenaState;
+                _arenaState = ArenaState.Paused;
+                _pauseNavGroup.SelectFirst();
             }
 
             _lastMouseState = mouseState;
@@ -848,7 +931,7 @@ namespace ProjectVagabond.Scenes
                 spriteBatch.DrawStringOutlinedSnapped(mainFont, sdText, sdPos, _global.Palette_Rust * sdAlpha, _global.Palette_Off * sdAlpha, sdRot, sdOrigin, sdScale, SpriteEffects.None, 0f);
             }
 
-            if (_arenaState == ArenaState.Betting || _arenaState == ArenaState.Countdown)
+            if (_arenaState == ArenaState.Betting)
             {
                 int currentSecond = (int)Math.Ceiling(_phaseTimer);
                 if (currentSecond > 0)
@@ -863,27 +946,26 @@ namespace ProjectVagabond.Scenes
 
                     spriteBatch.DrawStringOutlinedSnapped(mainFont, countText, countPos + countOrigin, countColor, _global.Palette_Off, countRot, countOrigin, countScale, SpriteEffects.None, 0f);
 
-                    if (_arenaState == ArenaState.Betting)
-                    {
-                        string betText = "PLACE YOUR BETS";
-                        Vector2 betSize = mainFont.MeasureString(betText);
-                        Vector2 betPos = new Vector2(MathF.Round(_arenaCenter.X - betSize.X / 2f), MathF.Round(countPos.Y - betSize.Y - 10));
+                    string betText = "PLACE YOUR BETS";
+                    Vector2 betSize = mainFont.MeasureString(betText);
+                    Vector2 betPos = new Vector2(MathF.Round(_arenaCenter.X - betSize.X / 2f), MathF.Round(countPos.Y - betSize.Y - 10));
 
-                        TextAnimator.DrawTextWithEffectOutlined(
-                            spriteBatch,
-                            mainFont,
-                            betText,
-                            betPos,
-                            _global.Palette_White,
-                            _global.Palette_Off,
-                            TextEffectType.RainbowWave,
-                            (float)effectiveGameTime.TotalGameTime.TotalSeconds,
-                            Vector2.One,
-                            null,
-                            0f
-                        );
-                    }
+                    TextAnimator.DrawTextWithEffectOutlined(
+                        spriteBatch,
+                        mainFont,
+                        betText,
+                        betPos,
+                        _global.Palette_White,
+                        _global.Palette_Off,
+                        TextEffectType.RainbowWave,
+                        (float)effectiveGameTime.TotalGameTime.TotalSeconds,
+                        Vector2.One,
+                        null,
+                        0f
+                    );
                 }
+
+                _skipButton.Draw(spriteBatch, tertFont, effectiveGameTime, transform);
             }
             else if (_arenaState == ArenaState.Fighting && _phaseTimer < 1.0f)
             {
@@ -913,6 +995,21 @@ namespace ProjectVagabond.Scenes
 
                 spriteBatch.DrawStringOutlinedSnapped(mainFont, text, pos, textColor, _global.Palette_Off);
             }
+
+            if (_arenaState == ArenaState.Paused)
+            {
+                spriteBatch.Draw(_pixel, new Rectangle(0, 0, Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT), Color.Black * 0.7f);
+
+                string pauseText = "PAUSED";
+                Vector2 pSize = mainFont.MeasureString(pauseText);
+                spriteBatch.DrawStringOutlinedSnapped(mainFont, pauseText, new Vector2(Global.VIRTUAL_WIDTH / 2f - pSize.X / 2f, 30), _global.Palette_Sun, _global.Palette_Off);
+
+                var secondaryFont = _core.SecondaryFont;
+                foreach (var btn in _pauseButtons)
+                {
+                    btn.Draw(spriteBatch, secondaryFont, effectiveGameTime, transform);
+                }
+            }
         }
 
         private string GetOrdinalSuffix(int number)
@@ -940,7 +1037,7 @@ namespace ProjectVagabond.Scenes
             int heartSpacing = 1;
 
             int aliveCount = _wizardsFixedOrder.Count(wiz => wiz.Data.Combat.State != WizardState.Dead);
-            bool showProbabilities = _arenaState == ArenaState.Betting || _arenaState == ArenaState.Countdown || (_arenaState == ArenaState.Fighting && aliveCount > 1);
+            bool showProbabilities = _arenaState == ArenaState.Betting || (_arenaState == ArenaState.Fighting && aliveCount > 1);
 
             float colWidth = Global.VIRTUAL_WIDTH / (float)_wizardsFixedOrder.Count;
 
