@@ -20,8 +20,10 @@ namespace ProjectVagabond.Battle
         private const float FLOATING_TEXT_DURATION = 1.0f;
         private const float KNOCKBACK_DURATION_BASE = 0.5f;
         private const float KNOCKBACK_DISTANCE_DIVISOR = 80f;
-        private const float MIN_ACTION_TIME = 2.0f;
-        private const float ACTION_TIME_VARIANCE = 6.0f;
+
+        private const float MIN_ACTION_TIME = 4.0f;
+        private const float ACTION_TIME_VARIANCE = 16.0f;
+
         private const float MIN_SPEED_MULTIPLIER = 0.1f;
         private const float MAX_SPEED_MULTIPLIER = 3.0f;
         private const float RECOVERING_DURATION = 0.25f;
@@ -36,8 +38,10 @@ namespace ProjectVagabond.Battle
         private const float HEALTH_BAR_FADE_SPEED = 4f;
         private const int TELEPORT_PARTICLE_BURST_COUNT = 20;
         private const int TELEPORT_MAX_ATTEMPTS = 50;
-        private const float BASE_SPEED_MULTIPLIER = 2.0f;
-        private const float BASE_SPEED_OFFSET = 2.5f;
+
+        private const float BASE_SPEED_MULTIPLIER = 3.0f;
+        private const float BASE_SPEED_OFFSET = 0.5f;
+
         private const float HEART_WAVE_BASE_INTERVAL = 1f;
         private const float HEART_WAVE_VARIANCE = 4f;
         private const float HEART_WAVE_DURATION_PER_HEART = 0.08f;
@@ -288,6 +292,12 @@ namespace ProjectVagabond.Battle
                     combat.State = WizardState.Recovering;
                     combat.StateTimer = RECOVERING_DURATION * 2f;
                     combat.TargetPosition = combat.Position;
+
+                    var ui = _wizard.Data.UI;
+                    ui.IsMoveCanceled = true;
+                    ui.MoveTextTimer = 1.0f;
+                    ui.MoveTextDuration = 1.0f;
+                    ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlayRoutedSfx("proc:wave=0;atk=0.01;sus=0.05;dec=0.25;freq=120;slide=-60;vol=0.15", 0f, null, combat.Position);
                 }
             }
 
@@ -320,7 +330,7 @@ namespace ProjectVagabond.Battle
             {
                 combat.WardTimer = combat.EquippedActiveSpell.Duration;
                 ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlayRoutedSfx("proc:wave=2;atk=0.01;sus=0.02;dec=0.2;freq=1600;slide=1000;vol=0.2", 0f, null, combat.Position);
-                
+
             }
             else if (combat.EquippedActiveSpell.ID == "force_cast")
             {
@@ -333,7 +343,7 @@ namespace ProjectVagabond.Battle
                 combat.TeleportTimer = combat.EquippedActiveSpell.Duration;
                 combat.KnockbackTimer = 0f;
 
-                ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlayRoutedSfx("proc:wave=4;atk=0.05;sus=0.1;dec=0.4;freq=600;slide=-200;vibdepth=50;vibspeed=15;vol=0.25", 0f, null, combat.Position);
+                ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlayRoutedSfx("proc:wave=2;atk=0.01;sus=0.02;dec=0.2;freq=800;slide=-400;vol=0.2", 0f, null, combat.Position);
 
                 var emitter = _particleSystemManager.CreateEmitter(ParticleEffects.CreateTeleportParticles());
                 emitter.Position = combat.Position;
@@ -413,7 +423,8 @@ namespace ProjectVagabond.Battle
                     combat.Position = combat.TeleportTargetPos;
                     combat.TargetPosition = combat.Position;
 
-                    ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlayRoutedSfx("proc:wave=2;atk=0.01;sus=0.02;dec=0.2;freq=800;slide=-400;vol=0.2", 0f, null, combat.Position);
+                    ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlayRoutedSfx("proc:wave=4;atk=0.05;sus=0.1;dec=0.4;freq=600;slide=-200;vibdepth=50;vibspeed=15;vol=0.15", 0f, null, combat.Position);
+                   
 
                     var emitter = _particleSystemManager.CreateEmitter(ParticleEffects.CreateTeleportParticles());
                     emitter.Position = combat.Position;
@@ -554,6 +565,11 @@ namespace ProjectVagabond.Battle
                         combat.State = WizardState.Recovering;
                         combat.StateTimer = RECOVERING_DURATION;
                         combat.QueuedTargetWizard = null;
+
+                        ui.IsMoveCanceled = true;
+                        ui.MoveTextTimer = 1.0f;
+                        ui.MoveTextDuration = 1.0f;
+                        ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlayRoutedSfx("proc:wave=0;atk=0.01;sus=0.05;dec=0.25;freq=120;slide=-60;vol=0.15", 0f, null, combat.Position);
                         break;
                     }
 
@@ -746,6 +762,7 @@ namespace ProjectVagabond.Battle
             ui.ActiveMoveText = combat.QueuedMove.Name;
             ui.MoveTextDuration = Math.Max(MIN_MOVE_TEXT_DURATION, combat.QueuedMove.ChargeTime + MOVE_TEXT_CHARGE_PADDING);
             ui.MoveTextTimer = ui.MoveTextDuration;
+            ui.IsMoveCanceled = false;
 
             if (combat.QueuedMove.ExecuteOnChargeStart)
             {

@@ -1,6 +1,5 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
-using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.Animations;
 using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond.Battle;
@@ -45,28 +44,47 @@ namespace ProjectVagabond.Battle
                 float timeElapsed = ui.MoveTextDuration - ui.MoveTextTimer;
                 float scale = 1f;
                 float alpha = 1f;
+                float yOffset = 0f;
+                float xOffset = 0f;
+                Color textColor = _global.Palette_Sun;
 
-                float appearDuration = 0.15f;
-                float expireDuration = 0.2f;
-
-                if (timeElapsed < appearDuration)
+                if (ui.IsMoveCanceled)
                 {
-                    scale = Easing.EaseOutBack(timeElapsed / appearDuration);
+                    float progress = 1f - (ui.MoveTextTimer / ui.MoveTextDuration);
+                    float ease = Easing.EaseOutCubic(progress);
+
+                    yOffset = -ease * 5f;
+
+                    float shakeDecay = 1f - progress;
+                    xOffset = MathF.Sin(progress * 60f) * 5f * shakeDecay;
+
+                    alpha = 1f - ease;
+                    textColor = _global.Palette_Rust;
                 }
-                else if (ui.MoveTextTimer < expireDuration)
+                else
                 {
-                    float shrinkProgress = 1f - (ui.MoveTextTimer / expireDuration);
-                    scale = Math.Max(0f, 1f - Easing.EaseInBack(shrinkProgress));
-                    alpha = (ui.MoveTextTimer / expireDuration);
+                    float appearDuration = 0.15f;
+                    float expireDuration = 0.2f;
+
+                    if (timeElapsed < appearDuration)
+                    {
+                        scale = Easing.EaseOutBack(timeElapsed / appearDuration);
+                    }
+                    else if (ui.MoveTextTimer < expireDuration)
+                    {
+                        float shrinkProgress = 1f - (ui.MoveTextTimer / expireDuration);
+                        scale = Math.Max(0f, 1f - Easing.EaseInBack(shrinkProgress));
+                        alpha = (ui.MoveTextTimer / expireDuration);
+                    }
                 }
 
-                if (scale > 0.01f)
+                if (scale > 0.01f && alpha > 0.01f)
                 {
                     Vector2 textSize = font.MeasureString(ui.ActiveMoveText);
-                    Vector2 textPos = new Vector2(wizX, wizY - 16);
+                    Vector2 textPos = new Vector2(wizX + xOffset, wizY - 16 + yOffset);
                     Vector2 origin = new Vector2(MathF.Round(textSize.X / 2f), MathF.Round(textSize.Y / 2f));
 
-                    spriteBatch.DrawStringOutlinedSnapped(font, ui.ActiveMoveText, textPos, _global.Palette_Sun * alpha, _global.Palette_Off * alpha, 0f, origin, scale, SpriteEffects.None, 0f);
+                    spriteBatch.DrawStringOutlinedSnapped(font, ui.ActiveMoveText, textPos, textColor * alpha, _global.Palette_Off * alpha, 0f, origin, scale, SpriteEffects.None, 0f);
                 }
             }
 

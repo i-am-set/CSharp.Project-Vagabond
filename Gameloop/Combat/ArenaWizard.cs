@@ -138,6 +138,7 @@ namespace ProjectVagabond.Battle
         public string ActiveMoveText;
         public float MoveTextTimer;
         public float MoveTextDuration;
+        public bool IsMoveCanceled;
 
         public List<FloatingText> FloatingTexts = new List<FloatingText>();
     }
