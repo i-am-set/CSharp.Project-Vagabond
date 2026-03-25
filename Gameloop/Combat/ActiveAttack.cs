@@ -6,6 +6,7 @@ using ProjectVagabond.Particles;
 using ProjectVagabond.Scenes;
 using ProjectVagabond.Utils;
 using System;
+using System.Collections.Generic;
 
 namespace ProjectVagabond.Battle
 {
@@ -83,13 +84,13 @@ namespace ProjectVagabond.Battle
 
                 if (!isAnimationPaused)
                 {
-                    if (!HasStartedAnimation && Animation != null)
+                    if (!HasStartedAnimation)
                     {
                         if (!string.IsNullOrEmpty(Move.CastSoundCue))
                         {
-                            ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlaySfx(Move.CastSoundCue, Move.CastSoundPitchVariance);
+                            ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlayRoutedSfx(Move.CastSoundCue, Move.CastSoundPitchVariance, null, Origin);
                         }
-                        Animation.Start(this, context);
+                        Animation?.Start(this, context);
                         HasStartedAnimation = true;
                     }
                 }
@@ -106,13 +107,13 @@ namespace ProjectVagabond.Battle
 
                     if (!isAnimationPaused)
                     {
-                        if (!HasStartedAnimation && Animation != null)
+                        if (!HasStartedAnimation)
                         {
                             if (!string.IsNullOrEmpty(Move.CastSoundCue))
                             {
-                                ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlaySfx(Move.CastSoundCue, Move.CastSoundPitchVariance);
+                                ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlayRoutedSfx(Move.CastSoundCue, Move.CastSoundPitchVariance, null, Origin);
                             }
-                            Animation.Start(this, context);
+                            Animation?.Start(this, context);
                             HasStartedAnimation = true;
                         }
 

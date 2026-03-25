@@ -85,6 +85,11 @@ namespace ProjectVagabond.Deliveries
 
                 if (_hitTargets.Add(target))
                 {
+                    if (!string.IsNullOrEmpty(attack.Move.ImpactSoundCue))
+                    {
+                        ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlayRoutedSfx(attack.Move.ImpactSoundCue);
+                    }
+
                     foreach (var effect in attack.Move.Effects)
                     {
                         effect.Apply(attack, target, context);

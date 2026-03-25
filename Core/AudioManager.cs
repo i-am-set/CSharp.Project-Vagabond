@@ -62,6 +62,7 @@ namespace ProjectVagabond.Audio
         private readonly Dictionary<string, PooledSound> _uiPools = new Dictionary<string, PooledSound>(StringComparer.OrdinalIgnoreCase);
         private readonly Dictionary<string, MusicTrack> _musicTracks = new Dictionary<string, MusicTrack>(StringComparer.OrdinalIgnoreCase);
         private readonly Dictionary<string, AmbientTrack> _ambientTracks = new Dictionary<string, AmbientTrack>(StringComparer.OrdinalIgnoreCase);
+        private readonly Dictionary<Guid, SoundEffectInstance> _activeLoops = new Dictionary<Guid, SoundEffectInstance>();
 
         private MusicTrack _currentMusic;
         private MusicTrack _fadingMusic;
@@ -82,6 +83,100 @@ namespace ProjectVagabond.Audio
             _uiVolume = Math.Clamp(ui, 0f, 1f);
 
             UpdateActiveVolumes();
+        }
+
+        private float CalculatePan(Vector2? position)
+        {
+            if (!position.HasValue) return 0f;
+            float pan = (position.Value.X / Global.VIRTUAL_WIDTH) * 2f - 1f;
+            return Math.Clamp(pan, -1f, 1f);
+        }
+
+        public void PlayRoutedSfx(string id, float pitchVariance = 0f, float? exactPitch = null, Vector2? position = null)
+        {
+            if (string.IsNullOrEmpty(id)) return;
+
+            if (id.StartsWith("proc:", StringComparison.OrdinalIgnoreCase))
+            {
+                if (!_sfxPools.ContainsKey(id))
+                {
+                    try
+                    {
+                        var sfx = SynthEngine.Generate(id);
+                        int poolSize = 3;
+                        var instances = new SoundEffectInstance[poolSize];
+                        for (int i = 0; i < poolSize; i++)
+                        {
+                            instances[i] = sfx.CreateInstance();
+                        }
+
+                        _sfxPools[id] = new PooledSound
+                        {
+                            Instances = instances,
+                            BasePitches = new float[poolSize],
+                            BaseVolume = 1.0f,
+                            MinPitch = 0f,
+                            MaxPitch = 0f,
+                            CurrentIndex = 0
+                        };
+                    }
+                    catch (Exception ex)
+                    {
+                        GameLogger.Log(LogSeverity.Warning, $"[AudioManager] Failed to generate procedural sound '{id}': {ex.Message}");
+                        return;
+                    }
+                }
+            }
+
+            PlaySfx(id, pitchVariance, exactPitch, position);
+        }
+
+        public Guid PlayLoopingSfx(string id, Vector2? position = null)
+        {
+            if (string.IsNullOrEmpty(id)) return Guid.Empty;
+
+            if (id.StartsWith("proc:", StringComparison.OrdinalIgnoreCase) && !_sfxPools.ContainsKey(id))
+            {
+                PlayRoutedSfx(id); // Forces generation and caching
+            }
+
+            if (_sfxPools.TryGetValue(id, out var pool))
+            {
+                var instance = pool.Instances[0].IsDisposed ? null : pool.Instances[0];
+                if (instance == null) return Guid.Empty;
+
+                int index = GetAvailableInstanceIndex(pool);
+                var loopInstance = pool.Instances[index];
+
+                loopInstance.IsLooped = true;
+                loopInstance.Volume = pool.BaseVolume * _sfxVolume * _masterVolume;
+                loopInstance.Pan = CalculatePan(position);
+                loopInstance.Play();
+
+                Guid handle = Guid.NewGuid();
+                _activeLoops[handle] = loopInstance;
+                return handle;
+            }
+
+            return Guid.Empty;
+        }
+
+        public void UpdateLoopingSfxPosition(Guid handle, Vector2 position)
+        {
+            if (handle != Guid.Empty && _activeLoops.TryGetValue(handle, out var instance))
+            {
+                instance.Pan = CalculatePan(position);
+            }
+        }
+
+        public void StopLoopingSfx(Guid handle)
+        {
+            if (handle != Guid.Empty && _activeLoops.TryGetValue(handle, out var instance))
+            {
+                instance.Stop();
+                instance.IsLooped = false;
+                _activeLoops.Remove(handle);
+            }
         }
 
         public void LoadContent(ContentManager content)
@@ -222,7 +317,7 @@ namespace ProjectVagabond.Audio
             }
         }
 
-        public void PlaySfx(string id, float pitchVariance = 0f, float? exactPitch = null)
+        public void PlaySfx(string id, float pitchVariance = 0f, float? exactPitch = null, Vector2? position = null)
         {
             if (string.IsNullOrEmpty(id) || !_sfxPools.TryGetValue(id, out var pool)) return;
 
@@ -230,6 +325,7 @@ namespace ProjectVagabond.Audio
             var instance = pool.Instances[index];
 
             instance.Volume = pool.BaseVolume * _sfxVolume * _masterVolume;
+            instance.Pan = CalculatePan(position);
 
             float calculatedPitch = 0f;
             if (exactPitch.HasValue)
@@ -254,7 +350,7 @@ namespace ProjectVagabond.Audio
             instance.Play();
         }
 
-        public void PlayUi(string id, float pitchVariance = 0f, float? exactPitch = null)
+        public void PlayUi(string id, float pitchVariance = 0f, float? exactPitch = null, Vector2? position = null)
         {
             if (string.IsNullOrEmpty(id) || !_uiPools.TryGetValue(id, out var pool)) return;
 
@@ -262,6 +358,7 @@ namespace ProjectVagabond.Audio
             var instance = pool.Instances[index];
 
             instance.Volume = pool.BaseVolume * _uiVolume * _masterVolume;
+            instance.Pan = CalculatePan(position);
 
             float calculatedPitch = 0f;
             if (exactPitch.HasValue)
@@ -575,6 +672,15 @@ namespace ProjectVagabond.Audio
                     }
                 }
             }
+
+            // Update active looping sounds
+            foreach (var loopInstance in _activeLoops.Values)
+            {
+                if (loopInstance.State == SoundState.Playing)
+                {
+                    loopInstance.Pitch = Math.Clamp(pitchOffset, -1f, 1f);
+                }
+            }
         }
 
         private void UpdateMusicTrack(MusicTrack track, float masterFade, float dt, float pitchOffset)
@@ -616,6 +722,15 @@ namespace ProjectVagabond.Audio
                     {
                         instance.Volume = pool.BaseVolume * _uiVolume * _masterVolume;
                     }
+                }
+            }
+
+            foreach (var loopInstance in _activeLoops.Values)
+            {
+                if (loopInstance.State == SoundState.Playing)
+                {
+                    // Assuming base volume of 1.0f for loops for now, can be expanded if needed
+                    loopInstance.Volume = 1.0f * _sfxVolume * _masterVolume;
                 }
             }
         }

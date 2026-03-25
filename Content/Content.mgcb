@@ -93,18 +93,6 @@
 /processorParam:Quality=Best
 /build:Audio/SFX/explosion.wav;Audio/SFX/explosion
 
-#begin Audio/SFX/fireball_cast.wav
-/importer:WavImporter
-/processor:SoundEffectProcessor
-/processorParam:Quality=Best
-/build:Audio/SFX/fireball_cast.wav;Audio/SFX/fireball_cast
-
-#begin Audio/SFX/fireball_impact.wav
-/importer:WavImporter
-/processor:SoundEffectProcessor
-/processorParam:Quality=Best
-/build:Audio/SFX/fireball_impact.wav;Audio/SFX/fireball_impact
-
 #begin Audio/SFX/slot_finish.wav
 /importer:WavImporter
 /processor:SoundEffectProcessor

@@ -1,18 +1,6 @@
 {
   "Sfx": [
     {
-      "Id": "sfx_fireball_cast",
-      "Path": "Audio/SFX/fireball_cast",
-      "PoolSize": 3,
-      "DefaultVolume": 0.2
-    },
-    {
-      "Id": "sfx_fireball_impact",
-      "Path": "Audio/SFX/fireball_impact",
-      "PoolSize": 5,
-      "DefaultVolume": 0.2
-    },
-    {
       "Id": "sfx_slot_lock",
       "Path": "Audio/SFX/slot_lock",
       "PoolSize": 6,
@@ -36,7 +24,7 @@
       "Id": "sfx_combatant_hit",
       "Path": "Audio/SFX/combatant_hit",
       "PoolSize": 10,
-      "DefaultVolume": 0.5,
+      "DefaultVolume": 0.25,
       "MinPitch": -0.3,
       "MaxPitch": 0.3
     },
@@ -44,7 +32,7 @@
       "Id": "sfx_combatant_heal",
       "Path": "Audio/SFX/combatant_heal",
       "PoolSize": 5,
-      "DefaultVolume": 0.35,
+      "DefaultVolume": 0.15,
       "MinPitch": -0.3,
       "MaxPitch": 0.3
     },
@@ -58,37 +46,37 @@
       "Id": "sfx_win",
       "Path": "Audio/SFX/win",
       "PoolSize": 1,
-      "DefaultVolume": 1.0
+      "DefaultVolume": 0.5
     },
     {
       "Id": "sfx_ticket_print_1",
       "Path": "Audio/SFX/ticket_print_1",
       "PoolSize": 3,
-      "DefaultVolume": 0.3
+      "DefaultVolume": 0.1
     },
     {
       "Id": "sfx_ticket_print_2",
       "Path": "Audio/SFX/ticket_print_2",
       "PoolSize": 3,
-      "DefaultVolume": 0.3
+      "DefaultVolume": 0.1
     },
     {
       "Id": "sfx_ticket_print_3",
       "Path": "Audio/SFX/ticket_print_3",
       "PoolSize": 3,
-      "DefaultVolume": 0.3
+      "DefaultVolume": 0.1
     },
     {
       "Id": "sfx_ticket_print_4",
       "Path": "Audio/SFX/ticket_print_4",
       "PoolSize": 3,
-      "DefaultVolume": 0.3
+      "DefaultVolume": 0.1
     },
     {
       "Id": "sfx_ticket_cut",
       "Path": "Audio/SFX/ticket_cut",
       "PoolSize": 3,
-      "DefaultVolume": 0.2
+      "DefaultVolume": 0.05
     }
   ],
   "Ui": [
@@ -175,7 +163,7 @@
         "Audio/Music/battle_commences_loopable",
         "Audio/Music/battle_commences_loopable_muffled"
       ],
-      "DefaultVolume": 0.15
+      "DefaultVolume": 0.025
     }
   ]
 }

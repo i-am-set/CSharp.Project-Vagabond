@@ -79,6 +79,12 @@ namespace ProjectVagabond.Deliveries
                     ExecuteOnChargeStart = true,
                     RequiresFocus = false,
                     ShowProjectileIndicator = true,
+                    CastSoundCue = attack.Move.CastSoundCue,
+                    CastSoundPitchVariance = attack.Move.CastSoundPitchVariance,
+                    ImpactSoundCue = attack.Move.ImpactSoundCue,
+                    TickSoundCue = attack.Move.TickSoundCue,
+                    LoopSoundCue = attack.Move.LoopSoundCue,
+                    BounceSoundCue = attack.Move.BounceSoundCue,
                     Delivery = new InstantAOEDelivery { Radius = ProjectileRadius, CheckProjectileCollision = false },
                     Effects = attack.Move.Effects.ToList()
                 };

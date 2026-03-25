@@ -25,6 +25,7 @@ namespace ProjectVagabond.Deliveries
         private float _tickTimer;
         private Vector2 _origin;
         private Vector2 _direction;
+        private Guid _loopSoundHandle = Guid.Empty;
 
         private struct BrambleLine { public Vector2 Start; public Vector2 End; public float GrowDelay; }
         private List<BrambleLine> _brambles = new List<BrambleLine>();
@@ -45,6 +46,11 @@ namespace ProjectVagabond.Deliveries
             {
                 _emitter.IsActive = false;
                 _emitter = null;
+            }
+            if (_loopSoundHandle != Guid.Empty)
+            {
+                ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().StopLoopingSfx(_loopSoundHandle);
+                _loopSoundHandle = Guid.Empty;
             }
         }
 
@@ -86,6 +92,11 @@ namespace ProjectVagabond.Deliveries
             else
             {
                 _direction = Vector2.UnitX;
+            }
+
+            if (!string.IsNullOrEmpty(attack.Move.LoopSoundCue))
+            {
+                _loopSoundHandle = ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlayLoopingSfx(attack.Move.LoopSoundCue);
             }
 
             GenerateVisuals(attack);
@@ -140,6 +151,10 @@ namespace ProjectVagabond.Deliveries
 
         public void TriggerImpact(BattleContext context, ActiveAttack attack)
         {
+            if (!string.IsNullOrEmpty(attack.Move.ImpactSoundCue))
+            {
+                ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlayRoutedSfx(attack.Move.ImpactSoundCue);
+            }
             ApplyTick(context, attack);
             _tickTimer = 0f;
         }
@@ -177,6 +192,10 @@ namespace ProjectVagabond.Deliveries
             if (_tickTimer >= TickRate)
             {
                 _tickTimer -= TickRate;
+                if (!string.IsNullOrEmpty(attack.Move.TickSoundCue))
+                {
+                    ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlayRoutedSfx(attack.Move.TickSoundCue);
+                }
                 ApplyTick(context, attack);
             }
 
@@ -184,6 +203,12 @@ namespace ProjectVagabond.Deliveries
             {
                 _emitter.IsActive = false;
                 _emitter = null;
+            }
+
+            if (IsFinished && _loopSoundHandle != Guid.Empty)
+            {
+                ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().StopLoopingSfx(_loopSoundHandle);
+                _loopSoundHandle = Guid.Empty;
             }
         }
 

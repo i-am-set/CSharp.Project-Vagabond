@@ -2,6 +2,8 @@
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
+using ProjectVagabond.Battle;
+using ProjectVagabond.Scenes;
 using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
@@ -176,7 +178,7 @@ namespace ProjectVagabond.Battle
                 if (!ticket.IsDispensed)
                 {
                     ticket.IsDispensed = true;
-                    ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlaySfx("sfx_ticket_cut");
+                    ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlaySfx("sfx_ticket_cut", 0f, null, ticket.Position);
                     ticket.Velocity = new Vector2((float)(_random.NextDouble() * 60 - 30), 0f);
                     ticket.VelRotX = (float)(_random.NextDouble() * 4.0 - 2.0);
                     ticket.VelRotY = (float)(_random.NextDouble() * 4.0 - 2.0);
@@ -190,7 +192,7 @@ namespace ProjectVagabond.Battle
             ticket.Position.X = ticket.TargetX;
         }
 
-        private void PlayRandomPrintSound()
+        private void PlayRandomPrintSound(Vector2 position)
         {
             int nextSound;
             do
@@ -199,7 +201,7 @@ namespace ProjectVagabond.Battle
             } while (nextSound == _lastPrintSoundIndex);
 
             _lastPrintSoundIndex = nextSound;
-            ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlaySfx($"sfx_ticket_print_{nextSound}");
+            ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlaySfx($"sfx_ticket_print_{nextSound}", 0f, null, position);
         }
 
         public void Update(float dt, Vector2 virtualMousePos, bool justClicked, bool isClicking, InputManager inputManager)
@@ -209,9 +211,10 @@ namespace ProjectVagabond.Battle
             bool isPrinting = _tickets.Any(t => !t.IsDispensed);
             if (!isPrinting && _pendingTickets.Count > 0)
             {
-                _tickets.Add(_pendingTickets.Dequeue());
+                var newTicket = _pendingTickets.Dequeue();
+                _tickets.Add(newTicket);
                 _lastPrintSoundIndex = -1;
-                PlayRandomPrintSound();
+                PlayRandomPrintSound(newTicket.Position);
                 _printSoundTimer = PrintSoundDelay;
                 _lastWasSilence = false;
             }
@@ -224,7 +227,7 @@ namespace ProjectVagabond.Battle
                 {
                     if (_lastWasSilence)
                     {
-                        PlayRandomPrintSound();
+                        PlayRandomPrintSound(printingTicket.Position);
                         _lastWasSilence = false;
                         _printSoundTimer = PrintSoundDelay;
                     }
@@ -232,7 +235,7 @@ namespace ProjectVagabond.Battle
                     {
                         if (_random.Next(2) == 0)
                         {
-                            PlayRandomPrintSound();
+                            PlayRandomPrintSound(printingTicket.Position);
                             _lastWasSilence = false;
                             _printSoundTimer = PrintSoundDelay;
                         }

@@ -5,8 +5,14 @@
         public string ID { get; set; }
         public string Name { get; set; }
         public string AnimationID { get; set; }
+
         public string CastSoundCue { get; set; }
         public float CastSoundPitchVariance { get; set; }
+        public string ImpactSoundCue { get; set; }
+        public string TickSoundCue { get; set; }
+        public string LoopSoundCue { get; set; }
+        public string BounceSoundCue { get; set; }
+
         public int BasePower { get; set; }
         public float ChargeTime { get; set; }
         public int Weight { get; set; }

@@ -166,7 +166,7 @@ namespace ProjectVagabond.Scenes
         {
             _transitionTriggered = true;
             ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().ForceTransitionAmbient("ambient_hdd_startup");
-            _sceneManager.ChangeScene(GameSceneState.MainMenu, TransitionType.FadeOff, TransitionType.FadeOff);
+            _sceneManager.ChangeScene(GameSceneState.MainMenu, TransitionType.None, TransitionType.None);
         }
 
         private void FinishStartup()

@@ -14,12 +14,18 @@ namespace ProjectVagabond.Deliveries
         public bool IsFinished { get; private set; }
         public bool IsAnimationPaused => false;
         private float _visualTimer;
+        private Guid _loopSoundHandle = Guid.Empty;
 
         public void Reset()
         {
             _visualTimer = 0f;
             IsFinished = false;
             CheckProjectileCollision = true;
+            if (_loopSoundHandle != Guid.Empty)
+            {
+                ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().StopLoopingSfx(_loopSoundHandle);
+                _loopSoundHandle = Guid.Empty;
+            }
         }
 
         public void Setup(IDelivery template)
@@ -44,10 +50,19 @@ namespace ProjectVagabond.Deliveries
         {
             IsFinished = false;
             _visualTimer = 0.25f;
+            if (!string.IsNullOrEmpty(attack.Move.LoopSoundCue))
+            {
+                _loopSoundHandle = ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlayLoopingSfx(attack.Move.LoopSoundCue);
+            }
         }
 
         public void TriggerImpact(BattleContext context, ActiveAttack attack)
         {
+            if (!string.IsNullOrEmpty(attack.Move.ImpactSoundCue))
+            {
+                ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlayRoutedSfx(attack.Move.ImpactSoundCue);
+            }
+
             if (attack.TargetWizard != null && attack.TargetWizard.Data.Stats.CurrentHP > 0)
             {
                 foreach (var effect in attack.Move.Effects)
@@ -85,6 +100,12 @@ namespace ProjectVagabond.Deliveries
 
             _visualTimer -= dt;
             if (_visualTimer <= 0) IsFinished = true;
+
+            if (IsFinished && _loopSoundHandle != Guid.Empty)
+            {
+                ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().StopLoopingSfx(_loopSoundHandle);
+                _loopSoundHandle = Guid.Empty;
+            }
         }
 
         public void Draw(SpriteBatch spriteBatch, ActiveAttack attack)

@@ -173,6 +173,7 @@ namespace ProjectVagabond.Battle
             {
                 combat.WardHitTimer = WARD_HIT_DURATION;
                 metrics.DamageBlocked += amount;
+                ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlayRoutedSfx("proc:wave=2;atk=0.01;sus=0.025;dec=0.15;freq=400;slide=2000;vol=0.2", 0f, null, combat.Position);
                 return false;
             }
 
@@ -190,7 +191,7 @@ namespace ProjectVagabond.Battle
 
             if (actualDamage > 0)
             {
-                ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlaySfx("sfx_combatant_hit");
+                ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlaySfx("sfx_combatant_hit", 0f, null, combat.Position);
 
                 if (attacker != null)
                 {
@@ -246,7 +247,7 @@ namespace ProjectVagabond.Battle
 
             if (actualHeal > 0)
             {
-                ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlaySfx("sfx_combatant_heal");
+                ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlaySfx("sfx_combatant_heal", 0f, null, combat.Position);
 
                 var hitbox = GetHitbox(_spriteManager);
                 Vector2 centerOffset = new Vector2(hitbox.Center.X - combat.Position.X, hitbox.Center.Y - combat.Position.Y);
@@ -318,6 +319,8 @@ namespace ProjectVagabond.Battle
             if (combat.EquippedActiveSpell.ID == "ward")
             {
                 combat.WardTimer = combat.EquippedActiveSpell.Duration;
+                ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlayRoutedSfx("proc:wave=2;atk=0.01;sus=0.02;dec=0.2;freq=1600;slide=1000;vol=0.2", 0f, null, combat.Position);
+                
             }
             else if (combat.EquippedActiveSpell.ID == "force_cast")
             {
@@ -329,6 +332,8 @@ namespace ProjectVagabond.Battle
                 combat.IsTeleporting = true;
                 combat.TeleportTimer = combat.EquippedActiveSpell.Duration;
                 combat.KnockbackTimer = 0f;
+
+                ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlayRoutedSfx("proc:wave=4;atk=0.05;sus=0.1;dec=0.4;freq=600;slide=-200;vibdepth=50;vibspeed=15;vol=0.25", 0f, null, combat.Position);
 
                 var emitter = _particleSystemManager.CreateEmitter(ParticleEffects.CreateTeleportParticles());
                 emitter.Position = combat.Position;
@@ -407,6 +412,9 @@ namespace ProjectVagabond.Battle
                     combat.IsTeleporting = false;
                     combat.Position = combat.TeleportTargetPos;
                     combat.TargetPosition = combat.Position;
+
+                    ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlayRoutedSfx("proc:wave=2;atk=0.01;sus=0.02;dec=0.2;freq=800;slide=-400;vol=0.2", 0f, null, combat.Position);
+
                     var emitter = _particleSystemManager.CreateEmitter(ParticleEffects.CreateTeleportParticles());
                     emitter.Position = combat.Position;
                     emitter.EmitBurst(TELEPORT_PARTICLE_BURST_COUNT);
@@ -524,6 +532,7 @@ namespace ProjectVagabond.Battle
                 {
                     combat.State = WizardState.Dead;
                     combat.TimeSinceDeath = 0f;
+                    ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlayRoutedSfx("proc:wave=1;atk=0.02;sus=0.1;dec=0.5;freq=250;slide=-200;crush=6;vol=0.12", 0f, null, combat.Position);
                 }
                 return;
             }

@@ -538,7 +538,20 @@ namespace ProjectVagabond.Scenes
 
             if (_inputManager.Back)
             {
-                _sceneManager.ChangeScene(GameSceneState.MainMenu, TransitionType.FadeOff, TransitionType.FadeOff);
+                if (_arenaState == ArenaState.Betting || _arenaState == ArenaState.Countdown)
+                {
+                    _arenaState = ArenaState.Fighting;
+                    _phaseTimer = 0f;
+                    _plinkFight.Start(0f, 0.3f);
+
+                    var audio = ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>();
+                    audio.SetCurrentMusicStemVolume(0, 1.0f, fadeSpeed: 2.0f);
+                    audio.SetCurrentMusicStemVolume(1, 0.0f, fadeSpeed: 2.0f);
+                }
+                else
+                {
+                    _sceneManager.ChangeScene(GameSceneState.MainMenu, TransitionType.FadeOff, TransitionType.FadeOff);
+                }
             }
 
             _lastMouseState = mouseState;

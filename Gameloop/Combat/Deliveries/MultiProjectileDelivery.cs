@@ -75,6 +75,12 @@ namespace ProjectVagabond.Deliveries
                     RequiresFocus = false,
                     ShowProjectileIndicator = false,
                     DeliveryImpactMidFlight = attack.Move.DeliveryImpactMidFlight,
+                    CastSoundCue = attack.Move.CastSoundCue,
+                    CastSoundPitchVariance = attack.Move.CastSoundPitchVariance,
+                    ImpactSoundCue = attack.Move.ImpactSoundCue,
+                    TickSoundCue = attack.Move.TickSoundCue,
+                    LoopSoundCue = attack.Move.LoopSoundCue,
+                    BounceSoundCue = attack.Move.BounceSoundCue,
                     Delivery = SpreadAngle > 0 ? new InstantAOEDelivery { Radius = 12f, CheckProjectileCollision = attack.Move.DeliveryImpactMidFlight } : new SingleTargetDelivery { CheckProjectileCollision = attack.Move.DeliveryImpactMidFlight },
                     Effects = attack.Move.Effects.ToList()
                 };

@@ -67,6 +67,11 @@ namespace ProjectVagabond.Deliveries
 
         public void TriggerImpact(BattleContext context, ActiveAttack attack)
         {
+            if (!string.IsNullOrEmpty(attack.Move.ImpactSoundCue))
+            {
+                ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlayRoutedSfx(attack.Move.ImpactSoundCue);
+            }
+
             if (attack.TargetWizard != null && attack.TargetWizard.Data.Stats.CurrentHP > 0)
             {
                 foreach (var effect in attack.Move.Effects)
@@ -118,6 +123,11 @@ namespace ProjectVagabond.Deliveries
                 _nextTargetSpawned = true;
                 if (BounceCount > 0 && attack.TargetWizard != null)
                 {
+                    if (!string.IsNullOrEmpty(attack.Move.BounceSoundCue))
+                    {
+                        ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlayRoutedSfx(attack.Move.BounceSoundCue);
+                    }
+
                     if (HitTargets == null) HitTargets = new HashSet<ArenaWizard>();
                     HitTargets.Add(attack.TargetWizard);
 
