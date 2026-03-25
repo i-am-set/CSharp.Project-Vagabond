@@ -71,16 +71,20 @@ namespace ProjectVagabond.Scenes
             public PlinkAnimator Plink = new PlinkAnimator();
             public bool HasHopped;
             public float ShakeTimer;
+            public float ShakeMagnitude = 8f;
             public bool IsBobbingUp;
         }
 
-        private enum IntroState { Spinning, Transitioning }
+        private enum IntroState { Spinning, SequentialLock, Transitioning }
         private IntroState _state = IntroState.Spinning;
         private List<SlotColumn> _slots = new();
         private float _spinTimer = 0f;
         private int _slotsStopped = 0;
         private float _spinSoundTimer = 0f;
         private bool _hasPlayedFinishEffect = false;
+
+        private int _sequentialLockIndex = 0;
+        private float _sequentialLockTimer = 0f;
 
         private float _successWipeTimer = 0f;
         private const float SUCCESS_WIPE_DURATION = 0.8f;
@@ -140,7 +144,6 @@ namespace ProjectVagabond.Scenes
 
             _plinkTimer = 0f;
 
-            // Setup slots immediately
             var shuffled = _characterIds.OrderBy(x => _random.Next()).ToList();
             for (int i = 0; i < _randomCount; i++)
             {
@@ -155,6 +158,7 @@ namespace ProjectVagabond.Scenes
                     State = SlotState.WindUp,
                     StateTimer = 0f,
                     ShakeTimer = 0f,
+                    ShakeMagnitude = SLOT_SHAKE_MAGNITUDE,
                     IsBobbingUp = false
                 });
             }
@@ -162,6 +166,8 @@ namespace ProjectVagabond.Scenes
             _spinTimer = 0f;
             _slotsStopped = 0;
             _spinSoundTimer = 0f;
+            _sequentialLockIndex = _randomCount - 1;
+            _sequentialLockTimer = 0f;
         }
 
         private void InitializeData()
@@ -210,6 +216,10 @@ namespace ProjectVagabond.Scenes
             for (int i = 0; i < _slots.Count; i++)
             {
                 var slot = _slots[i];
+
+                if (slot.ShakeTimer > 0) slot.ShakeTimer -= dt;
+                if (slot.State == SlotState.Stopped) slot.Plink.Update(effectiveGameTime, Vector2.Zero);
+
                 if (slot.State == SlotState.Stopped)
                 {
                     float bob = MathF.Sin(_idleTimer * 6f - i * 0.5f);
@@ -252,9 +262,12 @@ namespace ProjectVagabond.Scenes
 
             if (_state == IntroState.Spinning)
             {
-                // --- SKIP LOGIC ---
                 if (_inputManager.Back)
                 {
+                    _state = IntroState.SequentialLock;
+                    _sequentialLockIndex = _randomCount - 1;
+                    _sequentialLockTimer = 0.1f;
+
                     for (int i = 0; i < _slots.Count; i++)
                     {
                         var slot = _slots[i];
@@ -266,48 +279,46 @@ namespace ProjectVagabond.Scenes
                             float diff = slot.TargetIdIndex - currentMod;
                             if (diff < 0) diff += _characterIds.Count;
 
-                            slot.VirtualIndex += diff;
-                            slot.Speed = 0f;
-                            slot.State = SlotState.Stopped;
-                            slot.ShakeTimer = SLOT_SHAKE_DURATION;
-                            slot.Plink.Start(0f, 0.3f);
-                            _selectedWizards[slot.TargetId] = (0f, 0f);
+                            // Add one full rotation so it has room to decelerate smoothly
+                            diff += _characterIds.Count;
 
-                            var emitter = _particleSystemManager.CreateEmitter(ParticleEffects.CreateUIPlink());
-                            int slotWidth = (Global.VIRTUAL_WIDTH - 40) / _randomCount;
-                            int startX = 20 + (i * slotWidth);
-                            int centerX = startX + (slotWidth / 2);
-                            emitter.Position = new Vector2(centerX, Global.VIRTUAL_HEIGHT / 2f + 10);
-                            emitter.EmitBurst(15);
+                            slot.StartIndex = slot.VirtualIndex;
+                            slot.AbsoluteTargetIndex = slot.VirtualIndex + diff;
+                            slot.State = SlotState.Settling;
+                            slot.StateTimer = 0f;
+
+                            // Sync the settle duration perfectly with the right-to-left ripple effect
+                            slot.SettleDuration = ((_randomCount - 1 - i) + 1) * 0.1f;
                         }
                     }
-                    _slotsStopped = _randomCount;
-                    _state = IntroState.Transitioning;
-                    _spinTimer = 0f;
-                    _hapticsManager.TriggerZoomPulse(_global.HapticZoomPulseStrength, _global.HapticZoomPulseDuration);
-                    ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlaySfx("sfx_slot_lock", 0.1f);
-                    return;
                 }
+            }
 
-                _spinTimer += dt;
-
-                if (_slotsStopped < _randomCount)
+            // Run slot physics in both Spinning and SequentialLock states
+            if (_state == IntroState.Spinning || _state == IntroState.SequentialLock)
+            {
+                if (_state == IntroState.Spinning)
                 {
-                    _spinSoundTimer -= dt;
-                    if (_spinSoundTimer <= 0f)
-                    {
-                        ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlayUi("ui_hover");
+                    _spinTimer += dt;
 
-                        float speedUpProgress = Math.Clamp(_spinTimer / 0.5f, 0f, 1f);
-                        _spinSoundTimer = MathHelper.Lerp(0.25f, 0.06f, Easing.EaseInQuad(speedUpProgress));
+                    if (_slotsStopped < _randomCount)
+                    {
+                        _spinSoundTimer -= dt;
+                        if (_spinSoundTimer <= 0f)
+                        {
+                            ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlayUi("ui_hover");
+
+                            float speedUpProgress = Math.Clamp(_spinTimer / 0.5f, 0f, 1f);
+                            _spinSoundTimer = MathHelper.Lerp(0.25f, 0.06f, Easing.EaseInQuad(speedUpProgress));
+                        }
                     }
                 }
 
-                float baseSpinDuration = 2.5f;
+                float baseSpinDuration = 1.5f;
                 float stopInterval = 0.3f;
-
                 int shouldBeStopping = 0;
-                if (_spinTimer >= baseSpinDuration)
+
+                if (_state == IntroState.Spinning && _spinTimer >= baseSpinDuration)
                 {
                     shouldBeStopping = Math.Min(_randomCount, (int)((_spinTimer - baseSpinDuration) / stopInterval) + 1);
                 }
@@ -316,16 +327,7 @@ namespace ProjectVagabond.Scenes
                 {
                     var slot = _slots[i];
 
-                    if (slot.ShakeTimer > 0)
-                    {
-                        slot.ShakeTimer -= dt;
-                    }
-
-                    if (slot.State == SlotState.Stopped)
-                    {
-                        slot.Plink.Update(effectiveGameTime, Vector2.Zero);
-                        continue;
-                    }
+                    if (slot.State == SlotState.Stopped) continue;
 
                     slot.StateTimer += dt;
 
@@ -347,7 +349,7 @@ namespace ProjectVagabond.Scenes
                         slot.Speed = MathHelper.Lerp(slot.Speed, slot.MaxSpeed, dt * 4f);
                         slot.VirtualIndex += slot.Speed * dt;
 
-                        if (i < shouldBeStopping)
+                        if (_state == IntroState.Spinning && i < shouldBeStopping)
                         {
                             float currentMod = slot.VirtualIndex % _characterIds.Count;
                             if (currentMod < 0) currentMod += _characterIds.Count;
@@ -379,55 +381,105 @@ namespace ProjectVagabond.Scenes
                             slot.VirtualIndex = slot.AbsoluteTargetIndex;
                             slot.Speed = 0f;
                             slot.State = SlotState.Stopped;
-                            slot.ShakeTimer = SLOT_SHAKE_DURATION;
                             _slotsStopped++;
-
-                            _hapticsManager.TriggerZoomPulse(_global.HapticZoomPulseStrength, _global.HapticZoomPulseDuration);
-                            slot.Plink.Start(0f, 0.3f);
                             _selectedWizards[slot.TargetId] = (0f, 0f);
 
-                            var audio = ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>();
-                            audio.PlaySfx("sfx_slot_lock", 0.1f);
-
-                            var emitter = _particleSystemManager.CreateEmitter(ParticleEffects.CreateUIPlink());
-                            int slotWidth = (Global.VIRTUAL_WIDTH - 40) / _randomCount;
-                            int startX = 20 + (i * slotWidth);
-                            int centerX = startX + (slotWidth / 2);
-                            emitter.Position = new Vector2(centerX, Global.VIRTUAL_HEIGHT / 2f + 10);
-                            emitter.EmitBurst(15);
-
-                            if (_slotsStopped == _randomCount)
+                            if (_state == IntroState.Spinning)
                             {
-                                _state = IntroState.Transitioning;
-                                _spinTimer = 0f;
+                                // Normal lock animation
+                                slot.ShakeMagnitude = SLOT_SHAKE_MAGNITUDE;
+                                slot.ShakeTimer = SLOT_SHAKE_DURATION;
+                                slot.Plink.MaxScale = 1.3f;
+                                slot.Plink.Start(0f, 0.3f);
+                                _hapticsManager.TriggerZoomPulse(_global.HapticZoomPulseStrength, _global.HapticZoomPulseDuration);
+                                ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlaySfx("sfx_slot_lock", 0.1f);
+
+                                var emitter = _particleSystemManager.CreateEmitter(ParticleEffects.CreateUIPlink());
+                                int slotWidth = (Global.VIRTUAL_WIDTH - 40) / _randomCount;
+                                int startX = 20 + (i * slotWidth);
+                                int centerX = startX + (slotWidth / 2);
+                                emitter.Position = new Vector2(centerX, Global.VIRTUAL_HEIGHT / 2f + 10);
+                                emitter.EmitBurst(15);
+
+                                if (_slotsStopped == _randomCount)
+                                {
+                                    _state = IntroState.SequentialLock;
+                                    _sequentialLockIndex = _randomCount - 1;
+                                    _sequentialLockTimer = 0.065f;
+                                }
                             }
                         }
+                    }
+                }
+            }
+
+            if (_state == IntroState.SequentialLock)
+            {
+                _sequentialLockTimer -= dt;
+                if (_sequentialLockTimer <= 0f)
+                {
+                    if (_sequentialLockIndex >= 0)
+                    {
+                        var slot = _slots[_sequentialLockIndex];
+
+                        // Force it to stopped and exactly on target just in case the settle timer was slightly off
+                        slot.VirtualIndex = slot.AbsoluteTargetIndex;
+                        slot.Speed = 0f;
+                        slot.State = SlotState.Stopped;
+                        _selectedWizards[slot.TargetId] = (0f, 0f);
+
+                        int locksCompleted = (_randomCount - 1) - _sequentialLockIndex;
+                        float intensityProgress = (float)locksCompleted / (_randomCount - 1);
+
+                        slot.ShakeMagnitude = MathHelper.Lerp(2f, SLOT_SHAKE_MAGNITUDE, intensityProgress);
+                        slot.ShakeTimer = SLOT_SHAKE_DURATION;
+
+                        slot.Plink.MaxScale = MathHelper.Lerp(1.1f, 1.3f, intensityProgress);
+                        slot.Plink.Start(0f, 0.3f);
+
+                        float hapticStrength = MathHelper.Lerp(1.005f, _global.HapticZoomPulseStrength, intensityProgress);
+                        _hapticsManager.TriggerZoomPulse(hapticStrength, _global.HapticZoomPulseDuration);
+
+                        float pitch = 0.1f + (locksCompleted * 0.05f);
+                        ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlaySfx("sfx_slot_lock", 0f, pitch);
+
+                        var emitter = _particleSystemManager.CreateEmitter(ParticleEffects.CreateUIPlink());
+                        int slotWidth = (Global.VIRTUAL_WIDTH - 40) / _randomCount;
+                        int startX = 20 + (_sequentialLockIndex * slotWidth);
+                        int centerX = startX + (slotWidth / 2);
+                        emitter.Position = new Vector2(centerX, Global.VIRTUAL_HEIGHT / 2f + 10);
+
+                        int burstCount = (int)MathHelper.Lerp(5, 15, intensityProgress);
+                        emitter.EmitBurst(burstCount);
+
+                        _sequentialLockIndex--;
+                        _sequentialLockTimer = 0.065f;
+                    }
+                    else
+                    {
+                        _state = IntroState.Transitioning;
+                        _spinTimer = 0f;
+
+                        // Immediate finish effect
+                        _hasPlayedFinishEffect = true;
+                        _hapticsManager.TriggerShake(8f, 0.4f); // Screen shake
+                        _hapticsManager.TriggerZoomPulse(1.1f, 0.15f);
+                        ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlaySfx("sfx_explosion");
+                        ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlaySfx("sfx_slot_finish");
                     }
                 }
             }
             else if (_state == IntroState.Transitioning)
             {
                 _spinTimer += dt;
-                for (int i = 0; i < _slots.Count; i++)
-                {
-                    if (_slots[i].ShakeTimer > 0) _slots[i].ShakeTimer -= dt;
-                    _slots[i].Plink.Update(effectiveGameTime, Vector2.Zero);
-                }
-
-                if (!_hasPlayedFinishEffect && _spinTimer >= SLOT_SHAKE_DURATION)
-                {
-                    _hasPlayedFinishEffect = true;
-                    _hapticsManager.TriggerZoomPulse(1.1f, 0.15f);
-                    ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlaySfx("sfx_explosion");
-                    ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlaySfx("sfx_slot_finish");
-                }
 
                 if (_hasPlayedFinishEffect)
                 {
                     _successWipeTimer += dt;
                 }
 
-                if (_spinTimer > 1.5f + SLOT_SHAKE_DURATION)
+                // Quick and responsive handoff
+                if (_spinTimer > SUCCESS_WIPE_DURATION)
                 {
                     StartGameActual();
                 }
@@ -518,7 +570,7 @@ namespace ProjectVagabond.Scenes
                 {
                     float progress = 1f - (slot.ShakeTimer / SLOT_SHAKE_DURATION);
                     float decay = 1f - Easing.EaseOutQuad(progress);
-                    slotShakeX = MathF.Sin(slot.ShakeTimer * SLOT_SHAKE_FREQUENCY) * SLOT_SHAKE_MAGNITUDE * decay;
+                    slotShakeX = MathF.Sin(slot.ShakeTimer * SLOT_SHAKE_FREQUENCY) * slot.ShakeMagnitude * decay;
                 }
 
                 int slotCenterX = startX + (i * slotWidth) + (slotWidth / 2) + (int)MathF.Round(slotShakeX);
