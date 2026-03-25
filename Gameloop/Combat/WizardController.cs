@@ -653,7 +653,14 @@ namespace ProjectVagabond.Battle
                 dir.Normalize();
                 combat.Position += dir * stats.Speed * dt;
                 combat.Position = arena.ClampToArena(combat.Position, ARENA_CLAMP_MARGIN);
+
+                float oldHop = ui.HopTimer;
                 ui.HopTimer += dt * stats.Speed * HOP_SPEED_MULTIPLIER;
+
+                if (MathF.Floor(oldHop / MathHelper.Pi) < MathF.Floor(ui.HopTimer / MathHelper.Pi))
+                {
+                    ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlaySfx("sfx_hop_click", 0.2f, null, combat.Position);
+                }
             }
         }
 

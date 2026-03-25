@@ -77,6 +77,14 @@
       "Path": "Audio/SFX/ticket_cut",
       "PoolSize": 3,
       "DefaultVolume": 0.05
+    },
+    {
+      "Id": "sfx_hop_click",
+      "Path": "Audio/UI/hop_click",
+      "PoolSize": 10,
+      "DefaultVolume": 0.05,
+      "MinPitch": -0.2,
+      "MaxPitch": 0.2
     }
   ],
   "Ui": [

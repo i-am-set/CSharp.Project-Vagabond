@@ -65,6 +65,7 @@ namespace ProjectVagabond.Scenes
         private Color _matchResultColor = Color.White;
 
         private ArenaWizard? _hoveredHudWizard;
+        private ArenaWizard? _previousHoveredHudWizard;
 
         private const int MULT_DEFAULT_MIN_STEP = 9; // Index 9 is Palette_Rust
         private const float ARENA_FILL_OPACITY = 1f; // Tunable window effect
@@ -184,7 +185,6 @@ namespace ProjectVagabond.Scenes
                 int w = (int)size.X + 8;
                 int h = (int)size.Y + 4;
 
-                // Shift bounds down by 1, text up by 1 to effectively move the border down relative to the text.
                 var btn = new Button(new Rectangle(Global.VIRTUAL_WIDTH / 2 - w / 2, y + 1, w, h), text, font: font)
                 {
                     DrawBorderOnHover = true,
@@ -237,6 +237,7 @@ namespace ProjectVagabond.Scenes
             _probPlinks.Clear();
             _winProbabilities.Clear();
             _printedTickets.Clear();
+            _previousHoveredHudWizard = null;
 
             InitializePauseMenu();
 
@@ -416,6 +417,12 @@ namespace ProjectVagabond.Scenes
                     }
                 }
             }
+
+            if (_hoveredHudWizard != null && _hoveredHudWizard != _previousHoveredHudWizard)
+            {
+                ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlayUi("ui_hover");
+            }
+            _previousHoveredHudWizard = _hoveredHudWizard;
 
             _ticketManager.Update(dt, virtualMousePos, justClicked, isClicking, _inputManager);
 
