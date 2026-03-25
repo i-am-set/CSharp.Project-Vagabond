@@ -23,17 +23,15 @@ namespace ProjectVagabond
         public Texture2D CreateHeartParticleTexture()
         {
             var graphicsDevice = ServiceLocator.Get<GraphicsDevice>();
-            const int size = 5;
+            const int size = 3;
             var texture = new Texture2D(graphicsDevice, size, size);
             var colorData = new Color[size * size];
 
-            bool[,] pattern = new bool[5, 5]
+            bool[,] pattern = new bool[3, 3]
             {
-                { false, true,  false, true,  false },
-                { true,  true,  true,  true,  true  },
-                { true,  true,  true,  true,  true  },
-                { false, true,  true,  true,  false },
-                { false, false, true,  false, false }
+                { true, false,  true},
+                { true,  true,  true},
+                { false,  true,  false}
             };
 
             for (int y = 0; y < size; y++)

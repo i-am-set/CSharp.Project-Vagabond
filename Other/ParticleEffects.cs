@@ -612,10 +612,11 @@ namespace ProjectVagabond.Particles
             settings.Duration = 0.5f;
 
             settings.Lifetime = new FloatRange(1.0f, 2.5f);
+
             settings.InitialVelocityX = new FloatRange(-5f, 5f);
             settings.InitialVelocityY = new FloatRange(-20f, -5f);
 
-            settings.InitialSize = new FloatRange(2f, 2f);
+            settings.InitialSize = new FloatRange(1f, 1f);
             settings.EndSize = new FloatRange(0f);
             settings.InterpolateSize = true;
 

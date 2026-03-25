@@ -595,7 +595,9 @@ namespace ProjectVagabond.Scenes
                 _lastAudioScrollOffset = _targetScrollOffset;
             }
 
+            float previousScrollOffset = _scrollOffset;
             _scrollOffset = _targetScrollOffset;
+            bool scrolledThisFrame = Math.Abs(_scrollOffset - previousScrollOffset) > 0.01f;
 
             // Mask the mouse position if it's outside the viewport so hidden items don't react to hover
             Vector2 listMousePos = virtualMousePos;
@@ -638,7 +640,7 @@ namespace ProjectVagabond.Scenes
                     currentMouseState.XButton2
                 );
 
-                _navigationGroup.Update(_inputManager, virtualMouseState, deselectIfNoHover: true);
+                _navigationGroup.Update(_inputManager, virtualMouseState, deselectIfNoHover: true, forceUpdate: scrolledThisFrame);
 
                 if (_inputManager.CurrentInputDevice != InputDeviceType.Mouse)
                 {

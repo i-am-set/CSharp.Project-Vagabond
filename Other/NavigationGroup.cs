@@ -241,14 +241,12 @@ namespace ProjectVagabond.UI
             }
         }
 
-        public void Update(InputManager inputManager, MouseState? mouseState = null, bool deselectIfNoHover = false)
+        public void Update(InputManager inputManager, MouseState? mouseState = null, bool deselectIfNoHover = false, bool forceUpdate = false)
         {
-            // Strictly ignore mouse logic if the input manager says we are using Keyboard/Gamepad
             if (inputManager.CurrentInputDevice != InputDeviceType.Mouse)
                 return;
 
-            // Even if device is Mouse, ignore if no movement occurred this frame (optimization + jitter prevention)
-            if (!inputManager.MouseMovedThisFrame)
+            if (!inputManager.MouseMovedThisFrame && !forceUpdate)
                 return;
 
             MouseState currentMouseState = mouseState ?? inputManager.GetEffectiveMouseState();
