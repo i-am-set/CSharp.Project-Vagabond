@@ -1,24 +1,12 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Audio;
 using Microsoft.Xna.Framework.Content;
-using Microsoft.Xna.Framework.Graphics;
-using Microsoft.Xna.Framework.Input;
-using MonoGame.Extended.BitmapFonts;
-using ProjectVagabond;
-using ProjectVagabond.Battle;
-using ProjectVagabond.Particles;
-using ProjectVagabond.Scenes;
-using ProjectVagabond.Transitions;
-using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Runtime.InteropServices;
 using System.Text.Json;
-using System.Threading;
 using static ProjectVagabond.GameEvents;
 
 namespace ProjectVagabond.Audio
@@ -75,6 +63,8 @@ namespace ProjectVagabond.Audio
         private readonly Dictionary<string, MusicTrack> _musicTracks = new Dictionary<string, MusicTrack>(StringComparer.OrdinalIgnoreCase);
         private readonly Dictionary<string, AmbientTrack> _ambientTracks = new Dictionary<string, AmbientTrack>(StringComparer.OrdinalIgnoreCase);
         private readonly Dictionary<Guid, SoundEffectInstance> _activeLoops = new Dictionary<Guid, SoundEffectInstance>();
+
+        private readonly List<SoundEffectInstance> _pausedInstances = new List<SoundEffectInstance>();
 
         private MusicTrack _currentMusic;
         private MusicTrack _fadingMusic;
@@ -561,6 +551,77 @@ namespace ProjectVagabond.Audio
             }
         }
 
+        public void PauseGameAudio()
+        {
+            _pausedInstances.Clear();
+
+            if (_currentMusic != null)
+            {
+                foreach (var stem in _currentMusic.Stems)
+                {
+                    if (stem.State == SoundState.Playing)
+                    {
+                        stem.Pause();
+                        _pausedInstances.Add(stem);
+                    }
+                }
+            }
+
+            if (_fadingMusic != null)
+            {
+                foreach (var stem in _fadingMusic.Stems)
+                {
+                    if (stem.State == SoundState.Playing)
+                    {
+                        stem.Pause();
+                        _pausedInstances.Add(stem);
+                    }
+                }
+            }
+
+            foreach (var track in _ambientTracks.Values)
+            {
+                if (track.Instance.State == SoundState.Playing)
+                {
+                    track.Instance.Pause();
+                    _pausedInstances.Add(track.Instance);
+                }
+            }
+
+            foreach (var pool in _sfxPools.Values)
+            {
+                foreach (var inst in pool.Instances)
+                {
+                    if (inst.State == SoundState.Playing)
+                    {
+                        inst.Pause();
+                        _pausedInstances.Add(inst);
+                    }
+                }
+            }
+
+            foreach (var inst in _activeLoops.Values)
+            {
+                if (inst.State == SoundState.Playing)
+                {
+                    inst.Pause();
+                    _pausedInstances.Add(inst);
+                }
+            }
+        }
+
+        public void ResumeGameAudio()
+        {
+            foreach (var inst in _pausedInstances)
+            {
+                if (inst.State == SoundState.Paused)
+                {
+                    inst.Resume();
+                }
+            }
+            _pausedInstances.Clear();
+        }
+
         public void StopAll()
         {
             StopMusic(0f);
@@ -593,6 +654,7 @@ namespace ProjectVagabond.Audio
                 if (inst.State == SoundState.Playing) inst.Stop();
             }
             _activeLoops.Clear();
+            _pausedInstances.Clear();
         }
 
         public void Update(float dt)

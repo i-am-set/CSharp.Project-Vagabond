@@ -8,6 +8,8 @@ namespace ProjectVagabond.Particles
 {
     public class ParticleSystemManager
     {
+        public bool IsPaused { get; set; } = false;
+
         private readonly List<ParticleEmitter> _emitters = new List<ParticleEmitter>();
         private readonly Dictionary<(BlendState, Effect), List<ParticleEmitter>> _renderBatches = new Dictionary<(BlendState, Effect), List<ParticleEmitter>>();
         private readonly VectorField _vectorField;
@@ -30,7 +32,6 @@ namespace ProjectVagabond.Particles
         {
             var emitter = new ParticleEmitter(settings);
             _emitters.Add(emitter);
-            //Debug.WriteLine($"[PSM] Created emitter. Total emitters: {_emitters.Count}.");
             return emitter;
         }
 
@@ -49,6 +50,8 @@ namespace ProjectVagabond.Particles
 
         public void Update(float deltaTime)
         {
+            if (IsPaused) return;
+
             // Update the vector field first, so all emitters in this frame use the same state.
             _vectorField.Update(deltaTime);
 
@@ -60,10 +63,6 @@ namespace ProjectVagabond.Particles
 
             // Automatically remove any emitters that have finished their lifecycle.
             int removedCount = _emitters.RemoveAll(e => e.IsFinished);
-            if (removedCount > 0)
-            {
-                //Debug.WriteLine($"[PSM] Cleaned up {removedCount} finished emitter(s). Total emitters remaining: {_emitters.Count}.");
-            }
         }
 
         public void Draw(SpriteBatch spriteBatch, Matrix? transformMatrix = null, int drawLayer = 1)

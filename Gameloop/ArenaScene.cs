@@ -195,14 +195,21 @@ namespace ProjectVagabond.Scenes
             }
 
             var resumeBtn = CreatePauseButton("RESUME", startY);
-            resumeBtn.OnClick += () => { _arenaState = _prePauseState; };
+            resumeBtn.OnClick += () => {
+                _arenaState = _prePauseState;
+                _particleSystemManager.IsPaused = false;
+                ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().ResumeGameAudio();
+                ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlayRoutedSfx("proc:wave=2;atk=0.02;sus=0.05;dec=0.2;freq=880;slide=-440;vol=0.2");
+            };
 
             var settingsBtn = CreatePauseButton("SETTINGS", startY + spacing);
             settingsBtn.OnClick += () => { _sceneManager.ShowModal(GameSceneState.Settings); };
 
             var mainMenuBtn = CreatePauseButton("MAIN MENU", startY + spacing * 2);
             mainMenuBtn.OnClick += () => {
+                _particleSystemManager.IsPaused = false;
                 _particleSystemManager.ClearAllEmitters();
+                ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().ResumeGameAudio();
                 ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().StopAll();
                 PoolManager.ClearAll();
                 _sceneManager.ChangeScene(GameSceneState.MainMenu, TransitionType.FadeOff, TransitionType.FadeOff);
@@ -363,6 +370,9 @@ namespace ProjectVagabond.Scenes
                 if (_inputManager.Back)
                 {
                     _arenaState = _prePauseState;
+                    _particleSystemManager.IsPaused = false;
+                    ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().ResumeGameAudio();
+                    ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlayRoutedSfx("proc:wave=2;atk=0.02;sus=0.05;dec=0.2;freq=880;slide=-440;vol=0.2");
                 }
                 return;
             }
@@ -636,6 +646,9 @@ namespace ProjectVagabond.Scenes
                 _prePauseState = _arenaState;
                 _arenaState = ArenaState.Paused;
                 _pauseNavGroup.SelectFirst();
+                _particleSystemManager.IsPaused = true;
+                ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PauseGameAudio();
+                ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlayRoutedSfx("proc:wave=2;atk=0.02;sus=0.05;dec=0.2;freq=440;slide=440;vol=0.2");
             }
 
             _lastMouseState = mouseState;

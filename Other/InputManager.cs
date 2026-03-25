@@ -55,7 +55,7 @@ namespace ProjectVagabond
         {
             Keys.W, Keys.A, Keys.S, Keys.D,
             Keys.Up, Keys.Down, Keys.Left, Keys.Right,
-            Keys.Enter, Keys.Escape, Keys.Back
+            Keys.Enter, Keys.Back
         };
 
         public void Update()
