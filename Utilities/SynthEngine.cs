@@ -64,9 +64,9 @@ namespace ProjectVagabond.Audio
                     switch (key)
                     {
                         case "wave": lp.WaveType = (int)val; break;
-                        case "atk": lp.AttackTime = val; break;
-                        case "sus": lp.SustainTime = val; break;
-                        case "dec": lp.DecayTime = val; break;
+                        case "atk": lp.AttackTime = Math.Min(val, 5f); break;
+                        case "sus": lp.SustainTime = Math.Min(val, 5f); break;
+                        case "dec": lp.DecayTime = Math.Min(val, 5f); break;
                         case "freq": lp.StartFrequency = val; break;
                         case "minfreq": lp.MinFrequency = val; break;
                         case "slide": lp.Slide = val; break;

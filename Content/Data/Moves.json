@@ -366,7 +366,7 @@
     "Name": "Wall of Fire",
     "AnimationID": "",
     "CastSoundCue": "proc:wave=5;atk=0.5;sus=0.1;dec=0.5;freq=100;lpf=800;dist=2.0;vol=0.15|wave=3;atk=0.2;sus=0.2;dec=0.4;lpf=1500;lpfsweep=-500;vol=0.1",
-    "LoopSoundCue": "proc:wave=5;atk=0.5;sus=99.0;dec=0.5;lpf=300;vibdepth=20;vibspeed=10;vol=0.05",
+    "LoopSoundCue": "proc:wave=5;atk=0.5;sus=2.0;dec=0.5;lpf=300;vibdepth=20;vibspeed=10;vol=0.05",
     "BasePower": 15,
     "ChargeTime": 0.5,
     "IsRare": true,

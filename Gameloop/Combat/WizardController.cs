@@ -21,8 +21,8 @@ namespace ProjectVagabond.Battle
         private const float KNOCKBACK_DURATION_BASE = 0.5f;
         private const float KNOCKBACK_DISTANCE_DIVISOR = 80f;
 
-        private const float MIN_ACTION_TIME = 4.0f;
-        private const float ACTION_TIME_VARIANCE = 16.0f;
+        private const float MIN_ACTION_TIME = 2.0f;
+        private const float ACTION_TIME_VARIANCE = 14.0f;
 
         private const float MIN_SPEED_MULTIPLIER = 0.1f;
         private const float MAX_SPEED_MULTIPLIER = 3.0f;
