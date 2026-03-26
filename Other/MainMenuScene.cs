@@ -106,43 +106,20 @@ namespace ProjectVagabond.Scenes
             const int horizontalPadding = 4;
             const int verticalPadding = 2;
             const int buttonYSpacing = 0;
-            float currentY = 95f;
+            float currentY = 105f;
             int buttonX = Global.VIRTUAL_WIDTH / 2 - 130;
 
-            string continueText = "CONTINUE";
-            string newGameText = "NEW GAME";
+            string arenaText = "START MATCH";
             string settingsText = "SETTINGS";
             string exitText = "EXIT";
 
-            Vector2 continueSize = secondaryFont.MeasureString(continueText);
-            int continueWidth = (int)continueSize.X + horizontalPadding * 2;
-            int continueHeight = (int)continueSize.Y + verticalPadding * 2;
+            Vector2 arenaSize = secondaryFont.MeasureString(arenaText);
+            int arenaWidth = (int)arenaSize.X + horizontalPadding * 2;
+            int arenaHeight = (int)arenaSize.Y + verticalPadding * 2;
 
-            var continueButton = new Button(
-                new Rectangle(buttonX, (int)currentY, continueWidth, continueHeight),
-                continueText,
-                font: secondaryFont,
-                alignLeft: true
-            )
-            {
-                TextRenderOffset = new Vector2(0, -1),
-                EnableTextWave = false,
-                AlwaysAnimateText = false,
-                EnableHoverSway = false,
-                IsEnabled = false,
-                UseTextOutline = true,
-                TextOutlineColor = _global.Palette_Off
-            };
-            _buttons.Add(continueButton);
-            currentY += continueHeight + buttonYSpacing;
-
-            Vector2 newGameSize = secondaryFont.MeasureString(newGameText);
-            int newGameWidth = (int)newGameSize.X + horizontalPadding * 2;
-            int newGameHeight = (int)newGameSize.Y + verticalPadding * 2;
-
-            var newGameButton = new Button(
-                new Rectangle(buttonX, (int)currentY, newGameWidth, newGameHeight),
-                newGameText,
+            var arenaButton = new Button(
+                new Rectangle(buttonX, (int)currentY, arenaWidth, arenaHeight),
+                arenaText,
                 font: secondaryFont,
                 alignLeft: true
             )
@@ -155,16 +132,17 @@ namespace ProjectVagabond.Scenes
                 UseTextOutline = true,
                 TextOutlineColor = _global.Palette_Off
             };
-            newGameButton.OnClick += () =>
+            arenaButton.OnClick += () =>
             {
                 _hapticsManager.TriggerZoomPulse(_global.LightHapticZoomPulseStrength, _global.HapticZoomPulseDuration);
-                newGameButton.ResetAnimationState();
+                arenaButton.ResetAnimationState();
                 ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().StopMusic(1.5f);
                 _sceneManager.ChangeScene(GameSceneState.NewGameIntro, _transitionManager.GetRandomTransition(), _transitionManager.GetRandomTransition());
             };
-            _buttons.Add(newGameButton);
-            _navigationGroup.Add(newGameButton);
-            currentY += newGameHeight + buttonYSpacing;
+            _buttons.Add(arenaButton);
+            _navigationGroup.Add(arenaButton);
+
+            currentY += arenaHeight + buttonYSpacing + 12;
 
             string catyText = "CATYLOPEDIA";
             Vector2 catySize = secondaryFont.MeasureString(catyText);

@@ -686,6 +686,10 @@ namespace ProjectVagabond.Scenes
                 else if (_arenaState == ArenaState.MatchOver)
                 {
                     _matchOverTimer -= dt;
+                    if (_matchOverTimer <= 0f && !_transitionManager.IsTransitioning)
+                    {
+                        _sceneManager.ChangeScene(GameSceneState.MainMenu, TransitionType.FadeOff, TransitionType.FadeOff);
+                    }
                 }
             }
 
