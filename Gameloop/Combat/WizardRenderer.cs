@@ -39,14 +39,14 @@ namespace ProjectVagabond.Battle
 
             if (ui.MoveTextTimer > 0 && !string.IsNullOrEmpty(ui.ActiveMoveText) && combat.State != WizardState.Dead)
             {
-                var font = _core.SecondaryFont;
+                var font = _core.TertiaryFont;
 
                 float timeElapsed = ui.MoveTextDuration - ui.MoveTextTimer;
                 float scale = 1f;
                 float alpha = 1f;
                 float yOffset = 0f;
                 float xOffset = 0f;
-                Color textColor = _global.Palette_Sun;
+                Color textColor = ui.IsActiveMoveRare ? _global.Palette_Sun : _global.Palette_DarkestPale;
 
                 if (ui.IsMoveCanceled)
                 {
@@ -94,17 +94,13 @@ namespace ProjectVagabond.Battle
                 string text = (ft.IsHealing ? $"+{ft.Number}" : $"-{ft.Number}");
 
                 BitmapFont font = _core.TertiaryFont;
-                if (ft.Number > 4)
+                if (ft.Number >= 15)
                 {
                     font = _core.DefaultFont;
                 }
-                else if (ft.Number > 2)
+                else if (ft.Number >= 5)
                 {
                     font = _core.SecondaryFont;
-                }
-                else
-                {
-                    font = _core.TertiaryFont;
                 }
 
                 Color textColor = ft.IsHealing

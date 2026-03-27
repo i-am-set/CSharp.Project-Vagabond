@@ -228,7 +228,7 @@
     "TargetSelf": false,
     "CanEffectSelf": false,
     "ExecuteOnChargeStart": false,
-    "RequiresFocus": true,
+    "RequiresFocus": false,
     "ShowProjectileIndicator": true
   },
   {

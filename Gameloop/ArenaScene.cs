@@ -51,6 +51,8 @@ namespace ProjectVagabond.Scenes
         private int _lastCountdownSecond = 0;
         private bool _hasPlayedBetSound = false;
 
+        private float _hitstopTimer = 0f;
+
         private PlinkAnimator _plinkBetCountdown = null!;
         private PlinkAnimator _plinkFight = null!;
 
@@ -509,186 +511,197 @@ namespace ProjectVagabond.Scenes
 
             if (_arenaState == ArenaState.Fighting || _arenaState == ArenaState.MatchOver)
             {
-                _phaseTimer += dt;
-
-                if (_arenaState == ArenaState.Fighting)
+                if (_hitstopTimer > 0)
                 {
-                    if (_phaseTimer >= 1.0f && !IsOvertime)
+                    _hitstopTimer -= dt;
+                    foreach (var wizard in _wizards)
                     {
-                        _matchTimer -= dt;
-                        int currentSec = (int)Math.Ceiling(_matchTimer);
-                        if (currentSec != _lastMatchSecond && currentSec >= 0)
-                        {
-                            _lastMatchSecond = currentSec;
-                            if (currentSec == 60 || currentSec == 30 || currentSec <= 10)
-                            {
-                                _plinkTimerText.Start(0f, 0.3f);
-                            }
-                        }
+                        wizard.Data.UI.IsHovered = wizard.Data.Combat.State != WizardState.Dead && wizard.Controller.GetHitbox(_spriteManager).Contains(virtualMousePos);
+                    }
+                }
+                else
+                {
+                    _phaseTimer += dt;
 
-                        if (_matchTimer <= 0)
+                    if (_arenaState == ArenaState.Fighting)
+                    {
+                        if (_phaseTimer >= 1.0f && !IsOvertime)
                         {
-                            IsOvertime = true;
-                            _suddenDeathTimer = 1.0f;
-                            _plinkSuddenDeath.Start(0f, 0.3f);
-                            _plinkTimerText.Start(0f, 0.3f);
-
-                            foreach (var w in _wizards)
+                            _matchTimer -= dt;
+                            int currentSec = (int)Math.Ceiling(_matchTimer);
+                            if (currentSec != _lastMatchSecond && currentSec >= 0)
                             {
-                                if (w.Data.Combat.State != WizardState.Dead)
+                                _lastMatchSecond = currentSec;
+                                if (currentSec == 60 || currentSec == 30 || currentSec <= 10)
                                 {
-                                    w.Data.Stats.CurrentHP = 1;
-                                    if (w.Data.Combat.QueuedMove != null && w.Data.Combat.QueuedMove.Effects.Any(e => e is HealEffect))
+                                    _plinkTimerText.Start(0f, 0.3f);
+                                }
+                            }
+
+                            if (_matchTimer <= 0)
+                            {
+                                IsOvertime = true;
+                                _suddenDeathTimer = 1.0f;
+                                _plinkSuddenDeath.Start(0f, 0.3f);
+                                _plinkTimerText.Start(0f, 0.3f);
+
+                                foreach (var w in _wizards)
+                                {
+                                    if (w.Data.Combat.State != WizardState.Dead)
                                     {
-                                        w.Data.Combat.State = WizardState.Recovering;
-                                        w.Data.Combat.StateTimer = 0.25f;
-                                        w.Data.Combat.QueuedMove = null;
+                                        w.Data.Stats.CurrentHP = 1;
+                                        if (w.Data.Combat.QueuedMove != null && w.Data.Combat.QueuedMove.Effects.Any(e => e is HealEffect))
+                                        {
+                                            w.Data.Combat.State = WizardState.Recovering;
+                                            w.Data.Combat.StateTimer = 0.25f;
+                                            w.Data.Combat.QueuedMove = null;
+                                        }
+                                    }
+                                }
+
+                                foreach (var attack in _activeAttacks)
+                                {
+                                    if (attack.Move.Effects.Any(e => e is HealEffect))
+                                    {
+                                        attack.IsCanceled = true;
                                     }
                                 }
                             }
+                        }
 
-                            foreach (var attack in _activeAttacks)
+                        if (_suddenDeathTimer > 0)
+                        {
+                            _suddenDeathTimer -= dt;
+                        }
+                    }
+
+                    if (_inputManager.ActiveSpellTriggered && _arenaState == ArenaState.Fighting)
+                    {
+                        var player = _wizards.FirstOrDefault(w => w.Data.Stats.IsPlayer);
+                        if (player != null) player.Controller.TriggerActiveSpell(_battleContext);
+                    }
+
+                    foreach (var wizard in _wizards)
+                    {
+                        wizard.Data.UI.IsHovered = wizard.Data.Combat.State != WizardState.Dead && wizard.Controller.GetHitbox(_spriteManager).Contains(virtualMousePos);
+                        wizard.Controller.Update(dt, _battleContext);
+                    }
+
+                    for (int i = 0; i < _wizards.Count; i++)
+                    {
+                        var w1 = _wizards[i];
+                        if (w1.Data.Combat.State == WizardState.Dead) continue;
+
+                        for (int j = i + 1; j < _wizards.Count; j++)
+                        {
+                            var w2 = _wizards[j];
+                            if (w2.Data.Combat.State == WizardState.Dead) continue;
+
+                            var box1 = w1.Controller.GetHitbox(_spriteManager);
+                            var box2 = w2.Controller.GetHitbox(_spriteManager);
+
+                            if (box1.Intersects(box2))
                             {
-                                if (attack.Move.Effects.Any(e => e is HealEffect))
+                                Vector2 center1 = new Vector2(box1.Center.X, box1.Center.Y);
+                                Vector2 center2 = new Vector2(box2.Center.X, box2.Center.Y);
+
+                                Vector2 pushDir = center1 - center2;
+                                if (pushDir.LengthSquared() == 0)
                                 {
-                                    attack.IsCanceled = true;
+                                    pushDir = new Vector2((float)_random.NextDouble() - 0.5f, (float)_random.NextDouble() - 0.5f);
+                                    if (pushDir.LengthSquared() == 0) pushDir = new Vector2(1, 0);
+                                }
+                                pushDir.Normalize();
+
+                                if (w1.Data.Combat.State == WizardState.Moving)
+                                {
+                                    w1.Data.Combat.TargetPosition = ClampToArena(w1.Data.Combat.Position + pushDir * 50f, 12f);
+                                }
+                                if (w2.Data.Combat.State == WizardState.Moving)
+                                {
+                                    w2.Data.Combat.TargetPosition = ClampToArena(w2.Data.Combat.Position - pushDir * 50f, 12f);
                                 }
                             }
                         }
                     }
 
-                    if (_suddenDeathTimer > 0)
+                    for (int i = _activeAttacks.Count - 1; i >= 0; i--)
                     {
-                        _suddenDeathTimer -= dt;
-                    }
-                }
+                        var attack = _activeAttacks[i];
 
-                if (_inputManager.ActiveSpellTriggered && _arenaState == ArenaState.Fighting)
-                {
-                    var player = _wizards.FirstOrDefault(w => w.Data.Stats.IsPlayer);
-                    if (player != null) player.Controller.TriggerActiveSpell(_battleContext);
-                }
-
-                foreach (var wizard in _wizards)
-                {
-                    wizard.Data.UI.IsHovered = wizard.Data.Combat.State != WizardState.Dead && wizard.Controller.GetHitbox(_spriteManager).Contains(virtualMousePos);
-                    wizard.Controller.Update(dt, _battleContext);
-                }
-
-                for (int i = 0; i < _wizards.Count; i++)
-                {
-                    var w1 = _wizards[i];
-                    if (w1.Data.Combat.State == WizardState.Dead) continue;
-
-                    for (int j = i + 1; j < _wizards.Count; j++)
-                    {
-                        var w2 = _wizards[j];
-                        if (w2.Data.Combat.State == WizardState.Dead) continue;
-
-                        var box1 = w1.Controller.GetHitbox(_spriteManager);
-                        var box2 = w2.Controller.GetHitbox(_spriteManager);
-
-                        if (box1.Intersects(box2))
+                        if (attack.TargetWizard != null && attack.TargetWizard.Data.Combat.IsSuspended)
                         {
-                            Vector2 center1 = new Vector2(box1.Center.X, box1.Center.Y);
-                            Vector2 center2 = new Vector2(box2.Center.X, box2.Center.Y);
-
-                            Vector2 pushDir = center1 - center2;
-                            if (pushDir.LengthSquared() == 0)
-                            {
-                                pushDir = new Vector2((float)_random.NextDouble() - 0.5f, (float)_random.NextDouble() - 0.5f);
-                                if (pushDir.LengthSquared() == 0) pushDir = new Vector2(1, 0);
-                            }
-                            pushDir.Normalize();
-
-                            if (w1.Data.Combat.State == WizardState.Moving)
-                            {
-                                w1.Data.Combat.TargetPosition = ClampToArena(w1.Data.Combat.Position + pushDir * 50f, 12f);
-                            }
-                            if (w2.Data.Combat.State == WizardState.Moving)
-                            {
-                                w2.Data.Combat.TargetPosition = ClampToArena(w2.Data.Combat.Position - pushDir * 50f, 12f);
-                            }
+                            attack.TargetWizard = null;
                         }
-                    }
-                }
 
-                for (int i = _activeAttacks.Count - 1; i >= 0; i--)
-                {
-                    var attack = _activeAttacks[i];
+                        attack.Update(dt, _battleContext);
 
-                    if (attack.TargetWizard != null && attack.TargetWizard.Data.Combat.IsSuspended)
-                    {
-                        attack.TargetWizard = null;
-                    }
-
-                    attack.Update(dt, _battleContext);
-
-                    if (attack.IsFinished)
-                    {
-                        _activeAttacks.RemoveAt(i);
-                        attack.ReturnToPool();
-                    }
-                }
-
-                if (_arenaState == ArenaState.Fighting)
-                {
-                    UpdateDynamicOdds();
-
-                    int currentAliveCount = _wizards.Count(w => w.Data.Combat.State != WizardState.Dead);
-
-                    foreach (var w in _wizards)
-                    {
-                        if (w.Data.Combat.State == WizardState.Dead && w.Data.Metrics.Placement == 0)
+                        if (attack.IsFinished)
                         {
-                            w.Data.Metrics.Placement = currentAliveCount + 1;
-                            w.Data.Metrics.TimeSurvived = _phaseTimer;
-
-                            if (!_printedTickets.Contains(w))
-                            {
-                                _printedTickets.Add(w);
-                                _ticketManager.PrintTicket(_wizards.IndexOf(w) + 1, w.Data.Metrics.Placement);
-                            }
+                            _activeAttacks.RemoveAt(i);
+                            attack.ReturnToPool();
                         }
                     }
 
-                    if (currentAliveCount <= 1)
+                    if (_arenaState == ArenaState.Fighting)
                     {
-                        _arenaState = ArenaState.MatchOver;
-                        _matchOverTimer = 4.0f;
+                        UpdateDynamicOdds();
 
-                        ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().StopMusic(2.0f);
-                        ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlaySfx("sfx_win");
+                        int currentAliveCount = _wizards.Count(w => w.Data.Combat.State != WizardState.Dead);
 
-                        var winner = _wizards.FirstOrDefault(w => w.Data.Combat.State != WizardState.Dead);
-                        if (winner != null)
+                        foreach (var w in _wizards)
                         {
-                            winner.Data.Metrics.Placement = 1;
-                            winner.Data.Metrics.TimeSurvived = _phaseTimer;
-
-                            _matchResultText = $"{winner.Data.Stats.Name.ToUpper()} WINS!";
-
-                            if (!_printedTickets.Contains(winner))
+                            if (w.Data.Combat.State == WizardState.Dead && w.Data.Metrics.Placement == 0)
                             {
-                                _printedTickets.Add(winner);
-                                _ticketManager.PrintTicket(_wizards.IndexOf(winner) + 1, 1);
+                                w.Data.Metrics.Placement = currentAliveCount + 1;
+                                w.Data.Metrics.TimeSurvived = _phaseTimer;
+
+                                if (!_printedTickets.Contains(w))
+                                {
+                                    _printedTickets.Add(w);
+                                    _ticketManager.PrintTicket(_wizards.IndexOf(w) + 1, w.Data.Metrics.Placement);
+                                }
                             }
                         }
-                        else
-                        {
-                            _matchResultText = "DRAW";
-                            _matchResultColor = _global.Palette_Gray;
-                        }
 
-                        _gameState.LastMatchWizards = _wizards.ToList();
+                        if (currentAliveCount <= 1)
+                        {
+                            _arenaState = ArenaState.MatchOver;
+                            _matchOverTimer = 4.0f;
+
+                            ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().StopMusic(2.0f);
+                            ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlaySfx("sfx_win");
+
+                            var winner = _wizards.FirstOrDefault(w => w.Data.Combat.State != WizardState.Dead);
+                            if (winner != null)
+                            {
+                                winner.Data.Metrics.Placement = 1;
+                                winner.Data.Metrics.TimeSurvived = _phaseTimer;
+
+                                _matchResultText = $"{winner.Data.Stats.Name.ToUpper()} WINS!";
+
+                                if (!_printedTickets.Contains(winner))
+                                {
+                                    _printedTickets.Add(winner);
+                                    _ticketManager.PrintTicket(_wizards.IndexOf(winner) + 1, 1);
+                                }
+                            }
+                            else
+                            {
+                                _matchResultText = "DRAW";
+                                _matchResultColor = _global.Palette_Gray;
+                            }
+
+                            _gameState.LastMatchWizards = _wizards.ToList();
+                        }
                     }
-                }
-                else if (_arenaState == ArenaState.MatchOver)
-                {
-                    _matchOverTimer -= dt;
-                    if (_matchOverTimer <= 0f && !_transitionManager.IsTransitioning)
+                    else if (_arenaState == ArenaState.MatchOver)
                     {
-                        _sceneManager.ChangeScene(GameSceneState.MainMenu, TransitionType.FadeOff, TransitionType.FadeOff);
+                        _matchOverTimer -= dt;
+                        if (_matchOverTimer <= 0f && !_transitionManager.IsTransitioning)
+                        {
+                            _sceneManager.ChangeScene(GameSceneState.MainMenu, TransitionType.FadeOff, TransitionType.FadeOff);
+                        }
                     }
                 }
             }
@@ -1324,6 +1337,11 @@ namespace ProjectVagabond.Scenes
                     spriteBatch.DrawStringOutlinedSnapped(tertiaryFont, sufText, new Vector2(MathF.Round(startX + numSize.X) + 1, MathF.Round(sufY)), placementColor, outlineColor);
                 }
             }
+        }
+
+        public void TriggerHitstop(float duration)
+        {
+            _hitstopTimer = Math.Max(_hitstopTimer, duration);
         }
     }
 }

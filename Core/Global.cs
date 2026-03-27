@@ -137,8 +137,8 @@ namespace ProjectVagabond
         public float FrostbiteAgilityMultiplier { get; set; } = 0.5f;
         public float EmpoweredDamageMultiplier { get; set; } = 1.5f;
 
-        public float HitstopDuration_Normal { get; set; } = 0.1f;
-        public float HitstopDuration_Crit { get; set; } = 0.2f;
+        public float HitstopDuration_Normal { get; set; } = 0.025f;
+        public float HitstopDuration_Crit { get; set; } = 0.1f;
 
         public float Saturation { get; set; } = 1.1f;
         public float Vibrance { get; set; } = 0.15f;

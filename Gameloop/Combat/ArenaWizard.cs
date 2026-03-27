@@ -25,6 +25,7 @@ namespace ProjectVagabond.Battle
         public float Timer;
         public float Duration;
         public Vector2 LocalOffset;
+        public Vector2 StartOffset;
 
         public void Reset()
         {
@@ -34,6 +35,7 @@ namespace ProjectVagabond.Battle
             Timer = 0f;
             Duration = 0f;
             LocalOffset = Vector2.Zero;
+            StartOffset = Vector2.Zero;
         }
 
         public void ReturnToPool()
@@ -136,6 +138,7 @@ namespace ProjectVagabond.Battle
         public int[] HeartFlashFrame;
 
         public string ActiveMoveText;
+        public bool IsActiveMoveRare;
         public float MoveTextTimer;
         public float MoveTextDuration;
         public bool IsMoveCanceled;

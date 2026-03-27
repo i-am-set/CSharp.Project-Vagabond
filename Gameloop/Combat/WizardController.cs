@@ -22,8 +22,8 @@ namespace ProjectVagabond.Battle
         private const float KNOCKBACK_DURATION_BASE = 0.15f;
         private const float KNOCKBACK_DISTANCE_DIVISOR = 250f;
 
-        private const float MIN_ACTION_TIME = 4.0f;
-        private const float ACTION_TIME_VARIANCE = 16.0f;
+        private const float MIN_ACTION_TIME = 2.0f;
+        private const float ACTION_TIME_VARIANCE = 8.0f;
 
         private const float MIN_SPEED_MULTIPLIER = 0.1f;
         private const float MAX_SPEED_MULTIPLIER = 3.0f;
@@ -217,15 +217,36 @@ namespace ProjectVagabond.Battle
                 var hitbox = GetHitbox(_spriteManager);
                 Vector2 centerOffset = new Vector2(hitbox.Center.X - combat.Position.X, hitbox.Center.Y - combat.Position.Y);
 
-                var ft = Pool<FloatingText>.Get();
-                ft.Reset();
-                ft.Number = actualDamage;
-                ft.IsHealing = false;
-                ft.IsCrit = isCrit;
-                ft.Duration = FLOATING_TEXT_DURATION;
-                ft.Timer = FLOATING_TEXT_DURATION;
-                ft.LocalOffset = centerOffset + new Vector2(_random.Next(-8, 9), 0);
-                ui.FloatingTexts.Add(ft);
+                FloatingText existingText = null;
+                foreach (var ft in ui.FloatingTexts)
+                {
+                    if (!ft.IsHealing && ft.Timer > 0)
+                    {
+                        existingText = ft;
+                        break;
+                    }
+                }
+
+                if (existingText != null)
+                {
+                    existingText.Number += actualDamage;
+                    existingText.Timer = FLOATING_TEXT_DURATION;
+                    existingText.IsCrit = existingText.IsCrit || isCrit;
+                    existingText.LocalOffset = existingText.StartOffset; // Reset position so it doesn't float away
+                }
+                else
+                {
+                    var ft = Pool<FloatingText>.Get();
+                    ft.Reset();
+                    ft.Number = actualDamage;
+                    ft.IsHealing = false;
+                    ft.IsCrit = isCrit;
+                    ft.Duration = FLOATING_TEXT_DURATION;
+                    ft.Timer = FLOATING_TEXT_DURATION;
+                    ft.StartOffset = centerOffset + new Vector2(_random.Next(-8, 9), 0);
+                    ft.LocalOffset = ft.StartOffset;
+                    ui.FloatingTexts.Add(ft);
+                }
 
                 return true;
             }
@@ -254,22 +275,41 @@ namespace ProjectVagabond.Battle
             {
                 ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlaySfx("sfx_combatant_heal", 0f, null, combat.Position);
 
-                // Show health bar on heal
                 ui.HealthBarVisibilityTimer = ui.HealthBarLingerDuration;
                 ui.HealthBarAlpha = 1.0f;
 
                 var hitbox = GetHitbox(_spriteManager);
                 Vector2 centerOffset = new Vector2(hitbox.Center.X - combat.Position.X, hitbox.Center.Y - combat.Position.Y);
 
-                var ft = Pool<FloatingText>.Get();
-                ft.Reset();
-                ft.Number = actualHeal;
-                ft.IsHealing = true;
-                ft.IsCrit = false;
-                ft.Duration = FLOATING_TEXT_DURATION;
-                ft.Timer = FLOATING_TEXT_DURATION;
-                ft.LocalOffset = centerOffset + new Vector2(_random.Next(-8, 9), 0);
-                ui.FloatingTexts.Add(ft);
+                FloatingText existingText = null;
+                foreach (var ft in ui.FloatingTexts)
+                {
+                    if (ft.IsHealing && ft.Timer > 0)
+                    {
+                        existingText = ft;
+                        break;
+                    }
+                }
+
+                if (existingText != null)
+                {
+                    existingText.Number += actualHeal;
+                    existingText.Timer = FLOATING_TEXT_DURATION;
+                    existingText.LocalOffset = existingText.StartOffset; // Reset position
+                }
+                else
+                {
+                    var ft = Pool<FloatingText>.Get();
+                    ft.Reset();
+                    ft.Number = actualHeal;
+                    ft.IsHealing = true;
+                    ft.IsCrit = false;
+                    ft.Duration = FLOATING_TEXT_DURATION;
+                    ft.Timer = FLOATING_TEXT_DURATION;
+                    ft.StartOffset = centerOffset + new Vector2(_random.Next(-8, 9), 0);
+                    ft.LocalOffset = ft.StartOffset;
+                    ui.FloatingTexts.Add(ft);
+                }
             }
         }
 
@@ -300,8 +340,8 @@ namespace ProjectVagabond.Battle
 
                     var ui = _wizard.Data.UI;
                     ui.IsMoveCanceled = true;
-                    ui.MoveTextTimer = 1.0f;
-                    ui.MoveTextDuration = 1.0f;
+                    ui.MoveTextTimer = 2.0f;
+                    ui.MoveTextDuration = 2.0f;
                     ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlayRoutedSfx("proc:wave=0;atk=0.01;sus=0.05;dec=0.25;freq=120;slide=-60;vol=0.05", 0f, null, combat.Position);
                 }
             }
@@ -572,8 +612,8 @@ namespace ProjectVagabond.Battle
                         combat.QueuedTargetWizard = null;
 
                         ui.IsMoveCanceled = true;
-                        ui.MoveTextTimer = 1.0f;
-                        ui.MoveTextDuration = 1.0f;
+                        ui.MoveTextTimer = 2.0f;
+                        ui.MoveTextDuration = 2.0f;
                         ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlayRoutedSfx("proc:wave=0;atk=0.01;sus=0.05;dec=0.25;freq=120;slide=-60;vol=0.15", 0f, null, combat.Position);
                         break;
                     }
@@ -668,6 +708,13 @@ namespace ProjectVagabond.Battle
         {
             var combat = _wizard.Data.Combat;
             var ui = _wizard.Data.UI;
+
+            int activeCasters = context.Arena.Wizards.Count(w => w.Data.Combat.State == WizardState.Casting || w.Data.Combat.State == WizardState.Telegraphing);
+            if (activeCasters >= 2 && _random.NextDouble() < 0.75f)
+            {
+                combat.ActionTimer = 0.25f + (float)_random.NextDouble() * 0.5f;
+                return;
+            }
 
             var validMoves = combat.Moves;
             if (context.Arena.IsOvertime)
@@ -772,7 +819,8 @@ namespace ProjectVagabond.Battle
             }
 
             ui.ActiveMoveText = combat.QueuedMove.Name;
-            ui.MoveTextDuration = Math.Max(MIN_MOVE_TEXT_DURATION, combat.QueuedMove.ChargeTime + MOVE_TEXT_CHARGE_PADDING);
+            ui.IsActiveMoveRare = combat.QueuedMove.IsRare;
+            ui.MoveTextDuration = Math.Max(MIN_MOVE_TEXT_DURATION, combat.QueuedMove.ChargeTime + MOVE_TEXT_CHARGE_PADDING) * 2f;
             ui.MoveTextTimer = ui.MoveTextDuration;
             ui.IsMoveCanceled = false;
 

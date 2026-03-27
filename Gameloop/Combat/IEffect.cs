@@ -25,15 +25,35 @@ namespace ProjectVagabond.Battle
 
             int damage = Math.Max(1, (int)Math.Floor(attack.Move.BasePower * (attack.Caster.Data.Stats.Power + 10) / ((targetTenacity + 10) * 13.33f)));
 
+            int oldHP = target.Data.Stats.CurrentHP;
             bool tookDamage = target.Controller.TakeDamage(damage, isCrit, attack.Caster);
+            int actualDamage = oldHP - target.Data.Stats.CurrentHP;
 
-            if (tookDamage && attack.Move.Knockback != 0)
+            if (tookDamage)
             {
-                Vector2 sourcePos = attack.Caster.Data.Combat.Position;
-                if (attack.DeliveryInstance is InstantAOEDelivery) sourcePos = attack.TargetPosition;
-                else if (attack.DeliveryInstance is TickingBeamDelivery) sourcePos = attack.Origin;
+                float damagePercent = (float)actualDamage / target.Data.Stats.MaxHP;
+                var haptics = ServiceLocator.Get<HapticsManager>();
 
-                target.Controller.ApplyKnockback(sourcePos, attack.Move.Knockback, context.Arena);
+                if (isCrit || damagePercent > 0.15f)
+                {
+                    haptics.TriggerImpactTwist(damagePercent * 2f, 0.2f);
+                    haptics.TriggerShake(damagePercent * 5f, 0.2f);
+                    context.Arena.TriggerHitstop(context.Global.HitstopDuration_Crit);
+                }
+                else
+                {
+                    haptics.TriggerShake(damagePercent * 2f, 0.1f);
+                    context.Arena.TriggerHitstop(context.Global.HitstopDuration_Normal);
+                }
+
+                if (attack.Move.Knockback != 0)
+                {
+                    Vector2 sourcePos = attack.Caster.Data.Combat.Position;
+                    if (attack.DeliveryInstance is InstantAOEDelivery) sourcePos = attack.TargetPosition;
+                    else if (attack.DeliveryInstance is TickingBeamDelivery) sourcePos = attack.Origin;
+
+                    target.Controller.ApplyKnockback(sourcePos, attack.Move.Knockback, context.Arena);
+                }
             }
         }
     }
@@ -72,6 +92,21 @@ namespace ProjectVagabond.Battle
 
             if (tookDamage)
             {
+                float damagePercent = (float)actualDamage / target.Data.Stats.MaxHP;
+                var haptics = ServiceLocator.Get<HapticsManager>();
+
+                if (isCrit || damagePercent > 0.15f)
+                {
+                    haptics.TriggerImpactTwist(damagePercent * 5f, 0.2f);
+                    haptics.TriggerShake(damagePercent * 10f, 0.2f);
+                    context.Arena.TriggerHitstop(context.Global.HitstopDuration_Crit);
+                }
+                else
+                {
+                    haptics.TriggerShake(damagePercent * 5f, 0.1f);
+                    context.Arena.TriggerHitstop(context.Global.HitstopDuration_Normal);
+                }
+
                 if (actualDamage > 0)
                 {
                     int healAmount = Math.Max(1, (int)(actualDamage * DrainPercentage));
