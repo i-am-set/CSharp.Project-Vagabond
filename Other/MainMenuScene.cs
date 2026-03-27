@@ -142,7 +142,7 @@ namespace ProjectVagabond.Scenes
             _buttons.Add(arenaButton);
             _navigationGroup.Add(arenaButton);
 
-            currentY += arenaHeight + buttonYSpacing + 12;
+            currentY += arenaHeight + buttonYSpacing + 6;
 
             string catyText = "CATYLOPEDIA";
             Vector2 catySize = secondaryFont.MeasureString(catyText);

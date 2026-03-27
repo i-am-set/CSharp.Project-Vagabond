@@ -1,9 +1,15 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using Microsoft.Xna.Framework.Input;
+using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond.Battle;
+using ProjectVagabond.Particles;
 using ProjectVagabond.Scenes;
+using ProjectVagabond.Transitions;
+using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
+using System.Collections.Generic;
 
 namespace ProjectVagabond.Deliveries
 {
@@ -142,7 +148,7 @@ namespace ProjectVagabond.Deliveries
         {
             _detonated = true;
 
-            ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlayRoutedSfx("proc:wave=5;atk=0.01;sus=0.1;dec=0.5;freq=100;slide=-50;detune=0.03;delay=0.2;delfb=0.4;vol=0.3");
+            ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlayRoutedSfx("proc:wave=5;atk=0.01;sus=0.1;dec=0.5;freq=100;slide=-50;detune=0.03;delay=0.1;delfb=0.25;vol=0.3");
             ServiceLocator.Get<HapticsManager>().TriggerZoomPulse(1.05f, 0.15f);
             ServiceLocator.Get<HapticsManager>().TriggerShake(10f, 0.3f);
 

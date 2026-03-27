@@ -43,8 +43,9 @@ namespace ProjectVagabond.Audio
             public int DecaySamples => (int)(DecayTime * SAMPLE_RATE);
             public int DrySamples => AttackSamples + SustainSamples + DecaySamples;
 
-            // Extend total samples to allow delay echoes to ring out naturally
-            public int TotalSamples => DrySamples + (DelayTime > 0 ? (int)(DelayTime * SAMPLE_RATE * (DelayFeedback > 0.1f ? 6 : 2)) : 0);
+            public float SafeFeedback => Math.Clamp(DelayFeedback, 0f, 0.95f);
+            public int TailSamples => DelayTime > 0 ? (int)(DelayTime * SAMPLE_RATE * (4.0f / (1.0f - SafeFeedback))) : 0;
+            public int TotalSamples => DrySamples + TailSamples;
         }
 
         public static SoundEffect Generate(string configString)
@@ -94,7 +95,6 @@ namespace ProjectVagabond.Audio
                         case "sat": lp.Saturate = val; break;
                         case "exp": lp.Exponential = val > 0; break;
 
-                        // NEW: Parsers
                         case "delay": lp.DelayTime = val; break;
                         case "delfb": lp.DelayFeedback = val; break;
                         case "detune": lp.Detune = val; break;
@@ -112,7 +112,7 @@ namespace ProjectVagabond.Audio
             foreach (var lp in layers)
             {
                 double phase = 0.0;
-                double phase2 = 0.0; // Secondary phase for detune/chorus
+                double phase2 = 0.0;
                 double currentFreq = lp.StartFrequency;
                 double currentSlide = lp.Slide;
                 double currentDuty = lp.DutyCycle;
@@ -124,7 +124,6 @@ namespace ProjectVagabond.Audio
                 double[] pink = new double[7];
                 double heldSample = 0.0;
 
-                // Delay Line Initialization
                 int delayBufferSize = (int)(lp.DelayTime * SAMPLE_RATE);
                 double[] delayBuffer = delayBufferSize > 0 ? new double[delayBufferSize] : null;
                 int delayIndex = 0;
@@ -133,7 +132,6 @@ namespace ProjectVagabond.Audio
                 {
                     double time = (double)i / SAMPLE_RATE;
 
-                    // Envelope Logic (Only applies to DrySamples, delay tail rings out naturally)
                     double envVol = 0.0;
                     if (i < lp.AttackSamples) envVol = (double)i / lp.AttackSamples;
                     else if (i < lp.AttackSamples + lp.SustainSamples) envVol = 1.0;
@@ -143,7 +141,6 @@ namespace ProjectVagabond.Audio
                         envVol = lp.Exponential ? Math.Pow(1.0 - releasePhase, 3.0) : 1.0 - releasePhase;
                     }
 
-                    // Pitch Logic
                     currentSlide += lp.DeltaSlide * (1.0 / SAMPLE_RATE);
                     double slideDelta = currentSlide * (1.0 / SAMPLE_RATE);
                     currentFreq += lp.Exponential ? (currentFreq * slideDelta * 0.01) : slideDelta;
@@ -162,22 +159,21 @@ namespace ProjectVagabond.Audio
 
                     double sample = 0.0;
 
-                    // Only generate base oscillator if envelope is active (saves CPU in delay tail)
                     if (envVol > 0.001)
                     {
                         switch (lp.WaveType)
                         {
-                            case 0: sample = (phase < Math.PI * 2.0 * currentDuty) ? 1.0 : -1.0; break; // Pulse
-                            case 1: sample = 1.0 - (phase / Math.PI); break; // Saw
-                            case 2: sample = Math.Sin(phase); break; // Sine
-                            case 3: sample = (rnd.NextDouble() * 2.0) - 1.0; break; // White
-                            case 4: sample = 2.0 * Math.Abs(2.0 * (phase / (Math.PI * 2.0)) - 1.0) - 1.0; break; // Tri
-                            case 5: // Brown
+                            case 0: sample = (phase < Math.PI * 2.0 * currentDuty) ? 1.0 : -1.0; break;
+                            case 1: sample = 1.0 - (phase / Math.PI); break;
+                            case 2: sample = Math.Sin(phase); break;
+                            case 3: sample = (rnd.NextDouble() * 2.0) - 1.0; break;
+                            case 4: sample = 2.0 * Math.Abs(2.0 * (phase / (Math.PI * 2.0)) - 1.0) - 1.0; break;
+                            case 5:
                                 double whiteB = (rnd.NextDouble() * 2.0) - 1.0;
                                 lastBrown = (lastBrown + (0.05 * whiteB)) / 1.05;
                                 sample = lastBrown * 4.5;
                                 break;
-                            case 6: // Pink
+                            case 6:
                                 double whiteP = (rnd.NextDouble() * 2.0) - 1.0;
                                 pink[0] = 0.99886 * pink[0] + whiteP * 0.0555179;
                                 pink[1] = 0.99332 * pink[1] + whiteP * 0.0750759;
@@ -190,8 +186,7 @@ namespace ProjectVagabond.Audio
                                 break;
                         }
 
-                        // NEW: Detune / Unison Layer
-                        if (lp.Detune > 0 && lp.WaveType < 5) // Skip noise for detune
+                        if (lp.Detune > 0 && lp.WaveType < 5)
                         {
                             double vibFreq2 = vibFreq * (1.0 + lp.Detune);
                             phase2 += (vibFreq2 * Math.PI * 2.0) / SAMPLE_RATE;
@@ -205,7 +200,6 @@ namespace ProjectVagabond.Audio
                                 case 2: sample2 = Math.Sin(phase2); break;
                                 case 4: sample2 = 2.0 * Math.Abs(2.0 * (phase2 / (Math.PI * 2.0)) - 1.0) - 1.0; break;
                             }
-                            // Mix and slightly lower volume to compensate for doubling
                             sample = (sample + sample2) * 0.6;
                         }
 
@@ -215,7 +209,6 @@ namespace ProjectVagabond.Audio
                             sample = heldSample;
                         }
 
-                        // Filters
                         currentLpf += lp.LpfSweep * (1.0 / SAMPLE_RATE);
                         double cutoff = Math.Clamp(currentLpf, 10.0, SAMPLE_RATE * 0.45);
                         if (cutoff < SAMPLE_RATE * 0.45)
@@ -240,7 +233,6 @@ namespace ProjectVagabond.Audio
                             sample = hpfState;
                         }
 
-                        // Overdrive / Saturation
                         if (lp.Saturate > 0)
                         {
                             sample *= (1.0 + lp.Saturate);
@@ -260,11 +252,15 @@ namespace ProjectVagabond.Audio
                     if (delayBuffer != null)
                     {
                         double delayedSample = delayBuffer[delayIndex];
-                        // Write current dry sample + feedback back into the buffer
                         delayBuffer[delayIndex] = sample + (delayedSample * lp.DelayFeedback);
-                        // Mix delayed sample into the output (50% wet mix)
                         sample += delayedSample * 0.5;
                         delayIndex = (delayIndex + 1) % delayBufferSize;
+                    }
+
+                    int fadeSamples = Math.Min(1000, lp.TotalSamples / 10);
+                    if (i >= lp.TotalSamples - fadeSamples)
+                    {
+                        sample *= (double)(lp.TotalSamples - i) / fadeSamples;
                     }
 
                     mixBuffer[i] += sample;
