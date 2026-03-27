@@ -370,10 +370,11 @@ namespace ProjectVagabond.Battle
         public bool TriggerActiveSpell(BattleContext context)
         {
             var combat = _wizard.Data.Combat;
+            var stats = _wizard.Data.Stats;
 
             if (combat.EquippedActiveSpell == null || combat.ActiveSpellCooldownTimer > 0 || combat.State == WizardState.Dead || combat.IsSuspended) return false;
 
-            if (combat.EquippedActiveSpell.ID == "force_cast" && combat.State != WizardState.Moving) return false;
+            if (combat.EquippedActiveSpell.ID == "heal" && stats.CurrentHP >= stats.MaxHP) return false;
 
             combat.ActiveSpellCooldownTimer = combat.EquippedActiveSpell.Cooldown;
 
@@ -383,10 +384,16 @@ namespace ProjectVagabond.Battle
                 ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlayRoutedSfx("proc:wave=2;atk=0.01;sus=0.02;dec=0.2;freq=1600;slide=1000;detune=0.015;delay=0.08;delfb=0.25;vol=0.2", 0f, null, combat.Position);
 
             }
-            else if (combat.EquippedActiveSpell.ID == "force_cast")
+            else if (combat.EquippedActiveSpell.ID == "heal")
             {
-                combat.ActionTimer = 0f;
-                PrepareAttack(context);
+                int healAmount = (int)Math.Ceiling(stats.MaxHP * 0.25f);
+                Heal(healAmount);
+
+                ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlayRoutedSfx("proc:wave=2;atk=0.05;sus=0.1;dec=0.4;freq=400;slide=600;detune=0.02;delay=0.08;delfb=0.25;vol=0.2", 0f, null, combat.Position);
+
+                var emitter = _particleSystemManager.CreateEmitter(ParticleEffects.CreateHealBurst());
+                emitter.Position = combat.Position;
+                emitter.EmitBurst(15);
             }
             else if (combat.EquippedActiveSpell.ID == "teleport")
             {

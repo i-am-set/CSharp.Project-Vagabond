@@ -2,7 +2,7 @@
   {
     "ID": "ward",
     "Name": "Ward",
-    "Cooldown": 26.0,
+    "Cooldown": 45.0,
     "Duration": 6.0,
     "MinDistance": 0.0,
     "SpriteFrame": 0
@@ -10,15 +10,15 @@
   {
     "ID": "teleport",
     "Name": "Teleport",
-    "Cooldown": 8.0,
+    "Cooldown": 24.0,
     "Duration": 1.0,
     "MinDistance": 80.0,
     "SpriteFrame": 1
   },
   {
-    "ID": "force_cast",
-    "Name": "Force Cast",
-    "Cooldown": 8.0,
+    "ID": "heal",
+    "Name": "Heal",
+    "Cooldown": 24.0,
     "Duration": 0.0,
     "MinDistance": 0.0,
     "SpriteFrame": 2

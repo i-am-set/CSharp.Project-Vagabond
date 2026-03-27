@@ -33,13 +33,13 @@ namespace ProjectVagabond.Battle
             if (data.Name == "Gravity Well")
             {
                 move.ChargeTime = data.ChargeTime * 0.5f;
-                move.BasePower = 40;
+                move.BasePower = 35;
                 move.Delivery = new GravityWellDelivery
                 {
                     Radius = data.DeliveryRadius,
                     Lifetime = data.DeliveryLifetime,
-                    PullSpeed = 25f,
-                    SlingshotDistance = -150f
+                    PullSpeed = 55f,
+                    SlingshotDistance = -50f
                 };
             }
             else if (data.DeliveryType == "InstantAOE")

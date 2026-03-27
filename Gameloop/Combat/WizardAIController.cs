@@ -137,9 +137,10 @@ namespace ProjectVagabond.Battle
         {
             string spellId = self.Data.Combat.EquippedActiveSpell.ID;
 
-            if (spellId == "force_cast" && self.Data.Combat.State == WizardState.Moving)
+            if (spellId == "heal")
             {
-                if (context.Arena.Wizards.Any(w => w != self && w.Data.Stats.CurrentHP > 0))
+                int healAmount = (int)Math.Ceiling(self.Data.Stats.MaxHP * 0.25f);
+                if (self.Data.Stats.MaxHP - self.Data.Stats.CurrentHP >= healAmount)
                 {
                     if (_random.NextDouble() < 0.2f)
                     {

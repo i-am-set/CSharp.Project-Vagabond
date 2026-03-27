@@ -11,8 +11,7 @@
     "Move1": "wall_of_fire",
     "Move2": "chain_lightning",
     "Move3": "fireball",
-    "Move4": "meteor_strike",
-    "ActiveSpell": "ward"
+    "Move4": "meteor_strike"
   },
   {
     "MemberID": "1",
@@ -26,8 +25,7 @@
     "Move1": "magic_missile",
     "Move2": "arcane_barrage",
     "Move3": "magic_dart",
-    "Move4": "meteor_shower",
-    "ActiveSpell": "teleport"
+    "Move4": "meteor_shower"
   },
   {
     "MemberID": "2",
@@ -41,8 +39,7 @@
     "Move1": "lick_wounds",
     "Move2": "scratch",
     "Move3": "brambles",
-    "Move4": "magic_dart",
-    "ActiveSpell": "force_cast"
+    "Move4": "magic_dart"
   },
   {
     "MemberID": "3",
@@ -56,8 +53,7 @@
     "Move1": "vampiric_bite",
     "Move2": "scratch",
     "Move3": "magic_missile",
-    "Move4": "chain_lightning",
-    "ActiveSpell": "ward"
+    "Move4": "chain_lightning"
   },
   {
     "MemberID": "4",
@@ -71,8 +67,7 @@
     "Move1": "arcane_barrage",
     "Move2": "fireball",
     "Move3": "healing_aura",
-    "Move4": "meteor_shower",
-    "ActiveSpell": "teleport"
+    "Move4": "meteor_shower"
   },
   {
     "MemberID": "5",
@@ -86,8 +81,7 @@
     "Move1": "lick_wounds",
     "Move2": "ray_of_frost",
     "Move3": "healing_aura",
-    "Move4": "magic_missile",
-    "ActiveSpell": "force_cast"
+    "Move4": "magic_missile"
   },
   {
     "MemberID": "6",
@@ -101,8 +95,7 @@
     "Move1": "chain_lightning",
     "Move2": "brambles",
     "Move3": "bite",
-    "Move4": "meteor_shower",
-    "ActiveSpell": "ward"
+    "Move4": "meteor_shower"
   },
   {
     "MemberID": "7",
@@ -116,8 +109,7 @@
     "Move1": "lick_wounds",
     "Move2": "scratch",
     "Move3": "chain_lightning",
-    "Move4": "magic_missile",
-    "ActiveSpell": "teleport"
+    "Move4": "magic_missile"
   },
   {
     "MemberID": "8",
@@ -131,8 +123,7 @@
     "Move1": "healing_aura",
     "Move2": "chain_lightning",
     "Move3": "arcane_barrage",
-    "Move4": "gravity_well",
-    "ActiveSpell": "force_cast"
+    "Move4": "gravity_well"
   },
   {
     "MemberID": "9",
@@ -146,8 +137,7 @@
     "Move1": "healing_aura",
     "Move2": "scratch",
     "Move3": "wall_of_fire",
-    "Move4": "magic_missile",
-    "ActiveSpell": "ward"
+    "Move4": "magic_missile"
   },
   {
     "MemberID": "10",
@@ -161,8 +151,7 @@
     "Move1": "brambles",
     "Move2": "ray_of_frost",
     "Move3": "magic_dart",
-    "Move4": "healing_aura",
-    "ActiveSpell": "teleport"
+    "Move4": "healing_aura"
   },
   {
     "MemberID": "11",
@@ -176,8 +165,7 @@
     "Move1": "repelling_blast",
     "Move2": "vampiric_bite",
     "Move3": "meteor_shower",
-    "Move4": "gravity_well",
-    "ActiveSpell": "force_cast"
+    "Move4": "gravity_well"
   },
   {
     "MemberID": "12",
@@ -191,8 +179,7 @@
     "Move1": "fireball",
     "Move2": "brambles",
     "Move3": "chain_lightning",
-    "Move4": "arcane_barrage",
-    "ActiveSpell": "ward"
+    "Move4": "arcane_barrage"
   },
   {
     "MemberID": "13",
@@ -206,8 +193,7 @@
     "Move1": "lick_wounds",
     "Move2": "magic_missile",
     "Move3": "healing_aura",
-    "Move4": "repelling_blast",
-    "ActiveSpell": "teleport"
+    "Move4": "repelling_blast"
   },
   {
     "MemberID": "14",
@@ -221,7 +207,6 @@
     "Move1": "ray_of_frost",
     "Move2": "arcane_barrage",
     "Move3": "magic_dart",
-    "Move4": "meteor_shower",
-    "ActiveSpell": "force_cast"
+    "Move4": "meteor_shower"
   }
 ]
