@@ -204,7 +204,7 @@ namespace ProjectVagabond.Scenes
                 _arenaState = _prePauseState;
                 _particleSystemManager.IsPaused = false;
                 ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().ResumeGameAudio();
-                ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlayRoutedSfx("proc:wave=2;atk=0.02;sus=0.05;dec=0.2;freq=880;slide=-440;vol=0.2");
+                ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlayRoutedSfx("proc:wave=2;atk=0.02;sus=0.05;dec=0.2;freq=880;slide=-440;detune=0.01;delay=0.1;delfb=0.3;vol=0.2");
             };
 
             var settingsBtn = CreatePauseButton("SETTINGS", startY + spacing);
@@ -404,7 +404,7 @@ namespace ProjectVagabond.Scenes
                     _arenaState = _prePauseState;
                     _particleSystemManager.IsPaused = false;
                     ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().ResumeGameAudio();
-                    ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlayRoutedSfx("proc:wave=2;atk=0.02;sus=0.05;dec=0.2;freq=880;slide=-440;vol=0.2");
+                    ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlayRoutedSfx("proc:wave=2;atk=0.02;sus=0.05;dec=0.2;freq=880;slide=-440;detune=0.01;delay=0.1;delfb=0.3;vol=0.2");
                 }
                 return;
             }
@@ -486,12 +486,12 @@ namespace ProjectVagabond.Scenes
 
                     if (currentSecond <= 3)
                     {
-                        ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlayRoutedSfx("proc:wave=2;atk=0.01;sus=0.05;dec=0.1;freq=600;vol=0.15|wave=2;atk=0.01;sus=0.05;dec=0.2;freq=150;vol=0.25");
+                        ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlayRoutedSfx("proc:wave=2;atk=0.01;sus=0.05;dec=0.1;freq=600;delay=0.1;delfb=0.2;vol=0.15|wave=2;atk=0.01;sus=0.05;dec=0.2;freq=150;vol=0.25");
                         ServiceLocator.Get<HapticsManager>().TriggerZoomPulse(1.01f, 0.1f);
                     }
                     else if (currentSecond <= 10)
                     {
-                        ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlayRoutedSfx("proc:wave=2;atk=0.01;sus=0.05;dec=0.1;freq=600;vol=0.05");
+                        ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlayRoutedSfx("proc:wave=2;atk=0.01;sus=0.05;dec=0.1;freq=600;delay=0.1;delfb=0.1;vol=0.05");
                     }
                 }
 
@@ -713,7 +713,7 @@ namespace ProjectVagabond.Scenes
                 _pauseNavGroup.SelectFirst();
                 _particleSystemManager.IsPaused = true;
                 ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PauseGameAudio();
-                ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlayRoutedSfx("proc:wave=2;atk=0.02;sus=0.05;dec=0.2;freq=440;slide=440;vol=0.2");
+                ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlayRoutedSfx("proc:wave=2;atk=0.02;sus=0.05;dec=0.2;freq=440;slide=440;detune=0.01;delay=0.1;delfb=0.3;vol=0.2");
             }
 
             _lastMouseState = mouseState;
