@@ -750,6 +750,16 @@ namespace ProjectVagabond.Scenes
         {
             base.Exit();
             ServiceLocator.Get<GeometricBackgroundManager>().Hide();
+
+            foreach (var attack in _activeAttacks)
+            {
+                attack.ReturnToPool();
+            }
+            _activeAttacks.Clear();
+
+            _particleSystemManager.ClearAllEmitters();
+            ServiceLocator.Get<GeometricBackgroundManager>().Reset();
+
             PoolManager.ClearAll();
         }
 

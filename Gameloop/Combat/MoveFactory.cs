@@ -30,19 +30,7 @@ namespace ProjectVagabond.Battle
                 DeliveryImpactMidFlight = data.DeliveryImpactMidFlight
             };
 
-            if (data.Name == "Gravity Well")
-            {
-                move.ChargeTime = data.ChargeTime * 0.5f;
-                move.BasePower = 35;
-                move.Delivery = new GravityWellDelivery
-                {
-                    Radius = data.DeliveryRadius,
-                    Lifetime = data.DeliveryLifetime,
-                    PullSpeed = 55f,
-                    SlingshotDistance = -50f
-                };
-            }
-            else if (data.DeliveryType == "InstantAOE")
+            if (data.DeliveryType == "InstantAOE")
             {
                 move.Delivery = new InstantAOEDelivery
                 {

@@ -123,7 +123,7 @@
     "Move1": "healing_aura",
     "Move2": "chain_lightning",
     "Move3": "arcane_barrage",
-    "Move4": "gravity_well"
+    "Move4": "void_eruption"
   },
   {
     "MemberID": "9",
@@ -165,7 +165,7 @@
     "Move1": "repelling_blast",
     "Move2": "vampiric_bite",
     "Move3": "meteor_shower",
-    "Move4": "gravity_well"
+    "Move4": "void_eruption"
   },
   {
     "MemberID": "12",
