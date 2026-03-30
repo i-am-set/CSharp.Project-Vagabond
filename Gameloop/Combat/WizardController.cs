@@ -150,7 +150,7 @@ namespace ProjectVagabond.Battle
 
             if (combat.IsSuspended) return Rectangle.Empty;
 
-            var bounds = spriteManager.GetPlayerSpriteBounds(stats.PortraitIndex, PlayerSpriteType.Portrait5x5);
+            var bounds = spriteManager.GetPlayerSpriteBounds(stats.PortraitIndex, PlayerSpriteType.Portrait8x8);
             float hopOffset = combat.State == WizardState.Dead ? 0f : -MathF.Abs(MathF.Sin(ui.HopTimer)) * HOP_AMPLITUDE;
 
             if (combat.IsFacingRight)

@@ -220,7 +220,7 @@ namespace ProjectVagabond.Battle
             if (sheet == null) return;
 
             Vector2 origin = new Vector2(16, 16);
-            var sourceRect = spriteManager.GetPlayerSourceRect(stats.PortraitIndex, PlayerSpriteType.Portrait5x5);
+            var sourceRect = spriteManager.GetPlayerSourceRect(stats.PortraitIndex, PlayerSpriteType.Portrait8x8);
 
             bool isDead = combat.State == WizardState.Dead;
             float hopOffset = isDead ? 0f : -MathF.Abs(MathF.Sin(ui.HopTimer)) * 4f;

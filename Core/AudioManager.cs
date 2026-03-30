@@ -688,7 +688,7 @@ namespace ProjectVagabond.Audio
                 bool allStopped = true;
                 foreach (var stem in _currentMusic.Stems)
                 {
-                    if (stem.State == SoundState.Playing)
+                    if (stem.State != SoundState.Stopped)
                     {
                         allStopped = false;
                         break;
