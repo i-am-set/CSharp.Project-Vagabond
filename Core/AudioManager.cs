@@ -20,6 +20,8 @@ namespace ProjectVagabond.Audio
         private float _ambientVolume = 1.0f;
         private float _uiVolume = 1.0f;
 
+        public float MusicPitchOffset { get; set; } = 0f;
+
         public AudioManager()
         {
             EventBus.Subscribe<GameEvents.AlertPublished>(OnAlertPublished);
@@ -665,7 +667,7 @@ namespace ProjectVagabond.Audio
         {
             bool isFF = false;
             try { isFF = ServiceLocator.Get<InputManager>().IsCurrentlyFastForwarding; } catch { }
-            float pitchOffset = isFF ? 1.0f : 0.0f;
+            float pitchOffset = (isFF ? 1.0f : 0.0f) + MusicPitchOffset;
 
             if (_musicCrossfadeTimer < _musicCrossfadeDuration)
             {

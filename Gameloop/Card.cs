@@ -35,6 +35,9 @@ namespace ProjectVagabond.Scenes
         public bool IsBeingReplaced { get; set; }
         public float VisualYOffset { get; set; }
 
+        public Vector2 ShakeOffset { get; set; }
+        public float FlashWhiteIntensity { get; set; }
+
         private bool _isFlipping;
         private const float LERP_SPEED = 25f;
 
@@ -102,7 +105,7 @@ namespace ProjectVagabond.Scenes
             }
 
             Vector2 origin = new Vector2(18f, 25f);
-            Vector2 drawPos = new Vector2(MathF.Round(Position.X), MathF.Round(Position.Y + VisualYOffset));
+            Vector2 drawPos = new Vector2(MathF.Round(Position.X + ShakeOffset.X), MathF.Round(Position.Y + VisualYOffset + ShakeOffset.Y));
 
             if (IsHovered && !IsFocused) drawPos.Y -= 1f;
 
@@ -122,6 +125,44 @@ namespace ProjectVagabond.Scenes
             }
 
             spriteBatch.DrawSnapped(spriteManager.ScoundrelCardsSpriteSheet, drawPos, sourceRect, Color.White, Rotation, origin, Scale, SpriteEffects.None, 0f);
+        }
+
+        public void DrawFlash(SpriteBatch spriteBatch, SpriteManager spriteManager)
+        {
+            if (FlashWhiteIntensity <= 0f || spriteManager.ScoundrelCardsSpriteSheet == null) return;
+
+            Rectangle sourceRect;
+
+            if (!IsFaceUp)
+            {
+                sourceRect = spriteManager.ScoundrelCardRects[2, 0];
+            }
+            else if (Type == CardType.Outline)
+            {
+                sourceRect = spriteManager.ScoundrelCardRects[1, 0];
+            }
+            else
+            {
+                int row = 0;
+                switch (Suit)
+                {
+                    case CardSuit.Hearts: row = 0; break;
+                    case CardSuit.Diamonds: row = 1; break;
+                    case CardSuit.Spades: row = 2; break;
+                    case CardSuit.Clubs: row = 3; break;
+                }
+
+                int col = 0;
+                if (Rank == 14) col = 1; // Ace
+                else if (Rank >= 2 && Rank <= 13) col = Rank; // 2-10, J, Q, K
+
+                sourceRect = spriteManager.ScoundrelCardRects[row, col];
+            }
+
+            Vector2 origin = new Vector2(18f, 25f);
+            Vector2 drawPos = new Vector2(MathF.Round(Position.X + ShakeOffset.X), MathF.Round(Position.Y + VisualYOffset + ShakeOffset.Y));
+
+            spriteBatch.DrawSnapped(spriteManager.ScoundrelCardsSpriteSheet, drawPos, sourceRect, Color.White * FlashWhiteIntensity, Rotation, origin, Scale, SpriteEffects.None, 0f);
         }
 
         public Rectangle GetBounds()
