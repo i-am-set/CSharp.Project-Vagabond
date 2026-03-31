@@ -106,10 +106,12 @@ namespace ProjectVagabond.Scenes
             const int horizontalPadding = 4;
             const int verticalPadding = 2;
             const int buttonYSpacing = 0;
-            float currentY = 105f;
+            float currentY = 90f;
             int buttonX = Global.VIRTUAL_WIDTH / 2 - 130;
 
             string arenaText = "START MATCH";
+            string scoundrelText = "PLAY SCOUNDREL";
+            string catyText = "CATYLOPEDIA";
             string settingsText = "SETTINGS";
             string exitText = "EXIT";
 
@@ -144,7 +146,37 @@ namespace ProjectVagabond.Scenes
 
             currentY += arenaHeight + buttonYSpacing + 6;
 
-            string catyText = "CATYLOPEDIA";
+            Vector2 scoundrelSize = secondaryFont.MeasureString(scoundrelText);
+            int scoundrelWidth = (int)scoundrelSize.X + horizontalPadding * 2;
+            int scoundrelHeight = (int)scoundrelSize.Y + verticalPadding * 2;
+
+            var scoundrelButton = new Button(
+                new Rectangle(buttonX, (int)currentY, scoundrelWidth, scoundrelHeight),
+                scoundrelText,
+                font: secondaryFont,
+                alignLeft: true
+            )
+            {
+                TextRenderOffset = new Vector2(0, -1),
+                EnableTextWave = true,
+                AlwaysAnimateText = true,
+                WaveEffectType = TextEffectType.TypewriterPop,
+                EnableHoverSway = false,
+                UseTextOutline = true,
+                TextOutlineColor = _global.Palette_Off
+            };
+            scoundrelButton.OnClick += () =>
+            {
+                _hapticsManager.TriggerZoomPulse(_global.LightHapticZoomPulseStrength, _global.HapticZoomPulseDuration);
+                scoundrelButton.ResetAnimationState();
+                ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().StopMusic(1.5f);
+                _sceneManager.ChangeScene(GameSceneState.Scoundrel, _transitionManager.GetRandomTransition(), _transitionManager.GetRandomTransition());
+            };
+            _buttons.Add(scoundrelButton);
+            _navigationGroup.Add(scoundrelButton);
+
+            currentY += scoundrelHeight + buttonYSpacing;
+
             Vector2 catySize = secondaryFont.MeasureString(catyText);
             int catyWidth = (int)catySize.X + horizontalPadding * 2;
             int catyHeight = (int)catySize.Y + verticalPadding * 2;

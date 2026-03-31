@@ -167,6 +167,8 @@ namespace ProjectVagabond
         public Texture2D MousePromptDisabled { get; private set; }
         public Texture2D MousePromptDisabledSilhouette { get; private set; }
         public Texture2D CountdownNumbersSpriteSheet { get; private set; }
+        public Texture2D ScoundrelCardsSpriteSheet { get; private set; }
+        public Rectangle[,] ScoundrelCardRects { get; private set; }
 
         public Texture2D LogoSprite => _logoSprite;
         public Texture2D PlayerSprite => _playerSprite;
@@ -266,6 +268,16 @@ namespace ProjectVagabond
 
             CountdownNumbersSpriteSheet = LoadTex("Sprites/UI/BasicIcons/Countdown_3_2_1_Numbers", 96, 32, Color.Magenta);
 
+            ScoundrelCardsSpriteSheet = LoadTex("Sprites/Cards/base_cards_36x50_spritesheet", 504, 200, Color.Magenta);
+            ScoundrelCardRects = new Rectangle[4, 14];
+            for (int r = 0; r < 4; r++)
+            {
+                for (int c = 0; c < 14; c++)
+                {
+                    ScoundrelCardRects[r, c] = new Rectangle(c * 36, r * 50, 36, 50);
+                }
+            }
+
             SpellbookPageSprite = LoadTex("Sprites/SpellBook/spellbook_page", 35, 35, Color.Magenta);
             SpellbookClosedSprite = LoadTex("Sprites/SpellBook/spellbook_closed", 64, 64, Color.Magenta);
 
@@ -356,7 +368,6 @@ namespace ProjectVagabond
             InitializeTargetingButtonRects();
             InitializeStatChangeIconRects();
         }
-
         private void InitializeStatChangeIconRects()
         {
             StatChangeIconSourceRects = new Rectangle[3];

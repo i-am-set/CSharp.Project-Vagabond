@@ -240,6 +240,18 @@
 /processorParam:DebugMode=Auto
 /build:Shaders/RetroShader.fx
 
+#begin Sprites/Cards/base_cards_36x50_spritesheet.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Sprites/Cards/base_cards_36x50_spritesheet.png;Sprites/Cards/base_cards_36x50_spritesheet
+
 #begin Sprites/Enemies/boar.png
 /importer:TextureImporter
 /processor:TextureProcessor

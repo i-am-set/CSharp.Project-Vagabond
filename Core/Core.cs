@@ -234,6 +234,7 @@ namespace ProjectVagabond
             _sceneManager.AddScene(GameSceneState.Catyclopedia, new CatyclopediaScene());
             _sceneManager.AddScene(GameSceneState.Settings, new SettingsScene());
             _sceneManager.AddScene(GameSceneState.Arena, new ArenaScene());
+            _sceneManager.AddScene(GameSceneState.Scoundrel, new ScoundrelScene());
 
             _previousResolution = new Point(Window.ClientBounds.Width, Window.ClientBounds.Height);
             OnResize(null, null);

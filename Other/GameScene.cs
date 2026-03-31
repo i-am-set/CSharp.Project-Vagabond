@@ -20,7 +20,8 @@ namespace ProjectVagabond.Scenes
         AnimationEditor,
         Battle,
         Split,
-        Arena
+        Arena,
+        Scoundrel
     }
 
     /// <summary>
