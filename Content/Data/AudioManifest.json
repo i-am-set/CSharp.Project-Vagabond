@@ -159,7 +159,7 @@
         "Audio/Music/1_Voltz_Supreme_-_Analog_Ambience_-_Analog_Random_Ambience",
         "Audio/Music/1_Voltz_Supreme_-_Analog_Ambience_-_Analog_Random_Ambience_Muffled"
       ],
-      "DefaultVolume": 1.0,
+      "DefaultVolume": 0.5,
       "NextTrack": "music_main_menu_pt2"
     },
     {
@@ -168,7 +168,7 @@
         "Audio/Music/2_Voltz_Supreme_-_Analog_Ambience_-_Analog_Random_Ambience",
         "Audio/Music/2_Voltz_Supreme_-_Analog_Ambience_-_Analog_Random_Ambience_Muffled"
       ],
-      "DefaultVolume": 1.0,
+      "DefaultVolume": 0.0,
       "NextTrack": "music_main_menu_pt1"
     },
     {
