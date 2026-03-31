@@ -112,16 +112,16 @@ namespace ProjectVagabond.Scenes
             if (OutlineColor.HasValue && Scale.X > 0.05f)
             {
                 Texture2D pixel = ServiceLocator.Get<Texture2D>();
-                int w = (int)MathF.Round(40 * Scale.X);
-                int h = (int)MathF.Round(54 * Scale.Y);
+                int w = (int)MathF.Round(38 * Scale.X);
+                int h = (int)MathF.Round(52 * Scale.Y);
                 int x = (int)MathF.Round(drawPos.X) - w / 2;
                 int y = (int)MathF.Round(drawPos.Y) - h / 2;
 
-                // 2px thick border with 1px beveled corners
-                spriteBatch.Draw(pixel, new Rectangle(x + 1, y, w - 2, 2), OutlineColor.Value);
-                spriteBatch.Draw(pixel, new Rectangle(x + 1, y + h - 2, w - 2, 2), OutlineColor.Value);
-                spriteBatch.Draw(pixel, new Rectangle(x, y + 1, 2, h - 2), OutlineColor.Value);
-                spriteBatch.Draw(pixel, new Rectangle(x + w - 2, y + 1, 2, h - 2), OutlineColor.Value);
+                // 1px thick border with 1px beveled corners
+                spriteBatch.Draw(pixel, new Rectangle(x + 1, y, w - 2, 1), OutlineColor.Value);
+                spriteBatch.Draw(pixel, new Rectangle(x + 1, y + h - 1, w - 2, 1), OutlineColor.Value);
+                spriteBatch.Draw(pixel, new Rectangle(x, y + 1, 1, h - 2), OutlineColor.Value);
+                spriteBatch.Draw(pixel, new Rectangle(x + w - 1, y + 1, 1, h - 2), OutlineColor.Value);
             }
 
             spriteBatch.DrawSnapped(spriteManager.ScoundrelCardsSpriteSheet, drawPos, sourceRect, Color.White, Rotation, origin, Scale, SpriteEffects.None, 0f);

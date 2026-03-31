@@ -55,8 +55,17 @@ namespace ProjectVagabond.Scenes
         private PlinkAnimator _healthPlink;
         private List<FloatingText> _floatingTexts = new List<FloatingText>();
 
+        private float[] _heartFlashTimers = new float[10];
+        private int[] _heartFlashFrames = new int[10];
+        private const float HEART_FLASH_DURATION = 0.75f;
+        private const float HEART_FLASH_BLINK_INTERVAL = 0.15f;
+        private const float HEART_FLASH_BLINK_HALF = 0.075f;
+
+        private float _previewFlashTimer = 0f;
+        private Card _lastHoveredCard = null;
+
         private Vector2 _deckPos = new Vector2(30, 40);
-        private Vector2 _discardPos = new Vector2(290, 40);
+        private Vector2 _discardPos = new Vector2(30, 140);
         private Vector2 _weaponPos = new Vector2(160, 140);
         private Vector2[] _roomPositions = new Vector2[]
         {
@@ -149,6 +158,11 @@ namespace ProjectVagabond.Scenes
             _canSkip = true;
             _floatingTexts.Clear();
 
+            Array.Clear(_heartFlashTimers, 0, 10);
+            Array.Clear(_heartFlashFrames, 0, 10);
+            _previewFlashTimer = 0f;
+            _lastHoveredCard = null;
+
             _displayScore = -208;
             _targetScore = 0;
             _scoreAnimTimer = 0f;
@@ -209,8 +223,18 @@ namespace ProjectVagabond.Scenes
             bool justClicked = mouseState.LeftButton == ButtonState.Pressed && _previousMouseState.LeftButton == ButtonState.Released;
             Vector2 mousePos = Core.TransformMouse(mouseState.Position);
 
-            _healthPlink.Update(gameTime, new Vector2(20, 160));
+            var secFont = _core.SecondaryFont;
+            string hpText = $"HP: {_health}";
+            Vector2 hpSize = secFont.MeasureString(hpText);
+            Vector2 hpCenter = new Vector2(Global.VIRTUAL_WIDTH - 20 - hpSize.X / 2f, 20 + hpSize.Y / 2f);
+            _healthPlink.Update(gameTime, hpCenter);
+
             if (_skipShakeTimer > 0) _skipShakeTimer -= dt;
+
+            for (int i = 0; i < 10; i++)
+            {
+                if (_heartFlashTimers[i] > 0) _heartFlashTimers[i] -= dt;
+            }
 
             _roomWaveTimer += dt;
             if (_roomWaveTimer >= _roomWaveInterval)
@@ -289,6 +313,16 @@ namespace ProjectVagabond.Scenes
                 newHovered = allCards.Where(c => c.IsSelectable).OrderByDescending(c => c.ZIndex).FirstOrDefault(c => c.GetBounds().Contains(mousePos));
             }
 
+            if (newHovered != _lastHoveredCard)
+            {
+                _previewFlashTimer = 0f;
+                _lastHoveredCard = newHovered;
+            }
+            else if (newHovered != null)
+            {
+                _previewFlashTimer += dt;
+            }
+
             foreach (var c in allCards)
             {
                 if (c == newHovered && !c.IsHovered)
@@ -312,7 +346,7 @@ namespace ProjectVagabond.Scenes
 
             if (_state == ScoundrelState.Playing && newHovered != null && newHovered.Type == CardType.Weapon && _weaponSlot != null)
             {
-                _weaponSlot.TargetPosition = _weaponPos + new Vector2(26, 0);
+                _weaponSlot.TargetPosition = _weaponPos + new Vector2(34, 0);
                 _weaponSlot.IsBeingReplaced = true;
             }
 
@@ -902,11 +936,6 @@ namespace ProjectVagabond.Scenes
                 Vector2 tSize = defFont.MeasureString("SKIP ROOM");
                 Vector2 tPos = new Vector2(MathF.Round(b.Center.X - tSize.X / 2f), MathF.Round(b.Center.Y - tSize.Y / 2f));
                 spriteBatch.DrawStringSnapped(defFont, "SKIP ROOM", tPos, textColor);
-
-                if (!isEnabled)
-                {
-                    spriteBatch.Draw(_pixel, new Rectangle(b.X - 1, b.Center.Y - 1, b.Width + 2, 2), _global.Palette_Off);
-                }
             }
 
             spriteBatch.Draw(_pixel, new Rectangle(0, 0, Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT), _global.GameBg);
@@ -988,11 +1017,7 @@ namespace ProjectVagabond.Scenes
             }
 
             // Draw Hover Indicators
-            if (_state == ScoundrelState.Focused && _focusedCard != null)
-            {
-                DrawMonsterDamageText(spriteBatch, defFont, tertFont, _focusedCard, true);
-            }
-
+            int previewHealth = _health;
             var hoveredCard = allCards.FirstOrDefault(c => c.IsHovered && c.IsSelectable);
             if (hoveredCard != null && hoveredCard.IsFaceUp)
             {
@@ -1004,18 +1029,39 @@ namespace ProjectVagabond.Scenes
                         string wText = $"-{wDmg}";
                         Color wColor = wDmg == 0 ? _global.Palette_DarkSun : _global.Palette_Rust;
                         DrawHoverText(spriteBatch, defFont, wText, hoveredCard.Position + new Vector2(0, -32), wColor);
+                        previewHealth = _health - wDmg;
                     }
                     else if (hoveredCard == _fistCard)
                     {
                         string fText = $"-{_focusedCard.Value}";
                         DrawHoverText(spriteBatch, defFont, fText, hoveredCard.Position + new Vector2(0, -32), _global.Palette_Rust);
+                        previewHealth = _health - _focusedCard.Value;
                     }
                 }
                 else
                 {
                     if (hoveredCard.Type == CardType.Monster)
                     {
-                        DrawMonsterDamageText(spriteBatch, defFont, tertFont, hoveredCard, _weaponSlot != null && hoveredCard.Value < _lastSlainValue);
+                        bool canUseWeapon = _weaponSlot != null && hoveredCard.Value < _lastSlainValue;
+                        DrawMonsterDamageText(spriteBatch, defFont, tertFont, hoveredCard, canUseWeapon);
+
+                        if (canUseWeapon)
+                        {
+                            bool showFistDamage = (_previewFlashTimer % 1.2f) < 0.6f;
+                            if (showFistDamage)
+                            {
+                                previewHealth = _health - hoveredCard.Value;
+                            }
+                            else
+                            {
+                                int wDmg = Math.Max(0, hoveredCard.Value - _weaponSlot.Value);
+                                previewHealth = _health - wDmg;
+                            }
+                        }
+                        else
+                        {
+                            previewHealth = _health - hoveredCard.Value;
+                        }
                     }
                     else if (hoveredCard.Type == CardType.Potion)
                     {
@@ -1024,6 +1070,7 @@ namespace ProjectVagabond.Scenes
                         string healText = $"+{actualHeal}";
                         Color hColor = actualHeal == 0 ? _global.Palette_DarkSun : _global.Palette_Leaf;
                         DrawHoverText(spriteBatch, defFont, healText, hoveredCard.Position + new Vector2(0, -32), hColor);
+                        previewHealth = Math.Min(20, _health + baseHeal);
                     }
                     else if (hoveredCard.Type == CardType.Weapon)
                     {
@@ -1039,9 +1086,90 @@ namespace ProjectVagabond.Scenes
                 spriteBatch.DrawStringOutlinedSnapped(secFont, "FIST", fPos - fSize / 2f, _global.Palette_Sun, _global.Palette_Off);
             }
 
-            float hpScale = _healthPlink.IsActive ? _healthPlink.Scale : 1f;
-            Color hpColor = _health > 5 ? _global.Palette_Leaf : _global.Palette_Rust;
-            spriteBatch.DrawStringOutlinedSnapped(secFont, $"HP: {_health}", new Vector2(20, 160), hpColor, _global.Palette_Off, 0f, Vector2.Zero, hpScale, SpriteEffects.None, 0f);
+            var heartSheet = _spriteManager.HealthHearts7x6SpriteSheet;
+
+            if (heartSheet != null)
+            {
+                int maxHearts = 10;
+                int heartWidth = 7;
+                int heartHeight = 6;
+                int spacing = 1;
+                int totalWidth = maxHearts * heartWidth + (maxHearts - 1) * spacing;
+
+                Vector2 barCenter = new Vector2(Global.VIRTUAL_WIDTH - 10 - totalWidth / 2f, 15f);
+                float hpScale = _healthPlink.IsActive ? _healthPlink.Scale : 1f;
+
+                for (int i = 0; i < maxHearts; i++)
+                {
+                    int currentHeartVal = Math.Clamp(_health - i * 2, 0, 2);
+                    int previewHeartVal = Math.Clamp(previewHealth - i * 2, 0, 2);
+
+                    int frameIndex = 2;
+                    if (currentHeartVal == 2) frameIndex = 0;
+                    else if (currentHeartVal == 1) frameIndex = 1;
+
+                    if (_heartFlashTimers[i] > 0)
+                    {
+                        bool isFlashFrame = (_heartFlashTimers[i] % HEART_FLASH_BLINK_INTERVAL) > HEART_FLASH_BLINK_HALF;
+                        if (isFlashFrame) frameIndex = _heartFlashFrames[i];
+                    }
+                    else if (currentHeartVal != previewHeartVal)
+                    {
+                        if ((currentHeartVal == 2 && previewHeartVal == 0) || (currentHeartVal == 0 && previewHeartVal == 2)) frameIndex = 3;
+                        else if ((currentHeartVal == 2 && previewHeartVal == 1) || (currentHeartVal == 1 && previewHeartVal == 2)) frameIndex = 4;
+                        else if ((currentHeartVal == 1 && previewHeartVal == 0) || (currentHeartVal == 0 && previewHeartVal == 1)) frameIndex = 5;
+                        else frameIndex = 3;
+                    }
+
+                    Rectangle sourceRect = new Rectangle(frameIndex * heartWidth, 0, heartWidth, heartHeight);
+
+                    Vector2 offset = new Vector2(i * (heartWidth + spacing) + (heartWidth / 2f), heartHeight / 2f) - new Vector2(totalWidth / 2f, heartHeight / 2f);
+                    Vector2 finalPos = barCenter + offset * hpScale;
+                    Vector2 origin = new Vector2(heartWidth / 2f, heartHeight / 2f);
+
+                    spriteBatch.DrawSnapped(heartSheet, finalPos + new Vector2(-1, 0), sourceRect, _global.Palette_Off, 0f, origin, hpScale, SpriteEffects.None, 0f);
+                    spriteBatch.DrawSnapped(heartSheet, finalPos + new Vector2(1, 0), sourceRect, _global.Palette_Off, 0f, origin, hpScale, SpriteEffects.None, 0f);
+                    spriteBatch.DrawSnapped(heartSheet, finalPos + new Vector2(0, -1), sourceRect, _global.Palette_Off, 0f, origin, hpScale, SpriteEffects.None, 0f);
+                    spriteBatch.DrawSnapped(heartSheet, finalPos + new Vector2(0, 1), sourceRect, _global.Palette_Off, 0f, origin, hpScale, SpriteEffects.None, 0f);
+
+                    spriteBatch.DrawSnapped(heartSheet, finalPos, sourceRect, Color.White, 0f, origin, hpScale, SpriteEffects.None, 0f);
+                }
+
+                string hpLabel = "HP ";
+                string currentHpText = _health.ToString();
+                string maxHpText = "/20";
+
+                Color valColor;
+                if (_health >= 14) valColor = _global.Palette_Leaf;
+                else if (_health >= 7) valColor = _global.Palette_Fruit;
+                else valColor = _global.Palette_Rust;
+
+                Color currentHpTextColor = valColor;
+
+                if (previewHealth != _health)
+                {
+                    currentHpText = previewHealth.ToString();
+                    currentHpTextColor = _global.Palette_Sun;
+                }
+
+                Vector2 hpLabelSize = tertFont.MeasureString(hpLabel);
+                Vector2 currentHpSize = defFont.MeasureString(currentHpText);
+                Vector2 maxHpSize = tertFont.MeasureString(maxHpText);
+
+                float totalTextWidth = hpLabelSize.X + currentHpSize.X + maxHpSize.X;
+                float textStartX = MathF.Round(barCenter.X - totalTextWidth / 2f);
+                float textY = MathF.Round(barCenter.Y + heartHeight / 2f + 4f);
+
+                float baselineY = MathF.Round(textY + currentHpSize.Y);
+
+                Vector2 pos1 = new Vector2(MathF.Round(textStartX), MathF.Round(baselineY - hpLabelSize.Y));
+                Vector2 pos2 = new Vector2(MathF.Round(textStartX + hpLabelSize.X), MathF.Round(textY) + 1);
+                Vector2 pos3 = new Vector2(MathF.Round(textStartX + hpLabelSize.X + currentHpSize.X), MathF.Round(baselineY - maxHpSize.Y));
+
+                spriteBatch.DrawStringOutlinedSnapped(tertFont, hpLabel, pos1, _global.Palette_DarkestPale, _global.Palette_Off);
+                spriteBatch.DrawStringOutlinedSnapped(defFont, currentHpText, pos2, currentHpTextColor, _global.Palette_Off);
+                spriteBatch.DrawStringOutlinedSnapped(tertFont, maxHpText, pos3, valColor, _global.Palette_Off);
+            }
 
             foreach (var ft in _floatingTexts)
             {

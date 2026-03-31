@@ -153,6 +153,7 @@ namespace ProjectVagabond
         public Texture2D TargetingButtonSpriteSheet { get; private set; }
         public Texture2D HealthHeartsSpriteSheet { get; private set; }
         public Texture2D HealthHearts3x3SpriteSheet { get; private set; }
+        public Texture2D HealthHearts7x6SpriteSheet { get; private set; }
 
         public Texture2D NoiseTexture { get; private set; }
 
@@ -325,6 +326,7 @@ namespace ProjectVagabond
             TargetingButtonSpriteSheet = LoadTex("Sprites/UI/BattleUI/ui_choose_a_target_button_spritesheet", 450, 22, Color.Magenta);
             HealthHeartsSpriteSheet = LoadTex("Sprites/UI/BattleUI/health_5x5_icon_spritesheet", 45, 5, Color.Red);
             HealthHearts3x3SpriteSheet = LoadTex("Sprites/UI/BattleUI/health_3x3_icon_spritesheet", 27, 3, Color.Red);
+            HealthHearts7x6SpriteSheet = LoadTex("Sprites/UI/BattleUI/health_7x6_icon_spritesheet", 42, 6, Color.Red);
             InventoryPlayerHealthBarEmpty = LoadTex("Sprites/UI/Inventory/inventory_player_health_bar_empty", 66, 7, Color.DarkGray);
             InventoryPlayerHealthBarDisabled = LoadTex("Sprites/UI/Inventory/inventory_player_health_bar_disabled", 66, 7, Color.Black);
             InventoryPlayerHealthBarFull = LoadTex("Sprites/UI/Inventory/inventory_player_health_bar_full", 64, 7, Color.Red);
