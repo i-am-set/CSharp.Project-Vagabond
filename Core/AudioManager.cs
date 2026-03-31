@@ -3,6 +3,7 @@ using Microsoft.Xna.Framework.Audio;
 using Microsoft.Xna.Framework.Content;
 using ProjectVagabond.Utils;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -58,11 +59,11 @@ namespace ProjectVagabond.Audio
             public string NextTrackId;
         }
 
-        private readonly Dictionary<string, PooledSound> _sfxPools = new Dictionary<string, PooledSound>(StringComparer.OrdinalIgnoreCase);
-        private readonly Dictionary<string, PooledSound> _uiPools = new Dictionary<string, PooledSound>(StringComparer.OrdinalIgnoreCase);
-        private readonly Dictionary<string, MusicTrack> _musicTracks = new Dictionary<string, MusicTrack>(StringComparer.OrdinalIgnoreCase);
-        private readonly Dictionary<string, AmbientTrack> _ambientTracks = new Dictionary<string, AmbientTrack>(StringComparer.OrdinalIgnoreCase);
-        private readonly Dictionary<Guid, SoundEffectInstance> _activeLoops = new Dictionary<Guid, SoundEffectInstance>();
+        private readonly ConcurrentDictionary<string, PooledSound> _sfxPools = new ConcurrentDictionary<string, PooledSound>(StringComparer.OrdinalIgnoreCase);
+        private readonly ConcurrentDictionary<string, PooledSound> _uiPools = new ConcurrentDictionary<string, PooledSound>(StringComparer.OrdinalIgnoreCase);
+        private readonly ConcurrentDictionary<string, MusicTrack> _musicTracks = new ConcurrentDictionary<string, MusicTrack>(StringComparer.OrdinalIgnoreCase);
+        private readonly ConcurrentDictionary<string, AmbientTrack> _ambientTracks = new ConcurrentDictionary<string, AmbientTrack>(StringComparer.OrdinalIgnoreCase);
+        private readonly ConcurrentDictionary<Guid, SoundEffectInstance> _activeLoops = new ConcurrentDictionary<Guid, SoundEffectInstance>();
 
         private readonly List<SoundEffectInstance> _pausedInstances = new List<SoundEffectInstance>();
 
@@ -177,7 +178,7 @@ namespace ProjectVagabond.Audio
             {
                 instance.Stop();
                 instance.IsLooped = false;
-                _activeLoops.Remove(handle);
+                _activeLoops.TryRemove(handle, out _);
             }
         }
 
@@ -210,7 +211,7 @@ namespace ProjectVagabond.Audio
             }
         }
 
-        private void LoadPool(ContentManager content, List<AudioEntry> entries, Dictionary<string, PooledSound> targetDict)
+        private void LoadPool(ContentManager content, List<AudioEntry> entries, ConcurrentDictionary<string, PooledSound> targetDict)
         {
             foreach (var entry in entries)
             {
@@ -387,20 +388,23 @@ namespace ProjectVagabond.Audio
 
         private int GetAvailableInstanceIndex(PooledSound pool)
         {
-            for (int i = 0; i < pool.Instances.Length; i++)
+            lock (pool)
             {
-                int index = (pool.CurrentIndex + i) % pool.Instances.Length;
-                if (pool.Instances[index].State == SoundState.Stopped)
+                for (int i = 0; i < pool.Instances.Length; i++)
                 {
-                    pool.CurrentIndex = (index + 1) % pool.Instances.Length;
-                    return index;
+                    int index = (pool.CurrentIndex + i) % pool.Instances.Length;
+                    if (pool.Instances[index].State == SoundState.Stopped)
+                    {
+                        pool.CurrentIndex = (index + 1) % pool.Instances.Length;
+                        return index;
+                    }
                 }
-            }
 
-            int stealIndex = pool.CurrentIndex;
-            pool.CurrentIndex = (pool.CurrentIndex + 1) % pool.Instances.Length;
-            pool.Instances[stealIndex].Stop();
-            return stealIndex;
+                int stealIndex = pool.CurrentIndex;
+                pool.CurrentIndex = (pool.CurrentIndex + 1) % pool.Instances.Length;
+                pool.Instances[stealIndex].Stop();
+                return stealIndex;
+            }
         }
 
         public void PlayMusic(string id, float crossfadeDuration = 2.0f)

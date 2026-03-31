@@ -28,8 +28,14 @@ namespace ProjectVagabond.Scenes
         public bool IsHovered { get; set; }
         public bool IsSelectable { get; set; }
 
+        public bool IsFocused { get; set; }
+        public bool ExpandHitboxX { get; set; }
+        public Color? OutlineColor { get; set; }
+        public bool ForceRenderAboveVeil { get; set; }
+        public bool IsBeingReplaced { get; set; }
+
         private bool _isFlipping;
-        private const float LERP_SPEED = 10f;
+        private const float LERP_SPEED = 25f;
 
         public Card(CardSuit suit, CardType type, int rank, int value)
         {
@@ -96,17 +102,41 @@ namespace ProjectVagabond.Scenes
 
             Vector2 origin = new Vector2(18f, 25f);
             Vector2 drawPos = new Vector2(MathF.Round(Position.X), MathF.Round(Position.Y));
-            if (IsHovered) drawPos.Y -= 1f;
+
+            if (IsHovered && !IsFocused) drawPos.Y -= 1f;
+
+            if (OutlineColor.HasValue && Scale.X > 0.05f)
+            {
+                Texture2D pixel = ServiceLocator.Get<Texture2D>();
+                int w = (int)MathF.Round(40 * Scale.X);
+                int h = (int)MathF.Round(54 * Scale.Y);
+                int x = (int)MathF.Round(drawPos.X) - w / 2;
+                int y = (int)MathF.Round(drawPos.Y) - h / 2;
+
+                // 2px thick border with 1px beveled corners
+                spriteBatch.Draw(pixel, new Rectangle(x + 1, y, w - 2, 2), OutlineColor.Value);
+                spriteBatch.Draw(pixel, new Rectangle(x + 1, y + h - 2, w - 2, 2), OutlineColor.Value);
+                spriteBatch.Draw(pixel, new Rectangle(x, y + 1, 2, h - 2), OutlineColor.Value);
+                spriteBatch.Draw(pixel, new Rectangle(x + w - 2, y + 1, 2, h - 2), OutlineColor.Value);
+            }
 
             spriteBatch.DrawSnapped(spriteManager.ScoundrelCardsSpriteSheet, drawPos, sourceRect, Color.White, Rotation, origin, Scale, SpriteEffects.None, 0f);
         }
 
         public Rectangle GetBounds()
         {
-            int width = (int)(36 * Scale.X);
-            int height = (int)(50 * Scale.Y);
-            int yOffset = IsHovered ? -1 : 0;
-            return new Rectangle((int)Position.X - width / 2, (int)Position.Y + yOffset - height / 2, width, height);
+            int width = (int)MathF.Round(36 * Scale.X);
+            int height = (int)MathF.Round(50 * Scale.Y);
+            int x = (int)MathF.Round(Position.X) - width / 2;
+            int y = (int)MathF.Round(Position.Y) - height / 2;
+
+            if (ExpandHitboxX)
+            {
+                x -= 1;
+                width += 2;
+            }
+
+            return new Rectangle(x, y, width, height);
         }
     }
 }
