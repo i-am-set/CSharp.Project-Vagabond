@@ -44,6 +44,10 @@ namespace ProjectVagabond.Scenes
         private const float DEAL_INTERVAL = 0.15f;
         private float _skipShakeTimer = 0f;
 
+        private float _roomWaveTimer = 0f;
+        private float _roomWaveInterval = 3f;
+        private float _currentWaveTime = -1f;
+
         private Button _skipButton;
         private Button _exitButton;
 
@@ -141,6 +145,10 @@ namespace ProjectVagabond.Scenes
             _scoreSlamPlayed = false;
             _skipShakeTimer = 0f;
 
+            _roomWaveTimer = 0f;
+            _roomWaveInterval = 3f + (float)_random.NextDouble() * 2f;
+            _currentWaveTime = -1f;
+
             _deck.Clear();
             _room.Clear();
             _discard.Clear();
@@ -183,6 +191,23 @@ namespace ProjectVagabond.Scenes
             _healthPlink.Update(gameTime, new Vector2(20, 160));
             if (_skipShakeTimer > 0) _skipShakeTimer -= dt;
 
+            _roomWaveTimer += dt;
+            if (_roomWaveTimer >= _roomWaveInterval)
+            {
+                _roomWaveTimer = 0f;
+                _roomWaveInterval = 3f + (float)_random.NextDouble() * 3f;
+                _currentWaveTime = 0f;
+            }
+
+            if (_currentWaveTime >= 0f)
+            {
+                _currentWaveTime += dt;
+                if (_currentWaveTime > 1.0f)
+                {
+                    _currentWaveTime = -1f;
+                }
+            }
+
             for (int i = _floatingTexts.Count - 1; i >= 0; i--)
             {
                 _floatingTexts[i].Timer -= dt;
@@ -205,6 +230,7 @@ namespace ProjectVagabond.Scenes
                 c.OutlineColor = null;
                 c.ForceRenderAboveVeil = false;
                 c.IsFocused = (c == _focusedCard);
+                c.VisualYOffset = 0f;
             }
 
             if (_state == ScoundrelState.Playing)
@@ -213,6 +239,17 @@ namespace ProjectVagabond.Scenes
                 {
                     c.IsSelectable = true;
                     c.ExpandHitboxX = true;
+
+                    if (_currentWaveTime >= 0f && c.RoomSlotIndex >= 0 && c.RoomSlotIndex <= 3)
+                    {
+                        float slotTime = c.RoomSlotIndex * 0.1f;
+                        float localTime = _currentWaveTime - slotTime;
+                        if (localTime > 0f && localTime < 0.2f)
+                        {
+                            float progress = localTime / 0.2f;
+                            c.VisualYOffset = -MathF.Sin(progress * MathHelper.Pi) * 1f;
+                        }
+                    }
                 }
             }
             else if (_state == ScoundrelState.Focused)
@@ -309,13 +346,13 @@ namespace ProjectVagabond.Scenes
                     card.Flip();
 
                     _dealTimer = DEAL_INTERVAL;
-                    ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlayRoutedSfx("proc:wave=2;freq=300;slide=3750;atk=0;sus=0;dec=0.08;exp=1;vol=0.05");
+                    ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlayRoutedSfx("proc:wave=2;freq=300;slide=3750;atk=0;sus=0;dec=0.08;exp=1;vol=0.05", 0.05f);
                 }
                 else if (_room.Count == 4 || _deck.Count == 0)
                 {
                     if (_state == ScoundrelState.Dealing)
                     {
-                        ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlayRoutedSfx("proc:wave=2;freq=400;atk=0.05;sus=0.1;dec=0.3;detune=0.01;delay=0.1;delfb=0.2;vol=0.15|wave=2;freq=600;atk=0.05;sus=0.1;dec=0.3;detune=0.01;vol=0.15");
+                        ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlayRoutedSfx("proc:wave=2;freq=400;atk=0.05;sus=0.1;dec=0.3;detune=0.01;delay=0.1;delfb=0.2;vol=0.15|wave=2;freq=600;atk=0.05;sus=0.1;dec=0.3;detune=0.01;vol=0.15", 0.05f);
                         _skipShakeTimer = 0.6f;
                     }
                     _state = ScoundrelState.Playing;
@@ -376,13 +413,13 @@ namespace ProjectVagabond.Scenes
                     if (newScore != _displayScore)
                     {
                         _displayScore = newScore;
-                        ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlayRoutedSfx($"proc:wave=2;freq={400 + p * 800};atk=0.01;sus=0;dec=0.05;detune=0.01;vol=0.12");
+                        ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlayRoutedSfx($"proc:wave=2;freq={400 + p * 800};atk=0.01;sus=0;dec=0.05;detune=0.01;vol=0.12", 0.05f);
                     }
 
                     if (p >= 1f && !_scoreSlamPlayed)
                     {
                         _displayScore = _targetScore;
-                        ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlayRoutedSfx("proc:wave=4;freq=100;slide=-50;atk=0.01;sus=0.1;dec=0.4;detune=0.03;lpf=800;vol=0.3|wave=5;freq=200;atk=0.01;sus=0.1;dec=0.3;lpf=500;vol=0.25");
+                        ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlayRoutedSfx("proc:wave=4;freq=100;slide=-50;atk=0.01;sus=0.1;dec=0.4;detune=0.03;lpf=800;vol=0.3|wave=5;freq=200;atk=0.01;sus=0.1;dec=0.3;lpf=500;vol=0.25", 0.05f);
                         _scoreSlamPlayed = true;
                     }
                 }
@@ -454,7 +491,7 @@ namespace ProjectVagabond.Scenes
             _state = ScoundrelState.Dealing;
             _dealTimer = DEAL_INTERVAL;
 
-            ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlayRoutedSfx("proc:wave=3;freq=1000;slide=-500;atk=0.02;sus=0.05;dec=0.15;vol=0.12|wave=4;freq=400;slide=-100;atk=0.02;sus=0.05;dec=0.15;vol=0.15");
+            ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlayRoutedSfx("proc:wave=3;freq=1000;slide=-500;atk=0.02;sus=0.05;dec=0.15;vol=0.12|wave=4;freq=400;slide=-100;atk=0.02;sus=0.05;dec=0.15;vol=0.15", 0.1f);
         }
 
         private void OnFistsClicked()
@@ -469,7 +506,7 @@ namespace ProjectVagabond.Scenes
             if (_focusedCard.Value >= _lastSlainValue)
             {
                 _hapticsManager.TriggerShake(5f, 0.2f);
-                ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlayRoutedSfx("proc:wave=4;freq=120;slide=-60;atk=0.01;sus=0.1;dec=0.3;dist=0.5;vol=0.25|wave=5;freq=200;atk=0.01;sus=0.05;dec=0.2;lpf=800;vol=0.2");
+                ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlayRoutedSfx("proc:wave=4;freq=150;atk=0.01;sus=0.1;dec=0.1;detune=0.03;vol=0.15|wave=0;freq=150;atk=0.01;sus=0.1;dec=0.1;duty=0.2;vol=0.1", 0.1f);
                 return;
             }
 
@@ -480,7 +517,7 @@ namespace ProjectVagabond.Scenes
             }
             else
             {
-                ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlayRoutedSfx("proc:wave=4;freq=150;slide=-75;atk=0.01;sus=0.05;dec=0.15;detune=0.02;lpf=1200;vol=0.2");
+                ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlayRoutedSfx("proc:wave=6;freq=1200;atk=0.01;sus=0.02;dec=0.15;hpf=600;vol=0.15|wave=1;freq=600;slide=-200;atk=0.01;sus=0.02;dec=0.1;detune=0.02;vol=0.1", 0.1f);
             }
 
             _lastSlainValue = _focusedCard.Value;
@@ -488,7 +525,7 @@ namespace ProjectVagabond.Scenes
 
             if (_focusedCard.Value == 2)
             {
-                ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlayRoutedSfx("proc:wave=5;freq=400;slide=-200;atk=0.01;sus=0.05;dec=0.2;lpf=1000;vol=0.12|wave=0;freq=150;slide=-50;atk=0.01;sus=0.05;dec=0.15;vol=0.06");
+                ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlayRoutedSfx("proc:wave=6;freq=1000;atk=0.01;sus=0.05;dec=0.2;hpf=500;hpfsweep=-200;vol=0.15|wave=4;freq=300;slide=-100;atk=0.01;sus=0.02;dec=0.15;detune=0.04;vol=0.1", 0.1f);
                 MoveToDiscard(_weaponSlot, false);
                 _weaponSlot = null;
                 foreach (var c in _slainPile) MoveToDiscard(c, false);
@@ -530,9 +567,9 @@ namespace ProjectVagabond.Scenes
         {
             _health -= amount;
             _healthPlink.Start(0f, 0.3f);
-            _hapticsManager.TriggerShake(amount * 2f, 0.2f);
+            _hapticsManager.TriggerShake(amount * 1f, 0.1f);
 
-            ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlayRoutedSfx("proc:wave=1;freq=150;slide=-100;atk=0.01;sus=0.05;dec=0.25;detune=0.03;lpf=1500;vol=0.25|wave=5;freq=400;slide=-200;atk=0.01;sus=0.05;dec=0.2;lpf=1000;vol=0.2");
+            ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlayRoutedSfx("proc:wave=4;freq=350;slide=-150;atk=0.01;sus=0.05;dec=0.2;detune=0.05;sat=0.5;vol=0.15|wave=6;freq=800;atk=0.01;sus=0.02;dec=0.15;hpf=400;vol=0.1", 0.1f);
 
             _floatingTexts.Add(new FloatingText { Number = amount, IsHealing = false, Timer = 1.0f, LocalOffset = new Vector2(20, 150) });
         }
@@ -540,41 +577,41 @@ namespace ProjectVagabond.Scenes
         private async void PlayHealFull()
         {
             var audio = ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>();
-            audio.PlayRoutedSfx("proc:wave=2;freq=400;atk=0.02;sus=0.05;dec=0.15;detune=0.01;delay=0.05;delfb=0.15;vol=0.15");
+            audio.PlayRoutedSfx("proc:wave=2;freq=400;atk=0.02;sus=0.05;dec=0.15;detune=0.01;delay=0.05;delfb=0.15;vol=0.15", 0.05f);
             await Task.Delay(100);
-            audio.PlayRoutedSfx("proc:wave=2;freq=600;atk=0.02;sus=0.05;dec=0.15;detune=0.01;delay=0.05;delfb=0.15;vol=0.15");
+            audio.PlayRoutedSfx("proc:wave=2;freq=600;atk=0.02;sus=0.05;dec=0.15;detune=0.01;delay=0.05;delfb=0.15;vol=0.15", 0.05f);
             await Task.Delay(200);
-            audio.PlayRoutedSfx("proc:wave=2;freq=800;atk=0.02;sus=0.05;dec=0.25;detune=0.01;delay=0.05;delfb=0.15;vol=0.15");
+            audio.PlayRoutedSfx("proc:wave=2;freq=800;atk=0.02;sus=0.05;dec=0.25;detune=0.01;delay=0.05;delfb=0.15;vol=0.15", 0.05f);
         }
 
         private async void PlayHealPartial()
         {
             var audio = ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>();
-            audio.PlayRoutedSfx("proc:wave=2;freq=400;atk=0.02;sus=0.05;dec=0.15;detune=0.01;vol=0.15");
+            audio.PlayRoutedSfx("proc:wave=2;freq=400;atk=0.02;sus=0.05;dec=0.15;detune=0.01;vol=0.15", 0.05f);
             await Task.Delay(100);
-            audio.PlayRoutedSfx("proc:wave=2;freq=600;atk=0.02;sus=0.05;dec=0.2;detune=0.01;vol=0.15");
+            audio.PlayRoutedSfx("proc:wave=2;freq=600;atk=0.02;sus=0.05;dec=0.2;detune=0.01;vol=0.15", 0.05f);
         }
 
         private async void PlayDefeatSequence()
         {
             var audio = ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>();
-            audio.PlayRoutedSfx("proc:wave=4;freq=300;atk=0.05;sus=0.1;dec=0.3;detune=0.02;lpf=2000;vol=0.2");
+            audio.PlayRoutedSfx("proc:wave=4;freq=300;atk=0.05;sus=0.1;dec=0.3;detune=0.02;lpf=2000;vol=0.2", 0.05f);
             await Task.Delay(300);
-            audio.PlayRoutedSfx("proc:wave=4;freq=250;atk=0.05;sus=0.1;dec=0.3;detune=0.02;lpf=2000;vol=0.2");
+            audio.PlayRoutedSfx("proc:wave=4;freq=250;atk=0.05;sus=0.1;dec=0.3;detune=0.02;lpf=2000;vol=0.2", 0.05f);
             await Task.Delay(600);
-            audio.PlayRoutedSfx("proc:wave=4;freq=200;atk=0.05;sus=0.2;dec=0.6;detune=0.02;lpf=2000;vol=0.2");
+            audio.PlayRoutedSfx("proc:wave=4;freq=200;atk=0.05;sus=0.2;dec=0.6;detune=0.02;lpf=2000;vol=0.2", 0.05f);
         }
 
         private async void PlayVictorySequence()
         {
             var audio = ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>();
-            audio.PlayRoutedSfx("proc:wave=0;freq=400;atk=0.02;sus=0.1;dec=0.2;detune=0.01;lpf=3000;vol=0.15");
+            audio.PlayRoutedSfx("proc:wave=0;freq=400;atk=0.02;sus=0.1;dec=0.2;detune=0.01;lpf=3000;vol=0.15", 0.05f);
             await Task.Delay(200);
-            audio.PlayRoutedSfx("proc:wave=0;freq=500;atk=0.02;sus=0.1;dec=0.2;detune=0.01;lpf=3000;vol=0.15");
+            audio.PlayRoutedSfx("proc:wave=0;freq=500;atk=0.02;sus=0.1;dec=0.2;detune=0.01;lpf=3000;vol=0.15", 0.05f);
             await Task.Delay(400);
-            audio.PlayRoutedSfx("proc:wave=0;freq=600;atk=0.02;sus=0.1;dec=0.2;detune=0.01;lpf=3000;vol=0.15");
+            audio.PlayRoutedSfx("proc:wave=0;freq=600;atk=0.02;sus=0.1;dec=0.2;detune=0.01;lpf=3000;vol=0.15", 0.05f);
             await Task.Delay(600);
-            audio.PlayRoutedSfx("proc:wave=0;freq=800;atk=0.02;sus=0.2;dec=0.6;detune=0.01;lpf=3000;vol=0.15");
+            audio.PlayRoutedSfx("proc:wave=0;freq=800;atk=0.02;sus=0.2;dec=0.6;detune=0.01;lpf=3000;vol=0.15", 0.05f);
         }
 
         private void ApplyHeal(int amount)
@@ -585,7 +622,7 @@ namespace ProjectVagabond.Scenes
 
             if (actualHeal == 0)
             {
-                ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlayRoutedSfx("proc:wave=2;freq=300;slide=-50;atk=0.02;sus=0.05;dec=0.15;detune=0.01;vol=0.15");
+                ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlayRoutedSfx("proc:wave=2;freq=300;slide=-50;atk=0.02;sus=0.05;dec=0.15;detune=0.01;vol=0.15", 0.05f);
             }
             else if (_health == 20)
             {
@@ -606,7 +643,7 @@ namespace ProjectVagabond.Scenes
         {
             if (_weaponSlot != null)
             {
-                ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlayRoutedSfx("proc:wave=4;freq=200;slide=-100;atk=0.01;sus=0.05;dec=0.15;detune=0.03;lpf=1000;vol=0.2");
+                ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlayRoutedSfx("proc:wave=4;freq=200;slide=-100;atk=0.01;sus=0.05;dec=0.15;detune=0.03;lpf=1000;vol=0.2", 0.1f);
                 MoveToDiscard(_weaponSlot, false);
                 foreach (var c in _slainPile) MoveToDiscard(c, false);
                 _slainPile.Clear();
@@ -620,7 +657,7 @@ namespace ProjectVagabond.Scenes
             _weaponSlot.ZIndex = 200;
             _lastSlainValue = 99;
 
-            ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlayRoutedSfx("proc:wave=4;freq=600;slide=400;atk=0.01;sus=0.05;dec=0.15;detune=0.02;lpf=3000;vol=0.08|wave=2;freq=1200;slide=200;atk=0.01;sus=0.05;dec=0.1;vol=0.04");
+            ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlayRoutedSfx("proc:wave=6;freq=1500;atk=0.01;sus=0.02;dec=0.1;hpf=800;vol=0.1|wave=2;freq=800;slide=400;atk=0.01;sus=0.05;dec=0.1;detune=0.02;vol=0.1", 0.1f);
         }
 
         private void MoveToDiscard(Card card, bool playSound = true)
@@ -636,7 +673,7 @@ namespace ProjectVagabond.Scenes
 
             if (playSound)
             {
-                ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlayRoutedSfx("proc:wave=3;freq=1200;slide=-800;atk=0.01;sus=0.01;dec=0.05;vol=0.08|wave=4;freq=600;slide=-200;atk=0.01;sus=0.02;dec=0.05;vol=0.12");
+                ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlayRoutedSfx("proc:wave=3;freq=1200;slide=-800;atk=0.01;sus=0.01;dec=0.05;vol=0.08|wave=4;freq=600;slide=-200;atk=0.01;sus=0.02;dec=0.05;vol=0.12", 0.05f);
             }
         }
 
@@ -728,7 +765,7 @@ namespace ProjectVagabond.Scenes
             {
                 Rectangle outlineSource = _spriteManager.ScoundrelCardRects[1, 0];
                 Vector2 origin = new Vector2(18f, 25f);
-                Vector2 drawPos = new Vector2(MathF.Round(_weaponPos.X) - 1f, MathF.Round(_weaponPos.Y) - 1f);
+                Vector2 drawPos = new Vector2(MathF.Round(_weaponPos.X), MathF.Round(_weaponPos.Y));
                 spriteBatch.DrawSnapped(_spriteManager.ScoundrelCardsSpriteSheet, drawPos, outlineSource, Color.White * 0.5f, 0f, origin, 1f, SpriteEffects.None, 0f);
             }
 
@@ -745,20 +782,19 @@ namespace ProjectVagabond.Scenes
 
             foreach (var card in unselectable) card.Draw(spriteBatch, _spriteManager);
 
-            spriteBatch.Draw(_pixel, new Rectangle(0, 0, Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT), _global.Palette_Off * 0.4f);
             if (_weaponSlot != null && _weaponSlot.IsBeingReplaced)
             {
                 var xIcon = _spriteManager.ShopXIcon;
                 if (xIcon != null)
                 {
-                    Vector2 xPos = new Vector2(MathF.Round(_weaponSlot.Position.X) - 1f, MathF.Round(_weaponSlot.Position.Y) - 1f);
+                    Vector2 xPos = new Vector2(MathF.Round(_weaponSlot.Position.X), MathF.Round(_weaponSlot.Position.Y));
                     if (_weaponSlot.IsHovered && !_weaponSlot.IsFocused) xPos.Y -= 1f;
                     Vector2 xOrigin = new Vector2(xIcon.Width / 2f, xIcon.Height / 2f);
                     spriteBatch.DrawSnapped(xIcon, xPos, null, _global.Palette_Rust, _weaponSlot.Rotation, xOrigin, _weaponSlot.Scale, SpriteEffects.None, 0f);
                 }
             }
 
-            spriteBatch.Draw(_pixel, new Rectangle(0, 0, Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT), _global.Palette_Off * 0.25f);
+            spriteBatch.Draw(_pixel, new Rectangle(0, 0, Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT), _global.Palette_Off * 0.4f);
 
             foreach (var card in selectable) card.Draw(spriteBatch, _spriteManager);
 

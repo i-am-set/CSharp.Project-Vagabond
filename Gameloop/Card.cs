@@ -33,6 +33,7 @@ namespace ProjectVagabond.Scenes
         public Color? OutlineColor { get; set; }
         public bool ForceRenderAboveVeil { get; set; }
         public bool IsBeingReplaced { get; set; }
+        public float VisualYOffset { get; set; }
 
         private bool _isFlipping;
         private const float LERP_SPEED = 25f;
@@ -101,7 +102,7 @@ namespace ProjectVagabond.Scenes
             }
 
             Vector2 origin = new Vector2(18f, 25f);
-            Vector2 drawPos = new Vector2(MathF.Round(Position.X), MathF.Round(Position.Y));
+            Vector2 drawPos = new Vector2(MathF.Round(Position.X), MathF.Round(Position.Y + VisualYOffset));
 
             if (IsHovered && !IsFocused) drawPos.Y -= 1f;
 
