@@ -163,12 +163,10 @@ namespace ProjectVagabond
 
             var audioManager = new ProjectVagabond.Audio.AudioManager();
             ServiceLocator.Register<ProjectVagabond.Audio.AudioManager>(audioManager);
-
             _settings = SettingsManager.LoadSettings();
             ServiceLocator.Register<GameSettings>(_settings);
             _global = ServiceLocator.Get<Global>();
             ServiceLocator.Register<GraphicsDevice>(GraphicsDevice);
-
             _loadingScreen = new LoadingScreen();
             ServiceLocator.Register<LoadingScreen>(_loadingScreen);
             var textureFactory = new TextureFactory();
@@ -179,13 +177,10 @@ namespace ProjectVagabond
             ServiceLocator.Register<HapticsManager>(_hapticsManager);
             _tooltipManager = new TooltipManager();
             ServiceLocator.Register<TooltipManager>(_tooltipManager);
-
             _particleSystemManager = new ParticleSystemManager();
             ServiceLocator.Register<ParticleSystemManager>(_particleSystemManager);
-
             var geometricBackgroundManager = new GeometricBackgroundManager();
             ServiceLocator.Register<GeometricBackgroundManager>(geometricBackgroundManager);
-
             var autoCompleteManager = new AutoCompleteManager();
             ServiceLocator.Register<AutoCompleteManager>(autoCompleteManager);
             var commandProcessor = new CommandProcessor();
@@ -198,7 +193,6 @@ namespace ProjectVagabond
             ServiceLocator.Register<DebugConsole>(_debugConsole);
             _cursorManager = new CursorManager();
             ServiceLocator.Register<CursorManager>(_cursorManager);
-
             _inputManager = new InputManager();
             ServiceLocator.Register<InputManager>(_inputManager);
 
