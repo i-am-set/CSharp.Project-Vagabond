@@ -1,14 +1,6 @@
-﻿using Microsoft.Xna.Framework;
-using Microsoft.Xna.Framework.Graphics;
-using Microsoft.Xna.Framework.Input;
-using MonoGame.Extended.BitmapFonts;
-using ProjectVagabond;
-using ProjectVagabond.Scenes;
-using ProjectVagabond.UI;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
 
 namespace ProjectVagabond
 {
@@ -33,10 +25,8 @@ namespace ProjectVagabond
             var type = typeof(T);
             if (_services.ContainsKey(type))
             {
-                // This is a more flexible approach. It allows overwriting but logs a detailed
-                // warning to the debug console, which is visible during development.
                 var stackTrace = new StackTrace();
-                var callingFrame = stackTrace.GetFrame(1); // Get the frame that called this method
+                var callingFrame = stackTrace.GetFrame(1);
                 var callingMethod = callingFrame?.GetMethod();
                 var callingType = callingMethod?.DeclaringType;
 
@@ -61,9 +51,8 @@ namespace ProjectVagabond
             var type = typeof(T);
             if (!_services.TryGetValue(type, out var service))
             {
-                // Enhanced exception with stack trace information
                 var stackTrace = new StackTrace();
-                var callingFrame = stackTrace.GetFrame(1); // Get the frame that called this method
+                var callingFrame = stackTrace.GetFrame(1);
                 var callingMethod = callingFrame?.GetMethod();
                 var callingType = callingMethod?.DeclaringType;
                 throw new InvalidOperationException($"Service of type '{type.Name}' has not been registered. " +
