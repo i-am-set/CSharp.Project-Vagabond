@@ -495,7 +495,7 @@ namespace ProjectVagabond.Scenes
 
             if (_state == ScoundrelState.Playing && newHovered != null && newHovered.Type == CardType.Weapon && _weaponSlot != null)
             {
-                _weaponSlot.TargetPosition = _weaponPos + new Vector2(44, 0);
+                _weaponSlot.TargetPosition = _weaponPos + new Vector2(38, 0);
                 _weaponSlot.IsBeingReplaced = true;
             }
 
