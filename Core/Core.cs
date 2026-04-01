@@ -2,7 +2,6 @@
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
-using ProjectVagabond.Battle;
 using ProjectVagabond.Particles;
 using ProjectVagabond.Scenes;
 using ProjectVagabond.Transitions;
@@ -76,7 +75,6 @@ namespace ProjectVagabond
         private HapticsManager _hapticsManager;
         private TooltipManager _tooltipManager;
         private ParticleSystemManager _particleSystemManager;
-        private GameState _gameState;
         private InputManager _inputManager;
 
         private SpriteManager _spriteManager;
@@ -188,8 +186,6 @@ namespace ProjectVagabond
             var geometricBackgroundManager = new GeometricBackgroundManager();
             ServiceLocator.Register<GeometricBackgroundManager>(geometricBackgroundManager);
 
-            _gameState = new GameState(_global, _spriteManager);
-            ServiceLocator.Register<GameState>(_gameState);
             var autoCompleteManager = new AutoCompleteManager();
             ServiceLocator.Register<AutoCompleteManager>(autoCompleteManager);
             var commandProcessor = new CommandProcessor();
@@ -230,10 +226,7 @@ namespace ProjectVagabond
 
             _sceneManager.AddScene(GameSceneState.Startup, new StartupScene());
             _sceneManager.AddScene(GameSceneState.MainMenu, new MainMenuScene());
-            _sceneManager.AddScene(GameSceneState.NewGameIntro, new NewGameIntroScene());
-            _sceneManager.AddScene(GameSceneState.Catyclopedia, new CatyclopediaScene());
             _sceneManager.AddScene(GameSceneState.Settings, new SettingsScene());
-            _sceneManager.AddScene(GameSceneState.Arena, new ArenaScene());
             _sceneManager.AddScene(GameSceneState.Scoundrel, new ScoundrelScene());
 
             _previousResolution = new Point(Window.ClientBounds.Width, Window.ClientBounds.Height);
@@ -302,7 +295,6 @@ namespace ProjectVagabond
 
             _spriteManager.LoadEssentialContent();
             _spriteManager.LoadGameContent();
-            GameDataCache.LoadData(Content);
             ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().LoadContent(Content);
 
             _sceneManager.ChangeScene(GameSceneState.Startup, TransitionType.None, TransitionType.None);
@@ -324,7 +316,6 @@ namespace ProjectVagabond
             _debugConsole.ClearHistory();
             _transitionManager.Reset();
 
-            _gameState.Reset();
             PoolManager.ClearAll();
 
             var audio = ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>();

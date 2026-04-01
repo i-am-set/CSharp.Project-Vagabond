@@ -45,10 +45,10 @@ namespace ProjectVagabond.Scenes
         private VertexPositionColorTexture[] _shadowVertices;
         private short[] _logoIndices;
 
-        // Physics state for the interactive logo letters
-        private Vector2[] _logoLetterOffsets = new Vector2[18];
-        private Vector2[] _logoLetterVelocities = new Vector2[18];
-        private bool[] _logoLetterDisplaced = new bool[18];
+        // Physics state for the interactive logo letters (Updated to 20 for "TOWER")
+        private Vector2[] _logoLetterOffsets = new Vector2[20];
+        private Vector2[] _logoLetterVelocities = new Vector2[20];
+        private bool[] _logoLetterDisplaced = new bool[20];
 
         public MainMenuScene()
         {
@@ -79,11 +79,13 @@ namespace ProjectVagabond.Scenes
                 VertexColorEnabled = true
             };
 
-            _logoVertices = new VertexPositionColorTexture[72];
-            _shadowVertices = new VertexPositionColorTexture[72];
-            _logoIndices = new short[108];
+            // 20 letters * 4 vertices = 80
+            _logoVertices = new VertexPositionColorTexture[80];
+            _shadowVertices = new VertexPositionColorTexture[80];
+            // 20 letters * 6 indices = 120
+            _logoIndices = new short[120];
 
-            for (int i = 0; i < 18; i++)
+            for (int i = 0; i < 20; i++)
             {
                 _logoIndices[i * 6 + 0] = (short)(i * 4 + 0);
                 _logoIndices[i * 6 + 1] = (short)(i * 4 + 1);
@@ -106,22 +108,20 @@ namespace ProjectVagabond.Scenes
             const int horizontalPadding = 4;
             const int verticalPadding = 2;
             const int buttonYSpacing = 0;
-            float currentY = 90f;
+            float currentY = 110f;
             int buttonX = Global.VIRTUAL_WIDTH / 2 - 130;
 
-            string arenaText = "START MATCH";
-            string scoundrelText = "PLAY SCOUNDREL";
-            string catyText = "CATYLOPEDIA";
+            string playText = "PLAY";
             string settingsText = "SETTINGS";
             string exitText = "EXIT";
 
-            Vector2 arenaSize = secondaryFont.MeasureString(arenaText);
-            int arenaWidth = (int)arenaSize.X + horizontalPadding * 2;
-            int arenaHeight = (int)arenaSize.Y + verticalPadding * 2;
+            Vector2 playSize = secondaryFont.MeasureString(playText);
+            int playWidth = (int)playSize.X + horizontalPadding * 2;
+            int playHeight = (int)playSize.Y + verticalPadding * 2;
 
-            var arenaButton = new Button(
-                new Rectangle(buttonX, (int)currentY, arenaWidth, arenaHeight),
-                arenaText,
+            var playButton = new Button(
+                new Rectangle(buttonX, (int)currentY, playWidth, playHeight),
+                playText,
                 font: secondaryFont,
                 alignLeft: true
             )
@@ -134,77 +134,17 @@ namespace ProjectVagabond.Scenes
                 UseTextOutline = true,
                 TextOutlineColor = _global.Palette_Off
             };
-            arenaButton.OnClick += () =>
+            playButton.OnClick += () =>
             {
                 _hapticsManager.TriggerZoomPulse(_global.LightHapticZoomPulseStrength, _global.HapticZoomPulseDuration);
-                arenaButton.ResetAnimationState();
-                ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().StopMusic(1.5f);
-                _sceneManager.ChangeScene(GameSceneState.NewGameIntro, _transitionManager.GetRandomTransition(), _transitionManager.GetRandomTransition());
-            };
-            _buttons.Add(arenaButton);
-            _navigationGroup.Add(arenaButton);
-
-            currentY += arenaHeight + buttonYSpacing + 6;
-
-            Vector2 scoundrelSize = secondaryFont.MeasureString(scoundrelText);
-            int scoundrelWidth = (int)scoundrelSize.X + horizontalPadding * 2;
-            int scoundrelHeight = (int)scoundrelSize.Y + verticalPadding * 2;
-
-            var scoundrelButton = new Button(
-                new Rectangle(buttonX, (int)currentY, scoundrelWidth, scoundrelHeight),
-                scoundrelText,
-                font: secondaryFont,
-                alignLeft: true
-            )
-            {
-                TextRenderOffset = new Vector2(0, -1),
-                EnableTextWave = true,
-                AlwaysAnimateText = true,
-                WaveEffectType = TextEffectType.TypewriterPop,
-                EnableHoverSway = false,
-                UseTextOutline = true,
-                TextOutlineColor = _global.Palette_Off
-            };
-            scoundrelButton.OnClick += () =>
-            {
-                _hapticsManager.TriggerZoomPulse(_global.LightHapticZoomPulseStrength, _global.HapticZoomPulseDuration);
-                scoundrelButton.ResetAnimationState();
+                playButton.ResetAnimationState();
                 ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().StopMusic(1.5f);
                 _sceneManager.ChangeScene(GameSceneState.Scoundrel, _transitionManager.GetRandomTransition(), _transitionManager.GetRandomTransition());
             };
-            _buttons.Add(scoundrelButton);
-            _navigationGroup.Add(scoundrelButton);
+            _buttons.Add(playButton);
+            _navigationGroup.Add(playButton);
 
-            currentY += scoundrelHeight + buttonYSpacing;
-
-            Vector2 catySize = secondaryFont.MeasureString(catyText);
-            int catyWidth = (int)catySize.X + horizontalPadding * 2;
-            int catyHeight = (int)catySize.Y + verticalPadding * 2;
-
-            var catyButton = new Button(
-                new Rectangle(buttonX, (int)currentY, catyWidth, catyHeight),
-                catyText,
-                font: secondaryFont,
-                alignLeft: true
-            )
-            {
-                TextRenderOffset = new Vector2(0, -1),
-                EnableTextWave = true,
-                AlwaysAnimateText = true,
-                WaveEffectType = TextEffectType.TypewriterPop,
-                EnableHoverSway = false,
-                UseTextOutline = true,
-                TextOutlineColor = _global.Palette_Off
-            };
-            catyButton.OnClick += () =>
-            {
-                _hapticsManager.TriggerZoomPulse(_global.LightHapticZoomPulseStrength, _global.HapticZoomPulseDuration);
-                catyButton.ResetAnimationState();
-                _sceneManager.ChangeScene(GameSceneState.Catyclopedia, _transitionManager.GetRandomTransition(), _transitionManager.GetRandomTransition());
-            };
-            _buttons.Add(catyButton);
-            _navigationGroup.Add(catyButton);
-            currentY += catyHeight + buttonYSpacing;
+            currentY += playHeight + buttonYSpacing;
 
             Vector2 settingsSize = secondaryFont.MeasureString(settingsText);
             int settingsWidth = (int)settingsSize.X + horizontalPadding * 2;
@@ -310,7 +250,7 @@ namespace ProjectVagabond.Scenes
             _logoWaveTimer2 = 0f;
             _logoWaveCooldown2 = 2f + (float)_random.NextDouble() * 3f;
 
-            for (int i = 0; i < 18; i++)
+            for (int i = 0; i < 20; i++)
             {
                 _logoLetterOffsets[i] = Vector2.Zero;
                 _logoLetterVelocities[i] = Vector2.Zero;
@@ -486,8 +426,8 @@ namespace ProjectVagabond.Scenes
             int frameSize = 40;
             float halfSize = frameSize / 2f;
 
-            int[] rowLengths = { 3, 6, 6, 3 };
-            int[] centerToCenterSpacings = { 16, 24, 16, 24 };
+            int[] rowLengths = { 3, 6, 6, 5 };
+            int[] centerToCenterSpacings = { 16, 24, 16, 28 };
             float[] rowShifts = { -25f, 0f, 10f, 26f };
             float rowVerticalSpacing = frameSize * 0.60f;
             float baseY = 10f;
@@ -628,7 +568,7 @@ namespace ProjectVagabond.Scenes
             gd.SamplerStates[0] = SamplerState.PointClamp;
 
             int[] rowStartIndex = { 0, 18, 54, 90 };
-            int[] rowPrimitiveCount = { 6, 12, 12, 6 };
+            int[] rowPrimitiveCount = { 6, 12, 12, 10 };
 
             foreach (EffectPass pass in _logoEffect.CurrentTechnique.Passes)
             {
@@ -639,14 +579,14 @@ namespace ProjectVagabond.Scenes
                     // Draw shadows first for this row
                     gd.DrawUserIndexedPrimitives(
                         PrimitiveType.TriangleList,
-                        _shadowVertices, 0, 72,
+                        _shadowVertices, 0, 80,
                         _logoIndices, rowStartIndex[row], rowPrimitiveCount[row]
                     );
 
                     // Draw main logo for this row
                     gd.DrawUserIndexedPrimitives(
                         PrimitiveType.TriangleList,
-                        _logoVertices, 0, 72,
+                        _logoVertices, 0, 80,
                         _logoIndices, rowStartIndex[row], rowPrimitiveCount[row]
                     );
                 }

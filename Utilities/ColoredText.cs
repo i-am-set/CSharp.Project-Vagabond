@@ -1,14 +1,5 @@
 ﻿using Microsoft.Xna.Framework;
-using Microsoft.Xna.Framework.Graphics;
-using MonoGame.Extended.BitmapFonts;
-using ProjectVagabond.Battle;
-using ProjectVagabond.Scenes;
-using ProjectVagabond.UI; // Added to resolve TextEffectType
-using ProjectVagabond.Utils;
-using System;
-using System.Collections.Generic;
-using System.Reflection;
-using System.Text;
+using ProjectVagabond.UI;
 
 namespace ProjectVagabond
 {

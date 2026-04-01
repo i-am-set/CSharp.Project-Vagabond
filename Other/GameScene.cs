@@ -2,6 +2,7 @@
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
+using ProjectVagabond.Utils;
 
 namespace ProjectVagabond.Scenes
 {
@@ -12,15 +13,9 @@ namespace ProjectVagabond.Scenes
     {
         Startup,
         MainMenu,
-        NewGameIntro,
-        Catyclopedia,
-        TerminalMap,
         Settings,
         Transition,
         AnimationEditor,
-        Battle,
-        Split,
-        Arena,
         Scoundrel
     }
 
@@ -122,10 +117,6 @@ namespace ProjectVagabond.Scenes
             if (keyboardNavigatedLastFrame)
             {
                 keyboardNavigatedLastFrame = false;
-            }
-            else if (currentMouseState.Position != previousMouseState.Position)
-            {
-                // No longer need to manage OS cursor visibility here.
             }
 
             // Update previous states at the end of the frame for the next frame's logic

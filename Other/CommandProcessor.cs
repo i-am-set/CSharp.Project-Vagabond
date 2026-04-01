@@ -3,7 +3,6 @@ using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond;
-using ProjectVagabond.Battle;
 using ProjectVagabond.Scenes;
 using ProjectVagabond.Transitions;
 using ProjectVagabond.UI;
@@ -20,7 +19,6 @@ namespace ProjectVagabond
 {
     public class CommandProcessor
     {
-        private GameState _gameState;
         private Dictionary<string, Command> _commands;
         public Dictionary<string, Command> Commands => _commands;
 
@@ -46,7 +44,6 @@ namespace ProjectVagabond
                 sb.AppendLine("  [Palette_Sky]System & Debug[/]");
                 sb.AppendLine("    debug_text_anims                   - Shows all text animations.");
                 sb.AppendLine("    debug_colors                       - Lists all colors.");
-                sb.AppendLine("    debug_ticket                       - Spawns a blank ticket in the arena.");
                 sb.AppendLine("    clear                              - Clears console.");
                 sb.AppendLine("    exit                               - Exits game.");
                 sb.AppendLine("    fps                                - Toggles FPS counter.");
@@ -167,20 +164,6 @@ namespace ProjectVagabond
                 ServiceLocator.Get<DebugConsole>().SetFontIndex(index);
                 Log($"[Palette_Sky]Debug Console Font set to index {index}.");
             }, "debug_consolefont <0|1|2> - Sets the debug console font.");
-
-            _commands["debug_ticket"] = new Command("debug_ticket", (args) =>
-            {
-                var sceneManager = ServiceLocator.Get<SceneManager>();
-                if (sceneManager.CurrentActiveScene is ArenaScene arena)
-                {
-                    arena.DebugPrintTicket();
-                    Log("[Palette_Sky]Spawned debug ticket.[/]");
-                }
-                else
-                {
-                    Log("[error]Must be in the Arena scene to spawn a ticket.[/]");
-                }
-            }, "debug_ticket - Spawns a blank ticket in the arena for physics testing.");
 
             _commands["fps"] = new Command("fps", (args) =>
             {

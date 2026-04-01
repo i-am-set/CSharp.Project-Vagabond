@@ -2,8 +2,7 @@
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
-using ProjectVagabond.UI; // Added for TextAnimator and TextEffectType
-using ProjectVagabond.Utils;
+using ProjectVagabond.UI;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -18,7 +17,6 @@ namespace ProjectVagabond.Utils
     public class DebugConsole
     {
         public bool IsVisible { get; private set; }
-        private readonly GameState _gameState;
         private readonly Global _global;
         private readonly CommandProcessor _commandProcessor;
         private readonly AutoCompleteManager _autoCompleteManager;
@@ -61,7 +59,6 @@ namespace ProjectVagabond.Utils
 
         public DebugConsole()
         {
-            _gameState = ServiceLocator.Get<GameState>();
             _global = ServiceLocator.Get<Global>();
             _commandProcessor = ServiceLocator.Get<CommandProcessor>();
             _sceneManager = ServiceLocator.Get<SceneManager>();
@@ -94,7 +91,6 @@ namespace ProjectVagabond.Utils
         public void Show()
         {
             IsVisible = true;
-            _gameState.IsPausedByConsole = true;
             _previousKeyboardState = Keyboard.GetState();
             _previousMouseState = Mouse.GetState();
         }
@@ -102,7 +98,6 @@ namespace ProjectVagabond.Utils
         public void Hide()
         {
             IsVisible = false;
-            _gameState.IsPausedByConsole = false;
             _autoCompleteManager.HideSuggestions();
             ClearSelection();
 

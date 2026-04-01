@@ -362,9 +362,6 @@ namespace ProjectVagabond.UI
                     case "red": color = _global.Palette_Rust; break;
                     case "green": color = _global.Palette_Leaf; break;
                     case "yellow": color = _global.Palette_DarkSun; break;
-                    case "cemphasis": color = _global.ColorNarration_Emphasis; break;
-                    case "chighlight": color = _global.ColorNarration_Highlight; break;
-                    case "cdull": color = _global.ColorNarration_Dull; break;
                     default: return (taggedText, null);
                 }
                 return (text, color);
