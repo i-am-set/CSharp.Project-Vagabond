@@ -45,7 +45,6 @@ namespace ProjectVagabond.Scenes
         private VertexPositionColorTexture[] _shadowVertices;
         private short[] _logoIndices;
 
-        // Physics state for the interactive logo letters (Updated to 20 for "TOWER")
         private Vector2[] _logoLetterOffsets = new Vector2[20];
         private Vector2[] _logoLetterVelocities = new Vector2[20];
         private bool[] _logoLetterDisplaced = new bool[20];
@@ -79,10 +78,8 @@ namespace ProjectVagabond.Scenes
                 VertexColorEnabled = true
             };
 
-            // 20 letters * 4 vertices = 80
             _logoVertices = new VertexPositionColorTexture[80];
             _shadowVertices = new VertexPositionColorTexture[80];
-            // 20 letters * 6 indices = 120
             _logoIndices = new short[120];
 
             for (int i = 0; i < 20; i++)
@@ -103,7 +100,7 @@ namespace ProjectVagabond.Scenes
             _buttons.Clear();
             _navigationGroup.Clear();
 
-            var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
+            var defaultFont = ServiceLocator.Get<Core>().DefaultFont;
 
             const int horizontalPadding = 4;
             const int verticalPadding = 2;
@@ -115,18 +112,18 @@ namespace ProjectVagabond.Scenes
             string settingsText = "SETTINGS";
             string exitText = "EXIT";
 
-            Vector2 playSize = secondaryFont.MeasureString(playText);
+            Vector2 playSize = defaultFont.MeasureString(playText);
             int playWidth = (int)playSize.X + horizontalPadding * 2;
             int playHeight = (int)playSize.Y + verticalPadding * 2;
 
             var playButton = new Button(
                 new Rectangle(buttonX, (int)currentY, playWidth, playHeight),
                 playText,
-                font: secondaryFont,
+                font: defaultFont,
                 alignLeft: true
             )
             {
-                TextRenderOffset = new Vector2(0, -1),
+                TextRenderOffset = new Vector2(0, 1),
                 EnableTextWave = true,
                 AlwaysAnimateText = true,
                 WaveEffectType = TextEffectType.TypewriterPop,
@@ -146,18 +143,18 @@ namespace ProjectVagabond.Scenes
 
             currentY += playHeight + buttonYSpacing;
 
-            Vector2 settingsSize = secondaryFont.MeasureString(settingsText);
+            Vector2 settingsSize = defaultFont.MeasureString(settingsText);
             int settingsWidth = (int)settingsSize.X + horizontalPadding * 2;
             int settingsHeight = (int)settingsSize.Y + verticalPadding * 2;
 
             var settingsButton = new Button(
                 new Rectangle(buttonX, (int)currentY, settingsWidth, settingsHeight),
                 settingsText,
-                font: secondaryFont,
+                font: defaultFont,
                 alignLeft: true
             )
             {
-                TextRenderOffset = new Vector2(0, -1),
+                TextRenderOffset = new Vector2(0, 1),
                 EnableTextWave = true,
                 AlwaysAnimateText = true,
                 WaveEffectType = TextEffectType.TypewriterPop,
@@ -175,18 +172,18 @@ namespace ProjectVagabond.Scenes
             _navigationGroup.Add(settingsButton);
             currentY += settingsHeight + buttonYSpacing;
 
-            Vector2 exitSize = secondaryFont.MeasureString(exitText);
+            Vector2 exitSize = defaultFont.MeasureString(exitText);
             int exitWidth = (int)exitSize.X + horizontalPadding * 2;
             int exitHeight = (int)exitSize.Y + verticalPadding * 2;
 
             var exitButton = new Button(
                 new Rectangle(buttonX, (int)currentY, exitWidth, exitHeight),
                 exitText,
-                font: secondaryFont,
+                font: defaultFont,
                 alignLeft: true
             )
             {
-                TextRenderOffset = new Vector2(0, -1),
+                TextRenderOffset = new Vector2(0, 1),
                 EnableTextWave = true,
                 AlwaysAnimateText = true,
                 WaveEffectType = TextEffectType.TypewriterPop,
@@ -404,7 +401,6 @@ namespace ProjectVagabond.Scenes
             float fov = MathHelper.PiOver4;
             float cameraZ = (Global.VIRTUAL_HEIGHT / 2f) / MathF.Tan(fov / 2f);
 
-            // Negating cameraZ fixes the horizontal mirroring by aligning the 3D view matrix with 2D screen space
             _logoEffect.View = Matrix.CreateLookAt(
                 new Vector3(Global.VIRTUAL_WIDTH / 2f, Global.VIRTUAL_HEIGHT / 2f, -cameraZ),
                 new Vector3(Global.VIRTUAL_WIDTH / 2f, Global.VIRTUAL_HEIGHT / 2f, 0),
@@ -419,7 +415,6 @@ namespace ProjectVagabond.Scenes
             int vertIndex = 0;
             float time = (float)gameTime.TotalGameTime.TotalSeconds;
 
-            // Clamp dt to prevent physics explosions during lag spikes
             float dt = Math.Min((float)gameTime.ElapsedGameTime.TotalSeconds, 0.05f);
             Vector2 mousePos = Core.TransformMouse(_inputManager.GetEffectiveMouseState().Position);
 
@@ -474,7 +469,6 @@ namespace ProjectVagabond.Scenes
                         swayY = MathF.Cos(time * 0.85f + phase) * 1.4f;
                     }
 
-                    // --- Interactive Physics ---
                     Vector2 basePos = new Vector2(startCenterX + (col * spacing), centerY);
                     Vector2 currentPos = basePos + _logoLetterOffsets[letterIndex];
 
@@ -482,7 +476,6 @@ namespace ProjectVagabond.Scenes
                     float dist = toMouse.Length();
                     float repelRadius = 35f;
 
-                    // Apply repulsion force if mouse is close
                     if (dist < repelRadius && dist > 0.001f)
                     {
                         float force = (repelRadius - dist) / repelRadius;
@@ -490,13 +483,9 @@ namespace ProjectVagabond.Scenes
                         _logoLetterVelocities[letterIndex] += repelDir * force * 2500f * dt;
                     }
 
-                    // Apply spring force to pull back to center (0,0 offset)
                     Vector2 springForce = -_logoLetterOffsets[letterIndex] * 150f;
-
-                    // Apply damping to prevent infinite bouncing
                     Vector2 dampingForce = -_logoLetterVelocities[letterIndex] * 12f;
 
-                    // Integrate velocity and position
                     _logoLetterVelocities[letterIndex] += (springForce + dampingForce) * dt;
                     _logoLetterOffsets[letterIndex] += _logoLetterVelocities[letterIndex] * dt;
 
@@ -514,7 +503,6 @@ namespace ProjectVagabond.Scenes
                         _logoLetterDisplaced[letterIndex] = false;
                     }
 
-                    // Calculate final snapped position
                     float finalX = MathF.Round(basePos.X + swayX + _logoLetterOffsets[letterIndex].X);
                     float finalY = MathF.Round(basePos.Y + swayY + _logoLetterOffsets[letterIndex].Y);
 
@@ -541,7 +529,6 @@ namespace ProjectVagabond.Scenes
                     {
                         Vector3 transformed = Vector3.Transform(corners[v], rot);
 
-                        // Adjusted divisor to keep shading visible with the smaller rotation magnitude
                         float depthFactor = Math.Clamp(1.0f - (transformed.Z / 12f), 0.4f, 1.0f);
                         Color vertColor = new Color(depthFactor, depthFactor, depthFactor, 1.0f);
 
@@ -576,14 +563,12 @@ namespace ProjectVagabond.Scenes
 
                 for (int row = 0; row < 4; row++)
                 {
-                    // Draw shadows first for this row
                     gd.DrawUserIndexedPrimitives(
                         PrimitiveType.TriangleList,
                         _shadowVertices, 0, 80,
                         _logoIndices, rowStartIndex[row], rowPrimitiveCount[row]
                     );
 
-                    // Draw main logo for this row
                     gd.DrawUserIndexedPrimitives(
                         PrimitiveType.TriangleList,
                         _logoVertices, 0, 80,
