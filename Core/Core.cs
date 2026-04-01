@@ -460,7 +460,6 @@ namespace ProjectVagabond
             finalSceneTransform.M41 = MathF.Round(finalSceneTransform.M41);
             finalSceneTransform.M42 = MathF.Round(finalSceneTransform.M42);
 
-            // Draw the scene even if a transition is active, so the transition renders on top of it.
             if (!_loadingScreen.IsActive)
             {
                 _sceneManager.Draw(_spriteBatch, _defaultFont, gameTime, finalSceneTransform);
@@ -507,7 +506,6 @@ namespace ProjectVagabond
                     }
                 }
 
-                // --- GLOBAL FAST FORWARD ICON ---
                 if (_inputManager.IsCurrentlyFastForwarding)
                 {
                     var ffIcon = _spriteManager.FastForwardIcon;
@@ -536,16 +534,12 @@ namespace ProjectVagabond
             }
 
             // 2. Phosphor Persistence Pass (Ghosting)
-            // Switch to the accumulation buffer
             GraphicsDevice.SetRenderTarget(_phosphorTarget);
 
-            // Draw a semi-transparent black quad to fade out the previous frame's contents
-            // 0.15f alpha means the old image persists for a few frames, creating the trail.
             _spriteBatch.Begin(SpriteSortMode.Immediate, BlendState.AlphaBlend);
             _spriteBatch.Draw(_pixel, new Rectangle(0, 0, _phosphorTarget.Width, _phosphorTarget.Height), Color.Black * 0.15f);
             _spriteBatch.End();
 
-            // Draw the current frame (Composite) on top of the fading trails
             _spriteBatch.Begin(SpriteSortMode.Immediate, BlendState.Opaque);
             _spriteBatch.Draw(_finalCompositeTarget, Vector2.Zero, Color.White);
             _spriteBatch.End();
@@ -576,19 +570,15 @@ namespace ProjectVagabond
                 _retroEffect.Parameters["Vibrance"]?.SetValue(_global.Vibrance);
                 _retroEffect.Parameters["EnableJitter"]?.SetValue(_settings.EnableGlitchEffects ? 1.0f : 0.0f);
 
-                // Pass the actual render scale and offset to the shader
                 _retroEffect.Parameters["TargetScale"]?.SetValue(_finalScale);
                 _retroEffect.Parameters["TargetOffset"]?.SetValue(new Vector2(_finalRenderRectangle.X, _finalRenderRectangle.Y));
 
-                // Only enable LCD grid if resolution is high enough (>= 1280x720)
                 bool enableLcdGrid = GraphicsDevice.PresentationParameters.BackBufferWidth >= 1280 &&
                                      GraphicsDevice.PresentationParameters.BackBufferHeight >= 720;
                 _retroEffect.Parameters["EnableLcdGrid"]?.SetValue(enableLcdGrid ? 1.0f : 0.0f);
 
-                // --- Pass Palette ---
                 _retroEffect.Parameters["Palette"]?.SetValue(_global.GetPaletteAsVectors());
                 _retroEffect.Parameters["PaletteCount"]?.SetValue(16);
-                // -------------------------
 
                 float flashIntensity = 0f;
                 Color flashColor = Color.Transparent;
