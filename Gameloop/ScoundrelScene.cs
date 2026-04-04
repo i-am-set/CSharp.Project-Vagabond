@@ -83,6 +83,7 @@ namespace ProjectVagabond.Scenes
         public override void Enter()
         {
             base.Enter();
+
             if (!_uiInitialized)
             {
                 _ui.Initialize();
@@ -98,8 +99,191 @@ namespace ProjectVagabond.Scenes
             _isPaused = false;
             _ui.ConfirmationDialog.Hide();
 
-            RestartGame();
+            if (SaveManager.CurrentSave != null)
+            {
+                RestoreFromSave();
+            }
+            else
+            {
+                RestartGame();
+            }
+
             _previousMouseState = _inputManager.GetEffectiveMouseState();
+        }
+
+        private void RestoreFromSave()
+        {
+            var data = SaveManager.CurrentSave;
+
+            _runContext.Mode = data.Mode;
+            _runContext.Floor = data.Floor;
+            _runContext.MaxHealth = data.MaxHealth;
+            _runContext.Health = data.Health;
+
+            _combat.Reset(_runContext.Health);
+            _combat.Health = data.Health;
+            _combat.LastSlainValue = data.LastSlainValue;
+            _combat.CardsResolvedThisRoom = data.CardsResolvedThisRoom;
+            _combat.PotionsUsedThisRoom = data.PotionsUsedThisRoom;
+            _combat.CanSkip = data.CanSkip;
+
+            _board.Reset();
+
+            foreach (var cd in data.Deck) _board.Deck.Add(CreateCardFromData(cd));
+            foreach (var cd in data.Room) _board.Room.Add(CreateCardFromData(cd));
+            foreach (var cd in data.Discard) _board.Discard.Add(CreateCardFromData(cd));
+            foreach (var cd in data.SlainPile) _board.SlainPile.Add(CreateCardFromData(cd));
+            if (data.WeaponSlot != null) _board.WeaponSlot = CreateCardFromData(data.WeaponSlot);
+
+            // Force strict visual states to prevent mid-animation save bugs
+            for (int i = 0; i < _board.Deck.Count; i++)
+            {
+                _board.Deck[i].Position = _board.DeckPos + new Vector2(0, -i * 0.5f);
+                _board.Deck[i].TargetPosition = _board.Deck[i].Position;
+                _board.Deck[i].ZIndex = i;
+                _board.Deck[i].IsFaceUp = false;
+                _board.Deck[i].Scale = Vector2.One;
+                _board.Deck[i].TargetScale = Vector2.One;
+            }
+
+            foreach (var c in _board.Room)
+            {
+                c.Position = _board.RoomPositions[c.RoomSlotIndex];
+                c.TargetPosition = c.Position;
+                c.ZIndex = 100 + c.RoomSlotIndex;
+                c.IsFaceUp = true;
+                c.Scale = Vector2.One;
+                c.TargetScale = Vector2.One;
+            }
+
+            for (int i = 0; i < _board.Discard.Count; i++)
+            {
+                _board.Discard[i].Position = _board.DiscardPos + new Vector2(0, -i * 0.5f);
+                _board.Discard[i].TargetPosition = _board.Discard[i].Position;
+                _board.Discard[i].ZIndex = 50 + i;
+                _board.Discard[i].IsFaceUp = true;
+                _board.Discard[i].Scale = Vector2.One;
+                _board.Discard[i].TargetScale = Vector2.One;
+            }
+
+            if (_board.WeaponSlot != null)
+            {
+                _board.WeaponSlot.Position = _board.WeaponPos;
+                _board.WeaponSlot.TargetPosition = _board.WeaponPos;
+                _board.WeaponSlot.ZIndex = 200;
+                _board.WeaponSlot.IsFaceUp = true;
+                _board.WeaponSlot.Scale = Vector2.One;
+                _board.WeaponSlot.TargetScale = Vector2.One;
+
+                for (int i = 0; i < _board.SlainPile.Count; i++)
+                {
+                    _board.SlainPile[i].Position = _board.WeaponPos + new Vector2(7, 0);
+                    _board.SlainPile[i].TargetPosition = _board.SlainPile[i].Position;
+                    _board.SlainPile[i].Rotation = MathHelper.PiOver2;
+                    _board.SlainPile[i].TargetRotation = MathHelper.PiOver2;
+                    _board.SlainPile[i].ZIndex = 150 + i;
+                    _board.SlainPile[i].IsFaceUp = true;
+                    _board.SlainPile[i].Scale = Vector2.One;
+                    _board.SlainPile[i].TargetScale = Vector2.One;
+                }
+            }
+
+            _state = data.State;
+
+            if (_state == ScoundrelState.Focused)
+            {
+                if (data.FocusedRoomSlotIndex >= 0)
+                {
+                    _board.FocusedCard = _board.Room.FirstOrDefault(c => c.RoomSlotIndex == data.FocusedRoomSlotIndex);
+                    if (_board.FocusedCard != null)
+                    {
+                        _board.FocusedCard.Position = _board.RoomPositions[_board.FocusedCard.RoomSlotIndex] + new Vector2(0, -3);
+                        _board.FocusedCard.TargetPosition = _board.FocusedCard.Position;
+                        _board.FocusedCard.ZIndex = 500;
+                    }
+                }
+            }
+            else if (_state == ScoundrelState.ResolvingMonster)
+            {
+                var monster = _board.Room.FirstOrDefault(c => c.RoomSlotIndex == data.ResolvingMonsterRoomSlotIndex);
+                if (monster != null)
+                {
+                    _combat.StartMonsterResolution(monster, data.ResolveDamage, data.ResolveWeaponUsed);
+                    monster.ZIndex = 500;
+                }
+                else
+                {
+                    _state = ScoundrelState.Playing;
+                }
+            }
+            else if (_state == ScoundrelState.RewardSelection)
+            {
+                _ui.GenerateRewards(this, _runContext, _combat);
+            }
+
+            _ui.DeckCountPlink.Start(0.5f, 0.3f);
+            _ui.DiscardCountPlink.Start(0.6f, 0.3f);
+            _ui.HealthPlink.Start(0.7f, 0.4f);
+
+            SaveManager.CurrentSave = null;
+        }
+
+        private void SaveCurrentState()
+        {
+            if (_state == ScoundrelState.GameOver || _state == ScoundrelState.Restarting || _state == ScoundrelState.Intro) return;
+
+            if (_combat.Health <= 0)
+            {
+                SaveManager.DeleteSave();
+                return;
+            }
+
+            var data = new ScoundrelSaveData
+            {
+                Mode = _runContext.Mode,
+                Floor = _runContext.Floor,
+                MaxHealth = _runContext.MaxHealth,
+                Health = _combat.Health,
+                LastSlainValue = _combat.LastSlainValue,
+                CardsResolvedThisRoom = _combat.CardsResolvedThisRoom,
+                PotionsUsedThisRoom = _combat.PotionsUsedThisRoom,
+                CanSkip = _combat.CanSkip,
+                State = _state,
+                FocusedRoomSlotIndex = _board.FocusedCard?.RoomSlotIndex ?? -1,
+                ResolvingMonsterRoomSlotIndex = _combat.ResolvingMonster?.RoomSlotIndex ?? -1,
+                ResolveDamage = _combat.ResolveDamage,
+                ResolveWeaponUsed = _combat.ResolveWeaponUsed,
+                WeaponSlot = _board.WeaponSlot != null ? CreateDataFromCard(_board.WeaponSlot) : null
+            };
+
+            data.Deck = _board.Deck.Select(CreateDataFromCard).ToList();
+            data.Room = _board.Room.Select(CreateDataFromCard).ToList();
+            data.Discard = _board.Discard.Select(CreateDataFromCard).ToList();
+            data.SlainPile = _board.SlainPile.Select(CreateDataFromCard).ToList();
+
+            SaveManager.SaveGame(data);
+        }
+
+        private CardData CreateDataFromCard(Card c)
+        {
+            return new CardData
+            {
+                Suit = c.Suit,
+                Type = c.Type,
+                Rank = c.Rank,
+                Value = c.Value,
+                IsFaceUp = c.IsFaceUp,
+                RoomSlotIndex = c.RoomSlotIndex
+            };
+        }
+
+        private Card CreateCardFromData(CardData d)
+        {
+            return new Card(d.Suit, d.Type, d.Rank, d.Value)
+            {
+                IsFaceUp = d.IsFaceUp,
+                RoomSlotIndex = d.RoomSlotIndex
+            };
         }
 
         private void RestartGame()
@@ -134,6 +318,7 @@ namespace ProjectVagabond.Scenes
 
         public void ResetBoard()
         {
+            SaveManager.DeleteSave();
             ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().MusicPitchOffset = 0f;
 
             _runContext.Reset();
@@ -194,7 +379,7 @@ namespace ProjectVagabond.Scenes
             {
                 audio.SetCurrentMusicStemVolume(0, 0.0f, fadeSpeed: 5f);
                 audio.SetCurrentMusicStemVolume(1, 1.0f, fadeSpeed: 5f);
-                
+
                 if (_inputManager.CurrentInputDevice != InputDeviceType.Mouse)
                 {
                     _ui.PauseNavGroup.SelectFirst();
@@ -221,6 +406,16 @@ namespace ProjectVagabond.Scenes
         {
             rewardAction?.Invoke();
             _runContext.Health = _combat.Health;
+
+            if (_combat.Health <= 0)
+            {
+                SaveManager.DeleteSave();
+                _state = ScoundrelState.GameOver;
+                _combat.PlayDefeatSequence();
+                _combat.CalculateTargetScore(_board, _runContext.MaxHealth);
+                return;
+            }
+
             _runContext.Floor++;
             _sceneManager.ChangeScene(GameSceneState.Scoundrel, TransitionType.FadeOff, TransitionType.FadeOff);
         }
@@ -518,6 +713,7 @@ namespace ProjectVagabond.Scenes
                 _state = ScoundrelState.Playing;
                 _combat.CardsResolvedThisRoom = 0;
                 _combat.PotionsUsedThisRoom = 0;
+                SaveCurrentState();
             }
         }
 
@@ -577,6 +773,7 @@ namespace ProjectVagabond.Scenes
             {
                 _state = ScoundrelState.RewardSelection;
                 _ui.GenerateRewards(this, _runContext, _combat);
+                SaveCurrentState();
             }
         }
 
@@ -620,6 +817,7 @@ namespace ProjectVagabond.Scenes
             {
                 if (_board.WeaponSlot == null || card.Value > _combat.LastSlainValue)
                 {
+                    if (_combat.Health - card.Value <= 0) SaveManager.DeleteSave();
                     _combat.StartMonsterResolution(card, card.Value, false);
                     _state = ScoundrelState.ResolvingMonster;
                     if (_board.FocusedCard != null)
@@ -627,6 +825,7 @@ namespace ProjectVagabond.Scenes
                         _board.FocusedCard.ZIndex = 100 + _board.FocusedCard.RoomSlotIndex;
                         _board.FocusedCard = null;
                     }
+                    if (SaveManager.HasSave()) SaveCurrentState();
                 }
                 else
                 {
@@ -635,6 +834,7 @@ namespace ProjectVagabond.Scenes
                     _board.FocusedCard.ZIndex = 500;
                     _state = ScoundrelState.Focused;
                     ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlayRoutedSfx("proc:wave=6;freq=1500;atk=0.01;sus=0.02;dec=0.1;hpf=800;vol=0.1|wave=2;freq=1200;slide=-400;atk=0.01;sus=0.05;dec=0.1;detune=0.02;vol=0.1", 0.2f);
+                    SaveCurrentState();
                 }
             }
         }
@@ -663,14 +863,17 @@ namespace ProjectVagabond.Scenes
             _dealTimer = DEAL_INTERVAL;
 
             ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlayRoutedSfx("proc:wave=3;freq=1000;slide=-500;atk=0.02;sus=0.05;dec=0.15;vol=0.12|wave=4;freq=400;slide=-100;atk=0.02;sus=0.05;dec=0.15;vol=0.15", 0.2f);
+            SaveCurrentState();
         }
 
         private void OnFistsClicked()
         {
             if (_board.FocusedCard != null)
             {
+                if (_combat.Health - _board.FocusedCard.Value <= 0) SaveManager.DeleteSave();
                 _combat.StartMonsterResolution(_board.FocusedCard, _board.FocusedCard.Value, false);
                 _state = ScoundrelState.ResolvingMonster;
+                if (SaveManager.HasSave()) SaveCurrentState();
             }
         }
 
@@ -685,8 +888,11 @@ namespace ProjectVagabond.Scenes
             }
 
             int damage = Math.Max(0, _board.FocusedCard.Value - _board.WeaponSlot.Value);
+            if (_combat.Health - damage <= 0) SaveManager.DeleteSave();
+
             _combat.StartMonsterResolution(_board.FocusedCard, damage, true);
             _state = ScoundrelState.ResolvingMonster;
+            if (SaveManager.HasSave()) SaveCurrentState();
         }
 
         private void CancelFocus()
@@ -699,6 +905,7 @@ namespace ProjectVagabond.Scenes
             }
             _state = ScoundrelState.Playing;
             ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlayUi("ui_hover");
+            SaveCurrentState();
         }
 
         private void OnCardResolved()
@@ -711,12 +918,14 @@ namespace ProjectVagabond.Scenes
                 _state = ScoundrelState.Dealing;
                 _dealTimer = DEAL_INTERVAL;
             }
+            SaveCurrentState();
         }
 
         private void CheckGameOver()
         {
             if (_combat.Health <= 0)
             {
+                SaveManager.DeleteSave();
                 _state = ScoundrelState.GameOver;
                 _combat.PlayDefeatSequence();
                 _combat.CalculateTargetScore(_board, _runContext.MaxHealth);
@@ -725,6 +934,7 @@ namespace ProjectVagabond.Scenes
             {
                 if (_runContext.Mode == GameMode.Classic || _runContext.Floor >= _runContext.MaxFloors)
                 {
+                    SaveManager.DeleteSave();
                     _state = ScoundrelState.GameOver;
                     _combat.PlayVictorySequence();
                     _combat.CalculateTargetScore(_board, _runContext.MaxHealth);
@@ -733,6 +943,7 @@ namespace ProjectVagabond.Scenes
                 {
                     _state = ScoundrelState.FloorCleared;
                     _floorClearedTimer = 2.0f;
+                    SaveCurrentState();
                     ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlayRoutedSfx("proc:wave=0;freq=400;atk=0.02;sus=0.1;dec=0.2;detune=0.01;lpf=3000;vol=0.15", 0.15f);
                 }
             }

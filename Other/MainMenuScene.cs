@@ -30,7 +30,6 @@ namespace ProjectVagabond.Scenes
         private float _currentInputDelay = 0f;
 
         private ConfirmationDialog _confirmationDialog;
-        private bool _uiInitialized = false;
 
         private const float BUTTON_STAGGER_DELAY = 0.15f;
         private const float LOGO_SHADOW_OPACITY = 0.75f;
@@ -100,8 +99,6 @@ namespace ProjectVagabond.Scenes
 
         private void InitializeUI()
         {
-            if (_uiInitialized) return;
-
             _buttons.Clear();
             _navigationGroup.Clear();
 
@@ -113,18 +110,19 @@ namespace ProjectVagabond.Scenes
             float currentY = 90f;
             int buttonX = Global.VIRTUAL_WIDTH / 2 - 130;
 
-            string playText = "ROGUELIKE RUN";
+            string newRunText = "NEW RUN";
+            string continueText = "CONTINUE RUN";
             string classicText = "CLASSIC MODE";
             string settingsText = "SETTINGS";
             string exitText = "EXIT";
 
-            Vector2 playSize = defaultFont.MeasureString(playText);
-            int playWidth = (int)playSize.X + horizontalPadding * 2;
-            int playHeight = (int)playSize.Y + verticalPadding * 2;
+            Vector2 newRunSize = defaultFont.MeasureString(newRunText);
+            int newRunWidth = (int)newRunSize.X + horizontalPadding * 2;
+            int newRunHeight = (int)newRunSize.Y + verticalPadding * 2;
 
-            var playButton = new Button(
-                new Rectangle(buttonX, (int)currentY, playWidth, playHeight),
-                playText,
+            var newRunButton = new Button(
+                new Rectangle(buttonX, (int)currentY, newRunWidth, newRunHeight),
+                newRunText,
                 font: defaultFont,
                 alignLeft: true
             )
@@ -137,22 +135,76 @@ namespace ProjectVagabond.Scenes
                 UseTextOutline = true,
                 TextOutlineColor = _global.Palette_Off
             };
-            playButton.OnClick += () =>
+            newRunButton.OnClick += () =>
             {
                 _hapticsManager.TriggerZoomPulse(_global.LightHapticZoomPulseStrength, _global.HapticZoomPulseDuration);
-                playButton.ResetAnimationState();
+                newRunButton.ResetAnimationState();
+
+                if (SaveManager.HasSave())
+                {
+                    _confirmationDialog.Show(
+                        "Abandon current run?",
+                        new List<Tuple<string, Action>>
+                        {
+                            Tuple.Create("YES", new Action(() => {
+                                _hapticsManager.TriggerZoomPulse(_global.LightHapticZoomPulseStrength, _global.HapticZoomPulseDuration);
+                                SaveManager.DeleteSave();
+                                _confirmationDialog.Hide();
+                                StartNewRun();
+                            })),
+                            Tuple.Create("[chighlight]NO", new Action(() => {
+                                _hapticsManager.TriggerZoomPulse(_global.LightHapticZoomPulseStrength, _global.HapticZoomPulseDuration);
+                                _confirmationDialog.Hide();
+                            }))
+                        }
+                    );
+                }
+                else
+                {
+                    StartNewRun();
+                }
+            };
+            _buttons.Add(newRunButton);
+            _navigationGroup.Add(newRunButton);
+
+            currentY += newRunHeight + buttonYSpacing;
+
+            Vector2 continueSize = defaultFont.MeasureString(continueText);
+            int continueWidth = (int)continueSize.X + horizontalPadding * 2;
+            int continueHeight = (int)continueSize.Y + verticalPadding * 2;
+
+            var continueButton = new Button(
+                new Rectangle(buttonX, (int)currentY, continueWidth, continueHeight),
+                continueText,
+                font: defaultFont,
+                alignLeft: true
+            )
+            {
+                TextRenderOffset = new Vector2(0, 1),
+                EnableTextWave = true,
+                AlwaysAnimateText = true,
+                WaveEffectType = TextEffectType.TypewriterPop,
+                EnableHoverSway = false,
+                UseTextOutline = true,
+                TextOutlineColor = _global.Palette_Off,
+                IsEnabled = SaveManager.HasSave()
+            };
+            continueButton.OnClick += () =>
+            {
+                _hapticsManager.TriggerZoomPulse(_global.LightHapticZoomPulseStrength, _global.HapticZoomPulseDuration);
+                continueButton.ResetAnimationState();
                 ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().StopMusic(1.5f);
 
-                var ctx = ServiceLocator.Get<RunContext>();
-                ctx.Mode = GameMode.Roguelike;
-                ctx.Reset();
-
+                SaveManager.CurrentSave = SaveManager.LoadGame();
                 _sceneManager.ChangeScene(GameSceneState.Scoundrel, _transitionManager.GetRandomTransition(), _transitionManager.GetRandomTransition());
             };
-            _buttons.Add(playButton);
-            _navigationGroup.Add(playButton);
+            _buttons.Add(continueButton);
+            _navigationGroup.Add(continueButton);
 
-            currentY += playHeight + buttonYSpacing;
+            currentY += continueHeight + buttonYSpacing;
+
+            // 1 Line Gap
+            currentY += defaultFont.LineHeight;
 
             Vector2 classicSize = defaultFont.MeasureString(classicText);
             int classicWidth = (int)classicSize.X + horizontalPadding * 2;
@@ -177,13 +229,30 @@ namespace ProjectVagabond.Scenes
             {
                 _hapticsManager.TriggerZoomPulse(_global.LightHapticZoomPulseStrength, _global.HapticZoomPulseDuration);
                 classicButton.ResetAnimationState();
-                ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().StopMusic(1.5f);
 
-                var ctx = ServiceLocator.Get<RunContext>();
-                ctx.Mode = GameMode.Classic;
-                ctx.Reset();
-
-                _sceneManager.ChangeScene(GameSceneState.Scoundrel, _transitionManager.GetRandomTransition(), _transitionManager.GetRandomTransition());
+                if (SaveManager.HasSave())
+                {
+                    _confirmationDialog.Show(
+                        "Abandon current run?",
+                        new List<Tuple<string, Action>>
+                        {
+                            Tuple.Create("YES", new Action(() => {
+                                _hapticsManager.TriggerZoomPulse(_global.LightHapticZoomPulseStrength, _global.HapticZoomPulseDuration);
+                                SaveManager.DeleteSave();
+                                _confirmationDialog.Hide();
+                                StartClassicRun();
+                            })),
+                            Tuple.Create("[chighlight]NO", new Action(() => {
+                                _hapticsManager.TriggerZoomPulse(_global.LightHapticZoomPulseStrength, _global.HapticZoomPulseDuration);
+                                _confirmationDialog.Hide();
+                            }))
+                        }
+                    );
+                }
+                else
+                {
+                    StartClassicRun();
+                }
             };
             _buttons.Add(classicButton);
             _navigationGroup.Add(classicButton);
@@ -241,8 +310,26 @@ namespace ProjectVagabond.Scenes
             exitButton.OnClick += ConfirmExit;
             _buttons.Add(exitButton);
             _navigationGroup.Add(exitButton);
+        }
 
-            _uiInitialized = true;
+        private void StartNewRun()
+        {
+            ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().StopMusic(1.5f);
+            var ctx = ServiceLocator.Get<RunContext>();
+            ctx.Mode = GameMode.Roguelike;
+            ctx.Reset();
+            SaveManager.CurrentSave = null;
+            _sceneManager.ChangeScene(GameSceneState.Scoundrel, _transitionManager.GetRandomTransition(), _transitionManager.GetRandomTransition());
+        }
+
+        private void StartClassicRun()
+        {
+            ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().StopMusic(1.5f);
+            var ctx = ServiceLocator.Get<RunContext>();
+            ctx.Mode = GameMode.Classic;
+            ctx.Reset();
+            SaveManager.CurrentSave = null;
+            _sceneManager.ChangeScene(GameSceneState.Scoundrel, _transitionManager.GetRandomTransition(), _transitionManager.GetRandomTransition());
         }
 
         private void ConfirmExit()
@@ -261,6 +348,7 @@ namespace ProjectVagabond.Scenes
         public override void Enter()
         {
             base.Enter();
+            _confirmationDialog.Hide();
             InitializeUI();
             ServiceLocator.Get<GeometricBackgroundManager>().Show(1.0f);
 
