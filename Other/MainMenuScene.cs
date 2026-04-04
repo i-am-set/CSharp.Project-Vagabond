@@ -69,6 +69,11 @@ namespace ProjectVagabond.Scenes
 
         public override void Initialize()
         {
+            base.Initialize();
+
+            try { ServiceLocator.Get<RunContext>(); }
+            catch { ServiceLocator.Register(new RunContext()); }
+
             _confirmationDialog = new ConfirmationDialog(this);
 
             var gd = ServiceLocator.Get<GraphicsDevice>();
@@ -105,10 +110,11 @@ namespace ProjectVagabond.Scenes
             const int horizontalPadding = 4;
             const int verticalPadding = 2;
             const int buttonYSpacing = 0;
-            float currentY = 110f;
+            float currentY = 90f;
             int buttonX = Global.VIRTUAL_WIDTH / 2 - 130;
 
-            string playText = "PLAY";
+            string playText = "ROGUELIKE RUN";
+            string classicText = "CLASSIC MODE";
             string settingsText = "SETTINGS";
             string exitText = "EXIT";
 
@@ -136,12 +142,53 @@ namespace ProjectVagabond.Scenes
                 _hapticsManager.TriggerZoomPulse(_global.LightHapticZoomPulseStrength, _global.HapticZoomPulseDuration);
                 playButton.ResetAnimationState();
                 ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().StopMusic(1.5f);
+
+                var ctx = ServiceLocator.Get<RunContext>();
+                ctx.Mode = GameMode.Roguelike;
+                ctx.Reset();
+
                 _sceneManager.ChangeScene(GameSceneState.Scoundrel, _transitionManager.GetRandomTransition(), _transitionManager.GetRandomTransition());
             };
             _buttons.Add(playButton);
             _navigationGroup.Add(playButton);
 
             currentY += playHeight + buttonYSpacing;
+
+            Vector2 classicSize = defaultFont.MeasureString(classicText);
+            int classicWidth = (int)classicSize.X + horizontalPadding * 2;
+            int classicHeight = (int)classicSize.Y + verticalPadding * 2;
+
+            var classicButton = new Button(
+                new Rectangle(buttonX, (int)currentY, classicWidth, classicHeight),
+                classicText,
+                font: defaultFont,
+                alignLeft: true
+            )
+            {
+                TextRenderOffset = new Vector2(0, 1),
+                EnableTextWave = true,
+                AlwaysAnimateText = true,
+                WaveEffectType = TextEffectType.TypewriterPop,
+                EnableHoverSway = false,
+                UseTextOutline = true,
+                TextOutlineColor = _global.Palette_Off
+            };
+            classicButton.OnClick += () =>
+            {
+                _hapticsManager.TriggerZoomPulse(_global.LightHapticZoomPulseStrength, _global.HapticZoomPulseDuration);
+                classicButton.ResetAnimationState();
+                ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().StopMusic(1.5f);
+
+                var ctx = ServiceLocator.Get<RunContext>();
+                ctx.Mode = GameMode.Classic;
+                ctx.Reset();
+
+                _sceneManager.ChangeScene(GameSceneState.Scoundrel, _transitionManager.GetRandomTransition(), _transitionManager.GetRandomTransition());
+            };
+            _buttons.Add(classicButton);
+            _navigationGroup.Add(classicButton);
+
+            currentY += classicHeight + buttonYSpacing;
 
             Vector2 settingsSize = defaultFont.MeasureString(settingsText);
             int settingsWidth = (int)settingsSize.X + horizontalPadding * 2;

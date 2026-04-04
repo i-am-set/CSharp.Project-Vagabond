@@ -17,7 +17,7 @@ namespace ProjectVagabond.Scenes
 {
     public class ScoundrelScene : GameScene
     {
-        private enum ScoundrelState { Intro, Dealing, Playing, Focused, ResolvingMonster, GameOver, Restarting }
+        private enum ScoundrelState { Intro, Dealing, Playing, Focused, ResolvingMonster, GameOver, Restarting, FloorCleared, RewardSelection }
 
         private readonly Global _global;
         private readonly SpriteManager _spriteManager;
@@ -26,6 +26,8 @@ namespace ProjectVagabond.Scenes
         private readonly HapticsManager _hapticsManager;
         private readonly Core _core;
         private readonly Texture2D _pixel;
+
+        private RunContext _runContext;
 
         private ScoundrelState _state;
         private List<Card> _deck = new List<Card>();
@@ -64,8 +66,8 @@ namespace ProjectVagabond.Scenes
         private Color _hpTextFlashColor = Color.White;
         private List<FloatingText> _floatingTexts = new List<FloatingText>();
 
-        private float[] _heartFlashTimers = new float[10];
-        private int[] _heartFlashFrames = new int[10];
+        private float[] _heartFlashTimers = new float[20];
+        private int[] _heartFlashFrames = new int[20];
         private const float HEART_FLASH_DURATION = 0.75f;
         private const float HEART_FLASH_BLINK_INTERVAL = 0.15f;
         private const float HEART_FLASH_BLINK_HALF = 0.075f;
@@ -114,6 +116,11 @@ namespace ProjectVagabond.Scenes
         private List<Card> _cardsToReturn = new List<Card>();
         private float _returnTimer = 0f;
 
+        // Floor Transition State
+        private float _floorClearedTimer = 0f;
+        private List<Button> _rewardButtons = new List<Button>();
+        private NavigationGroup _rewardNavGroup;
+
         public ScoundrelScene()
         {
             _global = ServiceLocator.Get<Global>();
@@ -124,6 +131,7 @@ namespace ProjectVagabond.Scenes
             _core = ServiceLocator.Get<Core>();
             _pixel = ServiceLocator.Get<Texture2D>();
             _pauseNavGroup = new NavigationGroup(wrapNavigation: true);
+            _rewardNavGroup = new NavigationGroup(wrapNavigation: true);
         }
 
         public override Rectangle GetAnimatedBounds()
@@ -135,6 +143,9 @@ namespace ProjectVagabond.Scenes
         {
             base.Initialize();
             _confirmationDialog = new ConfirmationDialog(this);
+
+            try { _runContext = ServiceLocator.Get<RunContext>(); }
+            catch { _runContext = new RunContext(); ServiceLocator.Register(_runContext); }
         }
 
         private void InitializeUI()
@@ -232,15 +243,15 @@ namespace ProjectVagabond.Scenes
 
         private void RestartGame()
         {
-            _health = 20;
+            _health = _runContext.Health;
             _lastSlainValue = 99;
             _cardsResolvedThisRoom = 0;
             _potionsUsedThisRoom = 0;
             _canSkip = true;
             _floatingTexts.Clear();
 
-            Array.Clear(_heartFlashTimers, 0, 10);
-            Array.Clear(_heartFlashFrames, 0, 10);
+            Array.Clear(_heartFlashTimers, 0, 20);
+            Array.Clear(_heartFlashFrames, 0, 20);
             _previewFlashTimer = 0f;
             _lastHoveredCard = null;
             _hpTextFlashTimer = 0f;
@@ -265,7 +276,7 @@ namespace ProjectVagabond.Scenes
             _skipCard.Position = _deckPos;
             _skipCard.TargetPosition = _deckPos;
 
-            GenerateDeck();
+            _deck = DeckGenerator.Generate(_runContext);
 
             _state = ScoundrelState.Intro;
             _introTimer = 0f;
@@ -285,15 +296,18 @@ namespace ProjectVagabond.Scenes
 
         private void ResetBoard()
         {
-            _health = 20;
+            ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().MusicPitchOffset = 0f;
+
+            _runContext.Reset();
+            _health = _runContext.Health;
             _lastSlainValue = 99;
             _cardsResolvedThisRoom = 0;
             _potionsUsedThisRoom = 0;
             _canSkip = true;
             _floatingTexts.Clear();
 
-            Array.Clear(_heartFlashTimers, 0, 10);
-            Array.Clear(_heartFlashFrames, 0, 10);
+            Array.Clear(_heartFlashTimers, 0, 20);
+            Array.Clear(_heartFlashFrames, 0, 20);
             _previewFlashTimer = 0f;
             _lastHoveredCard = null;
             _hpTextFlashTimer = 0f;
@@ -346,23 +360,6 @@ namespace ProjectVagabond.Scenes
             ServiceLocator.Get<ParticleSystemManager>().ClearAllEmitters();
             ServiceLocator.Get<GeometricBackgroundManager>().Reset();
             PoolManager.ClearAll();
-        }
-
-        private void GenerateDeck()
-        {
-            for (int i = 2; i <= 10; i++) _deck.Add(new Card(CardSuit.Hearts, CardType.Potion, i, i));
-            for (int i = 2; i <= 10; i++) _deck.Add(new Card(CardSuit.Diamonds, CardType.Weapon, i, i));
-            for (int i = 2; i <= 14; i++) _deck.Add(new Card(CardSuit.Spades, CardType.Monster, i, i));
-            for (int i = 2; i <= 14; i++) _deck.Add(new Card(CardSuit.Clubs, CardType.Monster, i, i));
-
-            _deck = _deck.OrderBy(x => _random.Next()).ToList();
-
-            for (int i = 0; i < _deck.Count; i++)
-            {
-                _deck[i].Position = _deckPos + new Vector2(0, -i * 0.25f);
-                _deck[i].TargetPosition = _deck[i].Position;
-                _deck[i].ZIndex = i;
-            }
         }
 
         private void TogglePause()
@@ -427,7 +424,6 @@ namespace ProjectVagabond.Scenes
                 return;
             }
 
-            // Hold R to Restart Logic
             if (currentKeyboardState.IsKeyDown(Keys.R) && _state != ScoundrelState.GameOver && _state != ScoundrelState.Restarting)
             {
                 _restartHoldTimer += dt;
@@ -453,7 +449,7 @@ namespace ProjectVagabond.Scenes
 
             if (_hpTextFlashTimer > 0) _hpTextFlashTimer -= dt;
 
-            for (int i = 0; i < 10; i++)
+            for (int i = 0; i < 20; i++)
             {
                 if (_heartFlashTimers[i] > 0) _heartFlashTimers[i] -= dt;
             }
@@ -680,11 +676,11 @@ namespace ProjectVagabond.Scenes
 
                         ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlayRoutedSfx("proc:wave=2;freq=900;atk=0.01;sus=0.0;dec=0.15;exp=1;vol=0.05", 0.1f);
 
-                        _returnTimer = 0.1f;
+                        _returnTimer = _cardsToReturn.Count > 4 ? 0.02f : 0.1f;
                     }
                     else
                     {
-                        _deck = _deck.OrderBy(x => _random.Next()).ToList();
+                        _deck = DeckGenerator.Generate(_runContext);
                         for (int i = 0; i < _deck.Count; i++)
                         {
                             _deck[i].TargetPosition = _deckPos + new Vector2(0, -i * 0.25f);
@@ -784,13 +780,11 @@ namespace ProjectVagabond.Scenes
 
                 if (_resolveTimer < lungeTime)
                 {
-                    // Lunge with anticipation (pulls up slightly, then slams down)
                     float p = _resolveTimer / lungeTime;
                     if (_resolvingMonster != null) _resolvingMonster.VisualYOffset = Easing.EaseInBack(p) * 24f;
                 }
                 else if (_resolveTimer < totalTime)
                 {
-                    // Apex / Impact
                     if (!_resolveDamageApplied)
                     {
                         if (_resolveDamage > 0) ApplyDamage(_resolveDamage);
@@ -825,27 +819,22 @@ namespace ProjectVagabond.Scenes
 
                     if (_resolvingMonster != null)
                     {
-                        // Retreat with springy overshoot
                         _resolvingMonster.VisualYOffset = MathHelper.Lerp(24f, 0f, Easing.EaseOutBack(p));
 
-                        // Rotation Tween
                         float rotEase = Easing.EaseOutCubic(p);
                         _resolvingMonster.Rotation = _resolveTargetRotation * rotEase;
                         _resolvingMonster.TargetRotation = _resolvingMonster.Rotation;
 
-                        // Violent random shake
                         float decay = 1f - Easing.EaseOutQuad(p);
                         float shakeX = (float)(_random.NextDouble() * 2 - 1) * 10f * decay;
                         float shakeY = (float)(_random.NextDouble() * 2 - 1) * 10f * decay;
                         _resolvingMonster.ShakeOffset = new Vector2(shakeX, shakeY);
 
-                        // Flash white
                         _resolvingMonster.FlashWhiteIntensity = p < 0.15f ? 1f : (1f - (p - 0.15f) / 0.85f);
                     }
                 }
                 else
                 {
-                    // Finish
                     if (_resolvingMonster != null)
                     {
                         _resolvingMonster.ShakeOffset = Vector2.Zero;
@@ -857,15 +846,6 @@ namespace ProjectVagabond.Scenes
                         {
                             _lastSlainValue = _resolvingMonster.Value;
                             MoveToSlainPile(_resolvingMonster);
-
-                            if (_resolvingMonster.Value == 2)
-                            {
-                                ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlayRoutedSfx("proc:wave=6;freq=1000;atk=0.01;sus=0.05;dec=0.2;hpf=500;hpfsweep=-200;vol=0.15|wave=4;freq=300;slide=-100;atk=0.01;sus=0.02;dec=0.15;detune=0.04;vol=0.1", 0.2f);
-                                if (_weaponSlot != null) MoveToDiscard(_weaponSlot, false);
-                                _weaponSlot = null;
-                                foreach (var c in _slainPile) MoveToDiscard(c, false);
-                                _slainPile.Clear();
-                            }
                         }
                         else
                         {
@@ -875,6 +855,23 @@ namespace ProjectVagabond.Scenes
 
                     _state = ScoundrelState.Playing;
                     OnCardResolved();
+                }
+            }
+            else if (_state == ScoundrelState.FloorCleared)
+            {
+                _floorClearedTimer -= dt;
+                if (_floorClearedTimer <= 0)
+                {
+                    _state = ScoundrelState.RewardSelection;
+                    GenerateRewards();
+                }
+            }
+            else if (_state == ScoundrelState.RewardSelection)
+            {
+                foreach (var btn in _rewardButtons) btn.Update(mouseState);
+                if (_inputManager.CurrentInputDevice != InputDeviceType.Mouse)
+                {
+                    _rewardNavGroup.UpdateInput(_inputManager);
                 }
             }
             else if (_state == ScoundrelState.GameOver)
@@ -924,6 +921,45 @@ namespace ProjectVagabond.Scenes
 
             _previousMouseState = mouseState;
             _prevKeyboardState = currentKeyboardState;
+        }
+
+        private void GenerateRewards()
+        {
+            _rewardButtons.Clear();
+            _rewardNavGroup.Clear();
+
+            var defFont = _core.DefaultFont;
+            int btnWidth = 160;
+            int btnHeight = 20;
+            int startY = Global.VIRTUAL_HEIGHT / 2 - 20;
+            int spacing = 24;
+            int centerX = Global.VIRTUAL_WIDTH / 2 - btnWidth / 2;
+
+            var healBtn = new Button(new Rectangle(centerX, startY, btnWidth, btnHeight), "HEAL 5 HP", font: defFont);
+            healBtn.OnClick += () => ApplyRewardAndAdvance(() => { _health = Math.Min(_runContext.MaxHealth, _health + 5); });
+            _rewardButtons.Add(healBtn);
+            _rewardNavGroup.Add(healBtn);
+
+            var maxHpBtn = new Button(new Rectangle(centerX, startY + spacing, btnWidth, btnHeight), "MAX HP +2", font: defFont);
+            maxHpBtn.OnClick += () => ApplyRewardAndAdvance(() => { _runContext.MaxHealth += 2; _health += 2; });
+            _rewardButtons.Add(maxHpBtn);
+            _rewardNavGroup.Add(maxHpBtn);
+
+            var riskBtn = new Button(new Rectangle(centerX, startY + spacing * 2, btnWidth, btnHeight), "MAX HP +4, TAKE 2 DMG", font: defFont);
+            riskBtn.OnClick += () => ApplyRewardAndAdvance(() => { _runContext.MaxHealth += 4; _health += 2; });
+            _rewardButtons.Add(riskBtn);
+            _rewardNavGroup.Add(riskBtn);
+
+            _rewardNavGroup.SelectFirst();
+        }
+
+        private void ApplyRewardAndAdvance(Action rewardAction)
+        {
+            rewardAction?.Invoke();
+            _runContext.Health = _health;
+            _runContext.Floor++;
+
+            _sceneManager.ChangeScene(GameSceneState.Scoundrel, TransitionType.FadeOff, TransitionType.FadeOff);
         }
 
         private void StartMonsterResolution(Card? monster, int damage, bool weaponUsed)
@@ -1109,7 +1145,7 @@ namespace ProjectVagabond.Scenes
 
         private void ApplyHeal(int amount)
         {
-            int actualHeal = Math.Min(amount, 20 - _health);
+            int actualHeal = Math.Min(amount, _runContext.MaxHealth - _health);
             _health += actualHeal;
             _healthPlink.Start(0f, 0.3f);
 
@@ -1120,7 +1156,7 @@ namespace ProjectVagabond.Scenes
             {
                 ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlayRoutedSfx("proc:wave=2;freq=300;slide=-50;atk=0.02;sus=0.05;dec=0.15;detune=0.01;vol=0.15", 0.15f);
             }
-            else if (_health == 20)
+            else if (_health == _runContext.MaxHealth)
             {
                 PlayHealFull();
             }
@@ -1194,9 +1230,18 @@ namespace ProjectVagabond.Scenes
             }
             else if (_deck.Count == 0 && !_room.Any(c => c.Type == CardType.Monster))
             {
-                _state = ScoundrelState.GameOver;
-                PlayVictorySequence();
-                CalculateTargetScore();
+                if (_runContext.Mode == GameMode.Classic || _runContext.Floor >= _runContext.MaxFloors)
+                {
+                    _state = ScoundrelState.GameOver;
+                    PlayVictorySequence();
+                    CalculateTargetScore();
+                }
+                else
+                {
+                    _state = ScoundrelState.FloorCleared;
+                    _floorClearedTimer = 2.0f;
+                    ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlayRoutedSfx("proc:wave=0;freq=400;atk=0.02;sus=0.1;dec=0.2;detune=0.01;lpf=3000;vol=0.15", 0.15f);
+                }
             }
         }
 
@@ -1208,7 +1253,7 @@ namespace ProjectVagabond.Scenes
                 int remainingMonsters = _deck.Concat(_room).Where(c => c.Type == CardType.Monster).Sum(c => c.Value);
                 _targetScore = _health - remainingMonsters;
             }
-            else if (_health == 20)
+            else if (_health == _runContext.MaxHealth)
             {
                 var bestPotion = _room.Where(c => c.Type == CardType.Potion).OrderByDescending(c => c.Value).FirstOrDefault();
                 if (bestPotion != null) _targetScore += bestPotion.Value;
@@ -1403,11 +1448,11 @@ namespace ProjectVagabond.Scenes
                     else if (hoveredCard.Type == CardType.Potion)
                     {
                         int baseHeal = _potionsUsedThisRoom == 0 ? hoveredCard.Value : 0;
-                        int actualHeal = Math.Min(baseHeal, 20 - _health);
+                        int actualHeal = Math.Min(baseHeal, _runContext.MaxHealth - _health);
                         string healText = $"+{actualHeal}";
                         Color hColor = actualHeal == 0 ? _global.Palette_DarkSun : _global.Palette_Leaf;
                         DrawHoverText(spriteBatch, defFont, healText, hoveredCard.Position + new Vector2(0, -32), hColor);
-                        previewHealth = Math.Min(20, _health + baseHeal);
+                        previewHealth = Math.Min(_runContext.MaxHealth, _health + baseHeal);
                     }
                     else if (hoveredCard.Type == CardType.Weapon)
                     {
@@ -1429,7 +1474,7 @@ namespace ProjectVagabond.Scenes
 
             if (heartSheet != null && hpScale > 0.01f)
             {
-                int maxHearts = 10;
+                int maxHearts = _runContext.MaxHealth / 2;
                 int heartWidth = 7;
                 int heartHeight = 6;
                 int spacing = 1;
@@ -1475,11 +1520,11 @@ namespace ProjectVagabond.Scenes
 
                 string hpLabel = "HP ";
                 string currentHpText = _health.ToString();
-                string maxHpText = "/20";
+                string maxHpText = $"/{_runContext.MaxHealth}";
 
                 Color valColor;
-                if (_health >= 14) valColor = _global.Palette_Leaf;
-                else if (_health >= 7) valColor = _global.Palette_Fruit;
+                if (_health >= _runContext.MaxHealth * 0.7f) valColor = _global.Palette_Leaf;
+                else if (_health >= _runContext.MaxHealth * 0.35f) valColor = _global.Palette_Fruit;
                 else valColor = _global.Palette_Rust;
 
                 Color currentHpTextColor = valColor;
@@ -1548,7 +1593,26 @@ namespace ProjectVagabond.Scenes
                 spriteBatch.Draw(_pixel, new Rectangle(barX, barY, (int)(barWidth * progress), barHeight), _global.Palette_Sun);
             }
 
-            if (_state == ScoundrelState.GameOver)
+            if (_state == ScoundrelState.FloorCleared)
+            {
+                spriteBatch.Draw(_pixel, new Rectangle(0, 0, Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT), Color.Black * 0.6f);
+                string text = "FLOOR CLEARED";
+                Vector2 size = defFont.MeasureString(text);
+                spriteBatch.DrawStringOutlinedSnapped(defFont, text, new Vector2(Global.VIRTUAL_WIDTH / 2f - size.X / 2f, Global.VIRTUAL_HEIGHT / 2f - size.Y / 2f), _global.Palette_Sun, _global.Palette_Off);
+            }
+            else if (_state == ScoundrelState.RewardSelection)
+            {
+                spriteBatch.Draw(_pixel, new Rectangle(0, 0, Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT), Color.Black * 0.8f);
+                string text = "CHOOSE A REWARD";
+                Vector2 size = defFont.MeasureString(text);
+                spriteBatch.DrawStringOutlinedSnapped(defFont, text, new Vector2(Global.VIRTUAL_WIDTH / 2f - size.X / 2f, 30), _global.Palette_Sun, _global.Palette_Off);
+
+                foreach (var btn in _rewardButtons)
+                {
+                    btn.Draw(spriteBatch, defFont, gameTime, transform);
+                }
+            }
+            else if (_state == ScoundrelState.GameOver)
             {
                 spriteBatch.Draw(_pixel, new Rectangle(0, 0, Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT), Color.Black * 0.8f);
 
