@@ -1,0 +1,377 @@
+﻿using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Graphics;
+using Microsoft.Xna.Framework.Input;
+using MonoGame.Extended.BitmapFonts;
+using ProjectVagabond.UI;
+using ProjectVagabond.Utils;
+using System;
+using System.Collections.Generic;
+
+namespace ProjectVagabond.Scenes
+{
+    public class ScoundrelUIController
+    {
+        public Button TryAgainButton { get; private set; }
+        public Button ExitButton { get; private set; }
+        public List<Button> PauseButtons { get; } = new List<Button>();
+        public NavigationGroup PauseNavGroup { get; } = new NavigationGroup(wrapNavigation: true);
+        public List<Button> RewardButtons { get; } = new List<Button>();
+        public NavigationGroup RewardNavGroup { get; } = new NavigationGroup(wrapNavigation: true);
+        public ConfirmationDialog ConfirmationDialog { get; private set; }
+
+        public PlinkAnimator DeckCountPlink { get; } = new PlinkAnimator { MaxScale = 1.5f, RestScale = 1.0f };
+        public PlinkAnimator DiscardCountPlink { get; } = new PlinkAnimator { MaxScale = 1.5f, RestScale = 1.0f };
+        public PlinkAnimator HealthPlink { get; } = new PlinkAnimator { MaxScale = 1.5f, RestScale = 1.0f };
+
+        public float HpTextFlashTimer { get; set; }
+        public Color HpTextFlashColor { get; set; } = Color.White;
+        public List<FloatingText> FloatingTexts { get; } = new List<FloatingText>();
+
+        public float[] HeartFlashTimers { get; } = new float[20];
+        public int[] HeartFlashFrames { get; } = new int[20];
+        public const float HEART_FLASH_DURATION = 0.75f;
+        public const float HEART_FLASH_BLINK_INTERVAL = 0.15f;
+        public const float HEART_FLASH_BLINK_HALF = 0.075f;
+
+        private Global _global;
+        private Core _core;
+
+        public ScoundrelUIController(ScoundrelScene scene)
+        {
+            _global = ServiceLocator.Get<Global>();
+            _core = ServiceLocator.Get<Core>();
+            ConfirmationDialog = new ConfirmationDialog(scene);
+
+            var secFont = _core.SecondaryFont;
+            var defFont = _core.DefaultFont;
+
+            TryAgainButton = new Button(new Rectangle(Global.VIRTUAL_WIDTH / 2 - 35, 110, 70, 15), "TRY AGAIN", font: secFont) { DrawBorderOnHover = true };
+            ExitButton = new Button(new Rectangle(Global.VIRTUAL_WIDTH / 2 - 35, 125, 70, 15), "MAIN MENU", font: secFont) { DrawBorderOnHover = true };
+
+            int pauseBtnWidth = 100;
+            int pauseBtnHeight = 16;
+            int startY = Global.VIRTUAL_HEIGHT / 2 - 30;
+            int spacing = 18;
+            int centerX = Global.VIRTUAL_WIDTH / 2 - pauseBtnWidth / 2;
+
+            var resumeBtn = new Button(new Rectangle(centerX, startY, pauseBtnWidth, pauseBtnHeight), "RESUME", font: defFont);
+            PauseButtons.Add(resumeBtn);
+            PauseNavGroup.Add(resumeBtn);
+
+            var settingsBtn = new Button(new Rectangle(centerX, startY + spacing, pauseBtnWidth, pauseBtnHeight), "SETTINGS", font: defFont);
+            PauseButtons.Add(settingsBtn);
+            PauseNavGroup.Add(settingsBtn);
+
+            var menuBtn = new Button(new Rectangle(centerX, startY + spacing * 2, pauseBtnWidth, pauseBtnHeight), "MAIN MENU", font: defFont);
+            PauseButtons.Add(menuBtn);
+            PauseNavGroup.Add(menuBtn);
+
+            var desktopBtn = new Button(new Rectangle(centerX, startY + spacing * 3, pauseBtnWidth, pauseBtnHeight), "EXIT TO DESKTOP", font: defFont);
+            PauseButtons.Add(desktopBtn);
+            PauseNavGroup.Add(desktopBtn);
+        }
+
+        public void Initialize()
+        {
+            var scene = ServiceLocator.Get<SceneManager>().CurrentActiveScene as ScoundrelScene;
+            if (scene == null) return;
+
+            TryAgainButton.OnClick += () => scene.ResetBoard();
+            ExitButton.OnClick += () => scene.ExitToMainMenu();
+
+            PauseButtons[0].OnClick += () => scene.TogglePause();
+            PauseButtons[1].OnClick += () => ServiceLocator.Get<SceneManager>().ShowModal(GameSceneState.Settings);
+            PauseButtons[2].OnClick += () => ConfirmationDialog.Show("Return to Main Menu?\n[cred]Current run will be lost.[/]", new List<Tuple<string, Action>>
+            {
+                Tuple.Create("YES", new Action(() => scene.ExitToMainMenu())),
+                Tuple.Create("[chighlight]NO", new Action(() => ConfirmationDialog.Hide()))
+            });
+            PauseButtons[3].OnClick += () => ConfirmationDialog.Show("Exit to Desktop?\n[cred]Current run will be lost.[/]", new List<Tuple<string, Action>>
+            {
+                Tuple.Create("YES", new Action(() => ServiceLocator.Get<Core>().ExitApplication())),
+                Tuple.Create("[chighlight]NO", new Action(() => ConfirmationDialog.Hide()))
+            });
+        }
+
+        public void Reset()
+        {
+            FloatingTexts.Clear();
+            Array.Clear(HeartFlashTimers, 0, 20);
+            Array.Clear(HeartFlashFrames, 0, 20);
+            HpTextFlashTimer = 0f;
+        }
+
+        public void Update(float dt, GameTime gameTime, Vector2 deckPos, Vector2 discardPos)
+        {
+            if (HpTextFlashTimer > 0) HpTextFlashTimer -= dt;
+
+            for (int i = 0; i < 20; i++)
+            {
+                if (HeartFlashTimers[i] > 0) HeartFlashTimers[i] -= dt;
+            }
+
+            for (int i = FloatingTexts.Count - 1; i >= 0; i--)
+            {
+                FloatingTexts[i].Timer -= dt;
+                FloatingTexts[i].LocalOffset.Y -= 10f * dt;
+                if (FloatingTexts[i].Timer <= 0) FloatingTexts.RemoveAt(i);
+            }
+
+            Vector2 hpCenter = new Vector2(Global.VIRTUAL_WIDTH / 2f, 24f);
+            DeckCountPlink.Update(gameTime, deckPos + new Vector2(0, 32));
+            DiscardCountPlink.Update(gameTime, discardPos + new Vector2(0, -32));
+            HealthPlink.Update(gameTime, hpCenter);
+        }
+
+        public void AddFloatingText(int amount, bool isHealing)
+        {
+            FloatingTexts.Add(new FloatingText { Number = amount, IsHealing = isHealing, Timer = 1.0f, LocalOffset = new Vector2(Global.VIRTUAL_WIDTH / 2f, 24f) });
+        }
+
+        public void GenerateRewards(ScoundrelScene scene, RunContext runContext, ScoundrelCombatController combat)
+        {
+            RewardButtons.Clear();
+            RewardNavGroup.Clear();
+
+            var defFont = _core.DefaultFont;
+            int btnWidth = 160;
+            int btnHeight = 20;
+            int startY = Global.VIRTUAL_HEIGHT / 2 - 20;
+            int spacing = 24;
+            int centerX = Global.VIRTUAL_WIDTH / 2 - btnWidth / 2;
+
+            var healBtn = new Button(new Rectangle(centerX, startY, btnWidth, btnHeight), "HEAL 5 HP", font: defFont);
+            healBtn.OnClick += () => scene.ApplyRewardAndAdvance(() => { combat.Health = Math.Min(runContext.MaxHealth, combat.Health + 5); });
+            RewardButtons.Add(healBtn);
+            RewardNavGroup.Add(healBtn);
+
+            var maxHpBtn = new Button(new Rectangle(centerX, startY + spacing, btnWidth, btnHeight), "MAX HP +2", font: defFont);
+            maxHpBtn.OnClick += () => scene.ApplyRewardAndAdvance(() => { runContext.MaxHealth += 2; combat.Health += 2; });
+            RewardButtons.Add(maxHpBtn);
+            RewardNavGroup.Add(maxHpBtn);
+
+            var riskBtn = new Button(new Rectangle(centerX, startY + spacing * 2, btnWidth, btnHeight), "MAX HP +4, TAKE 2 DMG", font: defFont);
+            riskBtn.OnClick += () => scene.ApplyRewardAndAdvance(() => { runContext.MaxHealth += 4; combat.Health += 2; });
+            RewardButtons.Add(riskBtn);
+            RewardNavGroup.Add(riskBtn);
+
+            RewardNavGroup.SelectFirst();
+        }
+
+        public void DrawCounters(SpriteBatch spriteBatch, int deckCount, int discardCount, Vector2 deckPos, Vector2 discardPos)
+        {
+            var secFont = _core.SecondaryFont;
+            if (deckCount > 0 && DeckCountPlink.Scale > 0.01f)
+            {
+                string deckText = deckCount.ToString();
+                Vector2 deckSize = secFont.MeasureString(deckText);
+                Vector2 origin = new Vector2(MathF.Round(deckSize.X / 2f), MathF.Round(deckSize.Y / 2f));
+                Vector2 pos = deckPos + new Vector2(0, 32);
+                spriteBatch.DrawStringOutlinedSnapped(secFont, deckText, pos, _global.Palette_DarkestPale, _global.Palette_Off, DeckCountPlink.Rotation, origin, DeckCountPlink.Scale, SpriteEffects.None, 0f);
+            }
+
+            if (discardCount > 0 && DiscardCountPlink.Scale > 0.01f)
+            {
+                string discardText = discardCount.ToString();
+                Vector2 discardSize = secFont.MeasureString(discardText);
+                Vector2 origin = new Vector2(MathF.Round(discardSize.X / 2f), MathF.Round(discardSize.Y / 2f));
+                Vector2 pos = discardPos + new Vector2(0, -32);
+                spriteBatch.DrawStringOutlinedSnapped(secFont, discardText, pos, _global.Palette_DarkestPale, _global.Palette_Off, DiscardCountPlink.Rotation, origin, DiscardCountPlink.Scale, SpriteEffects.None, 0f);
+            }
+        }
+
+        public void DrawHoverIndicators(SpriteBatch spriteBatch, Card? hoveredCard, ScoundrelState state, ScoundrelBoardController board, ScoundrelCombatController combat, int maxHealth, float previewFlashTimer)
+        {
+            if (hoveredCard == null || !hoveredCard.IsFaceUp) return;
+
+            var defFont = _core.DefaultFont;
+            var tertFont = _core.TertiaryFont;
+
+            if (state == ScoundrelState.Focused)
+            {
+                if (hoveredCard == board.WeaponSlot)
+                {
+                    int wDmg = Math.Max(0, board.FocusedCard!.Value - board.WeaponSlot.Value);
+                    string wText = $"-{wDmg}";
+                    Color wColor = wDmg == 0 ? _global.Palette_DarkSun : _global.Palette_Rust;
+                    DrawHoverText(spriteBatch, defFont, wText, hoveredCard.Position + new Vector2(0, -32), wColor);
+                }
+                else if (hoveredCard == board.FistCard)
+                {
+                    string fText = $"-{board.FocusedCard!.Value}";
+                    DrawHoverText(spriteBatch, defFont, fText, hoveredCard.Position + new Vector2(0, -32), _global.Palette_Rust);
+                }
+            }
+            else
+            {
+                if (hoveredCard.Type == CardType.Monster)
+                {
+                    bool canUseWeapon = board.WeaponSlot != null && hoveredCard.Value <= combat.LastSlainValue;
+                    DrawMonsterDamageText(spriteBatch, defFont, tertFont, hoveredCard, canUseWeapon, board.WeaponSlot);
+                }
+                else if (hoveredCard.Type == CardType.Potion)
+                {
+                    int baseHeal = combat.PotionsUsedThisRoom == 0 ? hoveredCard.Value : 0;
+                    int actualHeal = Math.Min(baseHeal, maxHealth - combat.Health);
+                    string healText = $"+{actualHeal}";
+                    Color hColor = actualHeal == 0 ? _global.Palette_DarkSun : _global.Palette_Leaf;
+                    DrawHoverText(spriteBatch, defFont, healText, hoveredCard.Position + new Vector2(0, -32), hColor);
+                }
+                else if (hoveredCard.Type == CardType.Weapon)
+                {
+                    DrawHoverText(spriteBatch, defFont, "EQUIP", hoveredCard.Position + new Vector2(0, -32), _global.Palette_DarkSun);
+                }
+            }
+        }
+
+        public void DrawFloatingTexts(SpriteBatch spriteBatch)
+        {
+            var secFont = _core.SecondaryFont;
+            foreach (var ft in FloatingTexts)
+            {
+                Color c = ft.IsHealing ? _global.Palette_Leaf : _global.Palette_Rust;
+                string text = (ft.IsHealing ? "+" : "-") + ft.Number;
+                Vector2 size = secFont.MeasureString(text);
+                Vector2 drawPos = new Vector2(MathF.Round(ft.LocalOffset.X - size.X / 2f), MathF.Round(ft.LocalOffset.Y));
+                spriteBatch.DrawStringOutlinedSnapped(secFont, text, drawPos, c, _global.Palette_Off);
+            }
+        }
+
+        private void DrawHoverText(SpriteBatch spriteBatch, BitmapFont font, string text, Vector2 pos, Color color)
+        {
+            Vector2 size = font.MeasureString(text);
+            Vector2 startX = new Vector2(MathF.Round(pos.X - size.X / 2f), MathF.Round(pos.Y - size.Y / 2f));
+            spriteBatch.DrawStringOutlinedSnapped(font, text, startX, color, _global.Palette_Off);
+        }
+
+        private void DrawMonsterDamageText(SpriteBatch spriteBatch, BitmapFont defFont, BitmapFont tertFont, Card monsterCard, bool showWeaponDamage, Card? weaponSlot)
+        {
+            Vector2 hoverPos = monsterCard.Position + new Vector2(0, -32);
+            string dmgText = $"-{monsterCard.Value}";
+            Vector2 dmgSize = defFont.MeasureString(dmgText);
+
+            if (showWeaponDamage && weaponSlot != null)
+            {
+                int wDmg = Math.Max(0, monsterCard.Value - weaponSlot.Value);
+                string wText = $"(-{wDmg})";
+                Vector2 wSize = tertFont.MeasureString(wText);
+
+                float totalW = dmgSize.X + 2 + wSize.X;
+                Vector2 startX = new Vector2(MathF.Round(hoverPos.X - totalW / 2f), MathF.Round(hoverPos.Y - dmgSize.Y / 2f));
+
+                spriteBatch.DrawStringOutlinedSnapped(defFont, dmgText, startX, _global.Palette_Rust, _global.Palette_Off);
+
+                Color wColor = wDmg == 0 ? _global.Palette_DarkSun : _global.Palette_Rust;
+                Vector2 wPos = new Vector2(startX.X + dmgSize.X + 2, startX.Y + (dmgSize.Y - wSize.Y) / 2f);
+                spriteBatch.DrawStringOutlinedSnapped(tertFont, wText, wPos, wColor, _global.Palette_Off);
+            }
+            else
+            {
+                Vector2 startX = new Vector2(MathF.Round(hoverPos.X - dmgSize.X / 2f), MathF.Round(hoverPos.Y - dmgSize.Y / 2f));
+                spriteBatch.DrawStringOutlinedSnapped(defFont, dmgText, startX, _global.Palette_Rust, _global.Palette_Off);
+            }
+        }
+
+        public void DrawHealthBar(SpriteBatch spriteBatch, int health, int previewHealth, int maxHealth, SpriteManager spriteManager)
+        {
+            var heartSheet = spriteManager.HealthHearts7x6SpriteSheet;
+            float hpScale = HealthPlink.IsActive ? HealthPlink.Scale : 1f;
+
+            if (heartSheet != null && hpScale > 0.01f)
+            {
+                int maxHearts = maxHealth / 2;
+                int heartWidth = 7;
+                int heartHeight = 6;
+                int spacing = 1;
+                int totalWidth = maxHearts * heartWidth + (maxHearts - 1) * spacing;
+
+                Vector2 barCenter = new Vector2(Global.VIRTUAL_WIDTH / 2f, 24f);
+
+                for (int i = 0; i < maxHearts; i++)
+                {
+                    int currentHeartVal = Math.Clamp(health - i * 2, 0, 2);
+                    int previewHeartVal = Math.Clamp(previewHealth - i * 2, 0, 2);
+
+                    int frameIndex = 2;
+                    if (currentHeartVal == 2) frameIndex = 0;
+                    else if (currentHeartVal == 1) frameIndex = 1;
+
+                    if (HeartFlashTimers[i] > 0)
+                    {
+                        bool isFlashFrame = (HeartFlashTimers[i] % HEART_FLASH_BLINK_INTERVAL) > HEART_FLASH_BLINK_HALF;
+                        if (isFlashFrame) frameIndex = HeartFlashFrames[i];
+                    }
+                    else if (currentHeartVal != previewHeartVal)
+                    {
+                        if ((currentHeartVal == 2 && previewHeartVal == 0) || (currentHeartVal == 0 && previewHeartVal == 2)) frameIndex = 3;
+                        else if ((currentHeartVal == 2 && previewHeartVal == 1) || (currentHeartVal == 1 && previewHeartVal == 2)) frameIndex = 4;
+                        else if ((currentHeartVal == 1 && previewHeartVal == 0) || (currentHeartVal == 0 && previewHeartVal == 1)) frameIndex = 5;
+                        else frameIndex = 3;
+                    }
+
+                    Rectangle sourceRect = new Rectangle(frameIndex * heartWidth, 0, heartWidth, heartHeight);
+
+                    Vector2 offset = new Vector2(i * (heartWidth + spacing) + (heartWidth / 2f), heartHeight / 2f) - new Vector2(totalWidth / 2f, heartHeight / 2f);
+                    Vector2 finalPos = barCenter + offset * hpScale;
+                    Vector2 origin = new Vector2(heartWidth / 2f, heartHeight / 2f);
+
+                    spriteBatch.DrawSnapped(heartSheet, finalPos + new Vector2(-1, 0), sourceRect, _global.Palette_Off, 0f, origin, hpScale, SpriteEffects.None, 0f);
+                    spriteBatch.DrawSnapped(heartSheet, finalPos + new Vector2(1, 0), sourceRect, _global.Palette_Off, 0f, origin, hpScale, SpriteEffects.None, 0f);
+                    spriteBatch.DrawSnapped(heartSheet, finalPos + new Vector2(0, -1), sourceRect, _global.Palette_Off, 0f, origin, hpScale, SpriteEffects.None, 0f);
+                    spriteBatch.DrawSnapped(heartSheet, finalPos + new Vector2(0, 1), sourceRect, _global.Palette_Off, 0f, origin, hpScale, SpriteEffects.None, 0f);
+
+                    spriteBatch.DrawSnapped(heartSheet, finalPos, sourceRect, Color.White, 0f, origin, hpScale, SpriteEffects.None, 0f);
+                }
+
+                string hpLabel = "HP ";
+                string currentHpText = health.ToString();
+                string maxHpText = $"/{maxHealth}";
+
+                Color valColor;
+                if (health >= maxHealth * 0.7f) valColor = _global.Palette_Leaf;
+                else if (health >= maxHealth * 0.35f) valColor = _global.Palette_Fruit;
+                else valColor = _global.Palette_Rust;
+
+                Color currentHpTextColor = valColor;
+
+                if (previewHealth != health)
+                {
+                    currentHpText = previewHealth.ToString();
+                    currentHpTextColor = _global.Palette_Sun;
+                }
+                else if (HpTextFlashTimer > 0)
+                {
+                    float flashLerp = HpTextFlashTimer / 0.3f;
+                    currentHpTextColor = Color.Lerp(currentHpTextColor, HpTextFlashColor, flashLerp);
+                }
+
+                var tertFont = _core.TertiaryFont;
+                var defFont = _core.DefaultFont;
+
+                Vector2 hpLabelSize = tertFont.MeasureString(hpLabel);
+                Vector2 currentHpSize = defFont.MeasureString(currentHpText);
+                Vector2 maxHpSize = tertFont.MeasureString(maxHpText);
+
+                float totalTextWidth = hpLabelSize.X + currentHpSize.X + maxHpSize.X;
+                float textStartX = MathF.Round(barCenter.X - totalTextWidth / 2f);
+                float textY = MathF.Round(barCenter.Y + heartHeight / 2f + 4f);
+
+                float baselineY = MathF.Round(textY + currentHpSize.Y);
+
+                Vector2 pos1 = new Vector2(MathF.Round(textStartX), MathF.Round(baselineY - hpLabelSize.Y));
+                Vector2 pos2 = new Vector2(MathF.Round(textStartX + hpLabelSize.X), MathF.Round(textY) + 1);
+                Vector2 pos3 = new Vector2(MathF.Round(textStartX + hpLabelSize.X + currentHpSize.X), MathF.Round(baselineY - maxHpSize.Y));
+
+                Vector2 hpLabelOrigin = new Vector2(MathF.Round(hpLabelSize.X / 2f), MathF.Round(hpLabelSize.Y / 2f));
+                Vector2 hpTextOrigin = new Vector2(MathF.Round(currentHpSize.X / 2f), MathF.Round(currentHpSize.Y / 2f));
+                Vector2 maxHpOrigin = new Vector2(MathF.Round(maxHpSize.X / 2f), MathF.Round(maxHpSize.Y / 2f));
+
+                float hpRot = HealthPlink.IsActive ? HealthPlink.Rotation : 0f;
+
+                spriteBatch.DrawStringOutlinedSnapped(tertFont, hpLabel, pos1 + hpLabelOrigin, _global.Palette_DarkestPale, _global.Palette_Off, hpRot, hpLabelOrigin, hpScale, SpriteEffects.None, 0f);
+                spriteBatch.DrawStringOutlinedSnapped(defFont, currentHpText, pos2 + hpTextOrigin, currentHpTextColor, _global.Palette_Off, hpRot, hpTextOrigin, hpScale, SpriteEffects.None, 0f);
+                spriteBatch.DrawStringOutlinedSnapped(tertFont, maxHpText, pos3 + maxHpOrigin, valColor, _global.Palette_Off, hpRot, maxHpOrigin, hpScale, SpriteEffects.None, 0f);
+            }
+        }
+    }
+}
