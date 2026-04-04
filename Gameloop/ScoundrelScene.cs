@@ -120,10 +120,11 @@ namespace ProjectVagabond.Scenes
 
             for (int i = 0; i < _board.Deck.Count; i++)
             {
-                _board.Deck[i].Position = _board.DeckPos + new Vector2(0, -i * 0.5f);
+                _board.Deck[i].Position = new Vector2(_board.DeckPos.X, -200 - i * 10);
                 _board.Deck[i].TargetPosition = _board.Deck[i].Position;
-                _board.Deck[i].Scale = Vector2.Zero;
-                _board.Deck[i].TargetScale = Vector2.Zero;
+                _board.Deck[i].Scale = Vector2.One;
+                _board.Deck[i].TargetScale = Vector2.One;
+                _board.Deck[i].ZIndex = i;
             }
 
             _ui.DeckCountPlink.Start(0.5f, 0.3f);
@@ -424,8 +425,7 @@ namespace ProjectVagabond.Scenes
 
             while (_cardsLanded < targetLanded && _cardsLanded < _board.Deck.Count)
             {
-                _board.Deck[_cardsLanded].Scale = Vector2.One;
-                _board.Deck[_cardsLanded].TargetScale = Vector2.One;
+                _board.Deck[_cardsLanded].TargetPosition = _board.DeckPos + new Vector2(0, -_cardsLanded * 0.5f);
                 ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlayUi("ui_plink");
                 _cardsLanded++;
             }
@@ -434,8 +434,7 @@ namespace ProjectVagabond.Scenes
             {
                 for (int i = _cardsLanded; i < _board.Deck.Count; i++)
                 {
-                    _board.Deck[i].Scale = Vector2.One;
-                    _board.Deck[i].TargetScale = Vector2.One;
+                    _board.Deck[i].TargetPosition = _board.DeckPos + new Vector2(0, -i * 0.5f);
                 }
                 _cardsLanded = _board.Deck.Count;
 
