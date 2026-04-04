@@ -1,8 +1,8 @@
 ﻿using Microsoft.Xna.Framework;
 using ProjectVagabond.Utils;
 using System;
+using System.Collections.Generic;
 using System.Linq;
-using System.Threading.Tasks;
 
 namespace ProjectVagabond.Scenes
 {
@@ -27,6 +27,7 @@ namespace ProjectVagabond.Scenes
         public bool ScoreSlamPlayed { get; set; }
 
         private Random _random = new Random();
+        private readonly List<(float timer, string sfx)> _audioQueue = new List<(float, string)>();
 
         public void Reset(int startingHealth)
         {
@@ -46,6 +47,26 @@ namespace ProjectVagabond.Scenes
             TargetScore = 0;
             ScoreAnimTimer = 0f;
             ScoreSlamPlayed = false;
+
+            _audioQueue.Clear();
+        }
+
+        public void Update(float dt)
+        {
+            for (int i = _audioQueue.Count - 1; i >= 0; i--)
+            {
+                var item = _audioQueue[i];
+                item.timer -= dt;
+                if (item.timer <= 0)
+                {
+                    ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlayRoutedSfx(item.sfx, 0.15f);
+                    _audioQueue.RemoveAt(i);
+                }
+                else
+                {
+                    _audioQueue[i] = item;
+                }
+            }
         }
 
         public void StartMonsterResolution(Card? monster, int damage, bool weaponUsed)
@@ -241,44 +262,32 @@ namespace ProjectVagabond.Scenes
             }
         }
 
-        public async void PlayHealFull()
+        public void PlayHealFull()
         {
-            var audio = ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>();
-            audio.PlayRoutedSfx("proc:wave=2;freq=400;atk=0.02;sus=0.05;dec=0.15;detune=0.01;delay=0.05;delfb=0.15;vol=0.15", 0.15f);
-            await Task.Delay(100);
-            audio.PlayRoutedSfx("proc:wave=2;freq=600;atk=0.02;sus=0.05;dec=0.15;detune=0.01;delay=0.05;delfb=0.15;vol=0.15", 0.15f);
-            await Task.Delay(200);
-            audio.PlayRoutedSfx("proc:wave=2;freq=800;atk=0.02;sus=0.05;dec=0.25;detune=0.01;delay=0.05;delfb=0.15;vol=0.15", 0.15f);
+            _audioQueue.Add((0f, "proc:wave=2;freq=400;atk=0.02;sus=0.05;dec=0.15;detune=0.01;delay=0.05;delfb=0.15;vol=0.15"));
+            _audioQueue.Add((0.1f, "proc:wave=2;freq=600;atk=0.02;sus=0.05;dec=0.15;detune=0.01;delay=0.05;delfb=0.15;vol=0.15"));
+            _audioQueue.Add((0.3f, "proc:wave=2;freq=800;atk=0.02;sus=0.05;dec=0.25;detune=0.01;delay=0.05;delfb=0.15;vol=0.15"));
         }
 
-        public async void PlayHealPartial()
+        public void PlayHealPartial()
         {
-            var audio = ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>();
-            audio.PlayRoutedSfx("proc:wave=2;freq=400;atk=0.02;sus=0.05;dec=0.15;detune=0.01;vol=0.15", 0.15f);
-            await Task.Delay(100);
-            audio.PlayRoutedSfx("proc:wave=2;freq=600;atk=0.02;sus=0.05;dec=0.2;detune=0.01;vol=0.15", 0.15f);
+            _audioQueue.Add((0f, "proc:wave=2;freq=400;atk=0.02;sus=0.05;dec=0.15;detune=0.01;vol=0.15"));
+            _audioQueue.Add((0.1f, "proc:wave=2;freq=600;atk=0.02;sus=0.05;dec=0.2;detune=0.01;vol=0.15"));
         }
 
-        public async void PlayDefeatSequence()
+        public void PlayDefeatSequence()
         {
-            var audio = ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>();
-            audio.PlayRoutedSfx("proc:wave=4;freq=300;atk=0.05;sus=0.1;dec=0.3;detune=0.02;lpf=2000;vol=0.2", 0.15f);
-            await Task.Delay(300);
-            audio.PlayRoutedSfx("proc:wave=4;freq=250;atk=0.05;sus=0.1;dec=0.3;detune=0.02;lpf=2000;vol=0.2", 0.15f);
-            await Task.Delay(600);
-            audio.PlayRoutedSfx("proc:wave=4;freq=200;atk=0.05;sus=0.2;dec=0.6;detune=0.02;lpf=2000;vol=0.2", 0.15f);
+            _audioQueue.Add((0f, "proc:wave=4;freq=300;atk=0.05;sus=0.1;dec=0.3;detune=0.02;lpf=2000;vol=0.2"));
+            _audioQueue.Add((0.3f, "proc:wave=4;freq=250;atk=0.05;sus=0.1;dec=0.3;detune=0.02;lpf=2000;vol=0.2"));
+            _audioQueue.Add((0.9f, "proc:wave=4;freq=200;atk=0.05;sus=0.2;dec=0.6;detune=0.02;lpf=2000;vol=0.2"));
         }
 
-        public async void PlayVictorySequence()
+        public void PlayVictorySequence()
         {
-            var audio = ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>();
-            audio.PlayRoutedSfx("proc:wave=0;freq=400;atk=0.02;sus=0.1;dec=0.2;detune=0.01;lpf=3000;vol=0.15", 0.15f);
-            await Task.Delay(200);
-            audio.PlayRoutedSfx("proc:wave=0;freq=500;atk=0.02;sus=0.1;dec=0.2;detune=0.01;lpf=3000;vol=0.15", 0.15f);
-            await Task.Delay(400);
-            audio.PlayRoutedSfx("proc:wave=0;freq=600;atk=0.02;sus=0.1;dec=0.2;detune=0.01;lpf=3000;vol=0.15", 0.15f);
-            await Task.Delay(600);
-            audio.PlayRoutedSfx("proc:wave=0;freq=800;atk=0.02;sus=0.2;dec=0.6;detune=0.01;lpf=3000;vol=0.15", 0.15f);
+            _audioQueue.Add((0f, "proc:wave=0;freq=400;atk=0.02;sus=0.1;dec=0.2;detune=0.01;lpf=3000;vol=0.15"));
+            _audioQueue.Add((0.2f, "proc:wave=0;freq=500;atk=0.02;sus=0.1;dec=0.2;detune=0.01;lpf=3000;vol=0.15"));
+            _audioQueue.Add((0.6f, "proc:wave=0;freq=600;atk=0.02;sus=0.1;dec=0.2;detune=0.01;lpf=3000;vol=0.15"));
+            _audioQueue.Add((1.2f, "proc:wave=0;freq=800;atk=0.02;sus=0.2;dec=0.6;detune=0.01;lpf=3000;vol=0.15"));
         }
     }
 }

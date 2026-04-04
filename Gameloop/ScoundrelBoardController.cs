@@ -2,7 +2,6 @@
 using ProjectVagabond.Utils;
 using System;
 using System.Collections.Generic;
-using System.Linq;
 
 namespace ProjectVagabond.Scenes
 {
@@ -33,7 +32,9 @@ namespace ProjectVagabond.Scenes
         private float _roomWaveTimer = 0f;
         private float _roomWaveInterval = 3f;
         private float _currentWaveTime = -1f;
-        private System.Random _random = new System.Random();
+        private Random _random = new Random();
+
+        private readonly List<Card> _allCardsCache = new List<Card>(50);
 
         public ScoundrelBoardController()
         {
@@ -144,7 +145,7 @@ namespace ProjectVagabond.Scenes
             Discard.Add(card);
             card.RoomSlotIndex = -1;
             card.IsHovered = false;
-            card.TargetPosition = DiscardPos + new Vector2(0, -Discard.Count * 0.25f);
+            card.TargetPosition = DiscardPos + new Vector2(0, -Discard.Count * 0.5f);
             card.TargetScale = Vector2.One;
             card.TargetRotation = 0f;
             card.ZIndex = 50 + Discard.Count;
@@ -168,16 +169,16 @@ namespace ProjectVagabond.Scenes
 
         public List<Card> GetAllCards(bool includeFist, bool includeSkip)
         {
-            var allCards = new List<Card>();
-            allCards.AddRange(Deck);
-            allCards.AddRange(Discard);
-            allCards.AddRange(SlainPile);
-            if (WeaponSlot != null) allCards.Add(WeaponSlot);
-            allCards.AddRange(Room);
-            if (includeFist) allCards.Add(FistCard);
-            if (includeSkip) allCards.Add(SkipCard);
-            allCards.AddRange(CardsToReturn);
-            return allCards;
+            _allCardsCache.Clear();
+            _allCardsCache.AddRange(Deck);
+            _allCardsCache.AddRange(Discard);
+            _allCardsCache.AddRange(SlainPile);
+            if (WeaponSlot != null) _allCardsCache.Add(WeaponSlot);
+            _allCardsCache.AddRange(Room);
+            if (includeFist) _allCardsCache.Add(FistCard);
+            if (includeSkip) _allCardsCache.Add(SkipCard);
+            _allCardsCache.AddRange(CardsToReturn);
+            return _allCardsCache;
         }
     }
 }

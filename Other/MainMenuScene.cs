@@ -464,6 +464,7 @@ namespace ProjectVagabond.Scenes
 
             float dt = Math.Min((float)gameTime.ElapsedGameTime.TotalSeconds, 0.05f);
             Vector2 mousePos = Core.TransformMouse(_inputManager.GetEffectiveMouseState().Position);
+            bool isModalActive = ServiceLocator.Get<SceneManager>().IsModalActive;
 
             int frameSize = 40;
             float halfSize = frameSize / 2f;
@@ -523,7 +524,7 @@ namespace ProjectVagabond.Scenes
                     float dist = toMouse.Length();
                     float repelRadius = 35f;
 
-                    if (dist < repelRadius && dist > 0.001f)
+                    if (!isModalActive && dist < repelRadius && dist > 0.001f)
                     {
                         float force = (repelRadius - dist) / repelRadius;
                         Vector2 repelDir = toMouse / dist;

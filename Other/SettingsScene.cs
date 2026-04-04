@@ -90,10 +90,6 @@ namespace ProjectVagabond.Scenes
             EventBus.Subscribe<GameEvents.UIThemeOrResolutionChanged>(OnResolutionChanged);
             _navigationGroup.OnSelectionChanged += OnNavigationSelectionChanged;
 
-            var audio = ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>();
-            audio.SetCurrentMusicStemVolume(0, 0.0f);
-            audio.SetCurrentMusicStemVolume(1, 1.0f);
-
             foreach (var item in _settingControls) item.ResetAnimationState();
             foreach (var item in _footerButtons) item.ResetAnimationState();
 
@@ -121,10 +117,6 @@ namespace ProjectVagabond.Scenes
         {
             base.Exit();
             EventBus.Unsubscribe<GameEvents.UIThemeOrResolutionChanged>(OnResolutionChanged);
-
-            var audio = ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>();
-            audio.SetCurrentMusicStemVolume(0, 1.0f);
-            audio.SetCurrentMusicStemVolume(1, 0.0f);
         }
 
         private void OnResolutionChanged(GameEvents.UIThemeOrResolutionChanged e)
@@ -509,6 +501,15 @@ namespace ProjectVagabond.Scenes
             if (_confirmationDialog.IsActive) { _confirmationDialog.Update(gameTime); base.Update(gameTime); return; }
             if (_revertDialog.IsActive) { _revertDialog.Update(gameTime); base.Update(gameTime); return; }
 
+            if (_inputManager.Back)
+            {
+                AttemptToGoBack();
+            }
+            else if (_inputManager.CurrentInputDevice != InputDeviceType.Mouse)
+            {
+                _navigationGroup.UpdateInput(_inputManager);
+            }
+
             var currentMouseState = _inputManager.GetEffectiveMouseState();
             var font = ServiceLocator.Get<BitmapFont>();
 
@@ -641,12 +642,6 @@ namespace ProjectVagabond.Scenes
                 );
 
                 _navigationGroup.Update(_inputManager, virtualMouseState, deselectIfNoHover: true, forceUpdate: scrolledThisFrame);
-
-                if (_inputManager.CurrentInputDevice != InputDeviceType.Mouse)
-                {
-                    _navigationGroup.UpdateInput(_inputManager);
-                    if (_inputManager.Back) AttemptToGoBack();
-                }
             }
 
             if (currentMouseState.RightButton == ButtonState.Pressed && _previousMouseState.RightButton == ButtonState.Released)

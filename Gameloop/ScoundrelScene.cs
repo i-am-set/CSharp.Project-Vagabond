@@ -3,6 +3,7 @@ using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond.Particles;
+using ProjectVagabond.Scenes;
 using ProjectVagabond.Transitions;
 using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
@@ -42,7 +43,6 @@ namespace ProjectVagabond.Scenes
         private Card? _lastHoveredCard = null;
 
         private MouseState _previousMouseState;
-        private KeyboardState _prevKeyboardState;
         private bool _uiInitialized = false;
 
         private bool _isPaused = false;
@@ -52,6 +52,9 @@ namespace ProjectVagabond.Scenes
         private float _returnTimer = 0f;
 
         private float _floorClearedTimer = 0f;
+
+        private readonly List<Card> _selectableCardsCache = new List<Card>(50);
+        private readonly List<Card> _unselectableCardsCache = new List<Card>(50);
 
         public ScoundrelScene()
         {
@@ -97,7 +100,6 @@ namespace ProjectVagabond.Scenes
 
             RestartGame();
             _previousMouseState = _inputManager.GetEffectiveMouseState();
-            _prevKeyboardState = Keyboard.GetState();
         }
 
         private void RestartGame()
@@ -118,8 +120,10 @@ namespace ProjectVagabond.Scenes
 
             for (int i = 0; i < _board.Deck.Count; i++)
             {
-                _board.Deck[i].Position = new Vector2(_board.DeckPos.X, -100 - i * 5);
+                _board.Deck[i].Position = _board.DeckPos + new Vector2(0, -i * 0.5f);
                 _board.Deck[i].TargetPosition = _board.Deck[i].Position;
+                _board.Deck[i].Scale = Vector2.Zero;
+                _board.Deck[i].TargetScale = Vector2.Zero;
             }
 
             _ui.DeckCountPlink.Start(0.5f, 0.3f);
@@ -189,7 +193,15 @@ namespace ProjectVagabond.Scenes
             {
                 audio.SetCurrentMusicStemVolume(0, 0.0f, fadeSpeed: 5f);
                 audio.SetCurrentMusicStemVolume(1, 1.0f, fadeSpeed: 5f);
-                _ui.PauseNavGroup.SelectFirst();
+                
+                if (_inputManager.CurrentInputDevice != InputDeviceType.Mouse)
+                {
+                    _ui.PauseNavGroup.SelectFirst();
+                }
+                else
+                {
+                    _ui.PauseNavGroup.DeselectAll();
+                }
             }
             else
             {
@@ -217,12 +229,11 @@ namespace ProjectVagabond.Scenes
             base.Update(gameTime);
             float dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
 
-            var currentKeyboardState = Keyboard.GetState();
             var mouseState = _inputManager.GetEffectiveMouseState();
-            bool justClicked = mouseState.LeftButton == ButtonState.Pressed && _previousMouseState.LeftButton == ButtonState.Released;
+            bool justClicked = _inputManager.IsMouseClickAvailable() && mouseState.LeftButton == ButtonState.Pressed && _previousMouseState.LeftButton == ButtonState.Released;
             Vector2 mousePos = Core.TransformMouse(mouseState.Position);
 
-            if (currentKeyboardState.IsKeyDown(Keys.Escape) && !_prevKeyboardState.IsKeyDown(Keys.Escape))
+            if (_inputManager.Back)
             {
                 if (_ui.ConfirmationDialog.IsActive) _ui.ConfirmationDialog.Hide();
                 else TogglePause();
@@ -237,10 +248,10 @@ namespace ProjectVagabond.Scenes
                     if (_inputManager.CurrentInputDevice != InputDeviceType.Mouse) _ui.PauseNavGroup.UpdateInput(_inputManager);
                 }
                 _previousMouseState = mouseState;
-                _prevKeyboardState = currentKeyboardState;
                 return;
             }
 
+            var currentKeyboardState = Keyboard.GetState();
             if (currentKeyboardState.IsKeyDown(Keys.R) && _state != ScoundrelState.GameOver && _state != ScoundrelState.Restarting)
             {
                 _restartHoldTimer += dt;
@@ -254,6 +265,7 @@ namespace ProjectVagabond.Scenes
 
             _ui.Update(dt, gameTime, _board.DeckPos, _board.DiscardPos);
             _board.UpdateWaves(dt);
+            _combat.Update(dt);
 
             UpdateHoverStates(mousePos, dt);
 
@@ -273,7 +285,6 @@ namespace ProjectVagabond.Scenes
             }
 
             _previousMouseState = mouseState;
-            _prevKeyboardState = currentKeyboardState;
         }
 
         private void UpdateHoverStates(Vector2 mousePos, float dt)
@@ -314,10 +325,29 @@ namespace ProjectVagabond.Scenes
                 _board.FistCard.IsSelectable = true;
             }
 
+            _selectableCardsCache.Clear();
+            _unselectableCardsCache.Clear();
+
+            foreach (var c in allCards)
+            {
+                if (c.IsSelectable || c.ForceRenderAboveVeil) _selectableCardsCache.Add(c);
+                else _unselectableCardsCache.Add(c);
+            }
+
+            _selectableCardsCache.Sort((a, b) => a.ZIndex.CompareTo(b.ZIndex));
+            _unselectableCardsCache.Sort((a, b) => a.ZIndex.CompareTo(b.ZIndex));
+
             Card? newHovered = null;
             if ((_state == ScoundrelState.Playing || _state == ScoundrelState.Focused) && _inputManager.IsMouseClickAvailable())
             {
-                newHovered = allCards.Where(c => c.IsSelectable).OrderByDescending(c => c.ZIndex).FirstOrDefault(c => c.GetBounds().Contains(mousePos));
+                for (int i = _selectableCardsCache.Count - 1; i >= 0; i--)
+                {
+                    if (_selectableCardsCache[i].IsSelectable && _selectableCardsCache[i].GetBounds().Contains(mousePos))
+                    {
+                        newHovered = _selectableCardsCache[i];
+                        break;
+                    }
+                }
             }
 
             if (newHovered != _lastHoveredCard)
@@ -394,7 +424,8 @@ namespace ProjectVagabond.Scenes
 
             while (_cardsLanded < targetLanded && _cardsLanded < _board.Deck.Count)
             {
-                _board.Deck[_cardsLanded].TargetPosition = _board.DeckPos + new Vector2(0, -_cardsLanded * 0.25f);
+                _board.Deck[_cardsLanded].Scale = Vector2.One;
+                _board.Deck[_cardsLanded].TargetScale = Vector2.One;
                 ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlayUi("ui_plink");
                 _cardsLanded++;
             }
@@ -403,7 +434,8 @@ namespace ProjectVagabond.Scenes
             {
                 for (int i = _cardsLanded; i < _board.Deck.Count; i++)
                 {
-                    _board.Deck[i].TargetPosition = _board.DeckPos + new Vector2(0, -i * 0.25f);
+                    _board.Deck[i].Scale = Vector2.One;
+                    _board.Deck[i].TargetScale = Vector2.One;
                 }
                 _cardsLanded = _board.Deck.Count;
 
@@ -423,7 +455,7 @@ namespace ProjectVagabond.Scenes
                     _board.CardsToReturn.RemoveAt(_board.CardsToReturn.Count - 1);
 
                     card.IsFaceUp = false;
-                    card.TargetPosition = _board.DeckPos + new Vector2(0, -_board.Deck.Count * 0.25f);
+                    card.TargetPosition = _board.DeckPos + new Vector2(0, -_board.Deck.Count * 0.5f);
                     card.TargetScale = Vector2.One;
                     card.TargetRotation = 0f;
                     card.ZIndex = _board.Deck.Count;
@@ -440,7 +472,7 @@ namespace ProjectVagabond.Scenes
                     _board.Deck.AddRange(DeckGenerator.Generate(_runContext));
                     for (int i = 0; i < _board.Deck.Count; i++)
                     {
-                        _board.Deck[i].TargetPosition = _board.DeckPos + new Vector2(0, -i * 0.25f);
+                        _board.Deck[i].TargetPosition = _board.DeckPos + new Vector2(0, -i * 0.5f);
                         _board.Deck[i].Position = _board.Deck[i].TargetPosition;
                         _board.Deck[i].ZIndex = i;
                     }
@@ -611,7 +643,7 @@ namespace ProjectVagabond.Scenes
         private void OnSkipClicked()
         {
             _combat.CanSkip = false;
-            var skippedCards = _board.Room.ToList();
+            var skippedCards = new List<Card>(_board.Room);
             _board.Room.Clear();
 
             foreach (var card in skippedCards)
@@ -624,7 +656,7 @@ namespace ProjectVagabond.Scenes
 
             for (int i = 0; i < _board.Deck.Count; i++)
             {
-                _board.Deck[i].TargetPosition = _board.DeckPos + new Vector2(0, -i * 0.25f);
+                _board.Deck[i].TargetPosition = _board.DeckPos + new Vector2(0, -i * 0.5f);
                 _board.Deck[i].ZIndex = i;
             }
 
@@ -690,7 +722,7 @@ namespace ProjectVagabond.Scenes
                 _combat.PlayDefeatSequence();
                 _combat.CalculateTargetScore(_board, _runContext.MaxHealth);
             }
-            else if (_board.Deck.Count == 0 && !_board.Room.Any(c => c.Type == CardType.Monster))
+            else if (_board.Deck.Count == 0 && !HasMonsterInRoom())
             {
                 if (_runContext.Mode == GameMode.Classic || _runContext.Floor >= _runContext.MaxFloors)
                 {
@@ -705,6 +737,15 @@ namespace ProjectVagabond.Scenes
                     ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlayRoutedSfx("proc:wave=0;freq=400;atk=0.02;sus=0.1;dec=0.2;detune=0.01;lpf=3000;vol=0.15", 0.15f);
                 }
             }
+        }
+
+        private bool HasMonsterInRoom()
+        {
+            foreach (var c in _board.Room)
+            {
+                if (c.Type == CardType.Monster) return true;
+            }
+            return false;
         }
 
         private int GetPreviewHealth()
@@ -740,10 +781,6 @@ namespace ProjectVagabond.Scenes
 
         protected override void DrawSceneContent(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Matrix transform)
         {
-            var secFont = _core.SecondaryFont;
-            var defFont = _core.DefaultFont;
-            var tertFont = _core.TertiaryFont;
-
             bool canSkipNow = _state == ScoundrelState.Playing && _board.Room.Count == 4 && _combat.CardsResolvedThisRoom == 0 && _combat.CanSkip;
 
             spriteBatch.Draw(_pixel, new Rectangle(0, 0, Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT), _global.GameBg);
@@ -759,13 +796,9 @@ namespace ProjectVagabond.Scenes
                 spriteBatch.DrawSnapped(_spriteManager.ScoundrelCardsSpriteSheet, drawPos, outlineSource, Color.White * 0.5f, 0f, origin, 1f, SpriteEffects.None, 0f);
             }
 
-            var allCards = _board.GetAllCards(_state == ScoundrelState.Focused, canSkipNow);
-            var unselectable = allCards.Where(c => !c.IsSelectable && !c.ForceRenderAboveVeil).OrderBy(c => c.ZIndex).ToList();
-            var selectable = allCards.Where(c => c.IsSelectable || c.ForceRenderAboveVeil).OrderBy(c => c.ZIndex).ToList();
-
             if (_state == ScoundrelState.Focused)
             {
-                foreach (var card in unselectable) card.Draw(spriteBatch, _spriteManager);
+                foreach (var card in _unselectableCardsCache) card.Draw(spriteBatch, _spriteManager);
             }
 
             if (_state == ScoundrelState.Focused || (_state == ScoundrelState.Playing && !canSkipNow))
@@ -775,7 +808,7 @@ namespace ProjectVagabond.Scenes
 
             if (_state != ScoundrelState.Focused)
             {
-                foreach (var card in unselectable) card.Draw(spriteBatch, _spriteManager);
+                foreach (var card in _unselectableCardsCache) card.Draw(spriteBatch, _spriteManager);
             }
 
             if (_board.WeaponSlot != null && _board.WeaponSlot.IsBeingReplaced)
@@ -792,10 +825,11 @@ namespace ProjectVagabond.Scenes
 
             spriteBatch.Draw(_pixel, new Rectangle(0, 0, Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT), _global.Palette_Off * 0.4f);
 
-            foreach (var card in selectable) card.Draw(spriteBatch, _spriteManager);
+            foreach (var card in _selectableCardsCache) card.Draw(spriteBatch, _spriteManager);
 
             if (canSkipNow)
             {
+                var secFont = _core.SecondaryFont;
                 string skipText = "SKIP\nROOM";
                 Vector2 tSize = secFont.MeasureString(skipText);
                 Vector2 tPos = new Vector2(MathF.Round(_board.SkipCard.Position.X - tSize.X / 2f), MathF.Round(_board.SkipCard.Position.Y + _board.SkipCard.VisualYOffset - tSize.Y / 2f));
@@ -806,7 +840,10 @@ namespace ProjectVagabond.Scenes
 
             spriteBatch.End();
             spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.Additive, SamplerState.PointClamp, null, null, null, transform);
-            foreach (var card in allCards) card.DrawFlash(spriteBatch, _spriteManager);
+
+            foreach (var card in _unselectableCardsCache) card.DrawFlash(spriteBatch, _spriteManager);
+            foreach (var card in _selectableCardsCache) card.DrawFlash(spriteBatch, _spriteManager);
+
             spriteBatch.End();
             spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp, null, null, null, transform);
 
@@ -815,70 +852,24 @@ namespace ProjectVagabond.Scenes
             _ui.DrawHealthBar(spriteBatch, _combat.Health, GetPreviewHealth(), _runContext.MaxHealth, _spriteManager);
             _ui.DrawFloatingTexts(spriteBatch);
 
-            if (_restartHoldTimer > 0f)
-            {
-                float progress = Math.Clamp(_restartHoldTimer / RESTART_HOLD_DURATION, 0f, 1f);
-                string restartText = "HOLD R TO RESTART";
-                Vector2 rSize = secFont.MeasureString(restartText);
-                Vector2 rPos = new Vector2(Global.VIRTUAL_WIDTH / 2f - rSize.X / 2f, Global.VIRTUAL_HEIGHT - 20);
-
-                spriteBatch.DrawStringOutlinedSnapped(secFont, restartText, rPos, _global.Palette_LightPale, _global.Palette_Off);
-
-                int barWidth = 100;
-                int barHeight = 4;
-                int barX = Global.VIRTUAL_WIDTH / 2 - barWidth / 2;
-                int barY = (int)rPos.Y + (int)rSize.Y + 4;
-
-                spriteBatch.Draw(_pixel, new Rectangle(barX - 1, barY - 1, barWidth + 2, barHeight + 2), _global.Palette_Off);
-                spriteBatch.Draw(_pixel, new Rectangle(barX, barY, barWidth, barHeight), _global.Palette_DarkShadow);
-                spriteBatch.Draw(_pixel, new Rectangle(barX, barY, (int)(barWidth * progress), barHeight), _global.Palette_Sun);
-            }
+            _ui.DrawRestartBar(spriteBatch, _restartHoldTimer, RESTART_HOLD_DURATION);
 
             if (_state == ScoundrelState.FloorCleared)
             {
-                spriteBatch.Draw(_pixel, new Rectangle(0, 0, Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT), Color.Black * 0.6f);
-                string text = "FLOOR CLEARED";
-                Vector2 size = defFont.MeasureString(text);
-                spriteBatch.DrawStringOutlinedSnapped(defFont, text, new Vector2(Global.VIRTUAL_WIDTH / 2f - size.X / 2f, Global.VIRTUAL_HEIGHT / 2f - size.Y / 2f), _global.Palette_Sun, _global.Palette_Off);
+                _ui.DrawFloorCleared(spriteBatch);
             }
             else if (_state == ScoundrelState.RewardSelection)
             {
-                spriteBatch.Draw(_pixel, new Rectangle(0, 0, Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT), Color.Black * 0.8f);
-                string text = "CHOOSE A REWARD";
-                Vector2 size = defFont.MeasureString(text);
-                spriteBatch.DrawStringOutlinedSnapped(defFont, text, new Vector2(Global.VIRTUAL_WIDTH / 2f - size.X / 2f, 30), _global.Palette_Sun, _global.Palette_Off);
-
-                foreach (var btn in _ui.RewardButtons) btn.Draw(spriteBatch, defFont, gameTime, transform);
+                _ui.DrawRewardSelection(spriteBatch, gameTime, transform);
             }
             else if (_state == ScoundrelState.GameOver)
             {
-                spriteBatch.Draw(_pixel, new Rectangle(0, 0, Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT), Color.Black * 0.8f);
-
-                string result = _combat.Health > 0 ? "VICTORY" : "DEFEAT";
-                Color resColor = _combat.Health > 0 ? _global.Palette_Sun : _global.Palette_Rust;
-
-                Vector2 rSize = _core.DefaultFont.MeasureString(result);
-                spriteBatch.DrawStringOutlinedSnapped(_core.DefaultFont, result, new Vector2(Global.VIRTUAL_WIDTH / 2f - rSize.X / 2f, 60), resColor, _global.Palette_Off);
-
-                string scoreText = $"SCORE: {_combat.DisplayScore}";
-                Vector2 sSize = secFont.MeasureString(scoreText);
-                spriteBatch.DrawStringOutlinedSnapped(secFont, scoreText, new Vector2(Global.VIRTUAL_WIDTH / 2f - sSize.X / 2f, 90), _global.Palette_LightPale, _global.Palette_Off);
-
-                _ui.TryAgainButton.Draw(spriteBatch, secFont, gameTime, transform);
-                _ui.ExitButton.Draw(spriteBatch, secFont, gameTime, transform);
+                _ui.DrawGameOver(spriteBatch, gameTime, transform, _combat.Health, _combat.DisplayScore);
             }
 
             if (_isPaused)
             {
-                spriteBatch.Draw(_pixel, new Rectangle(0, 0, Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT), Color.Black * 0.7f);
-
-                string pauseText = "PAUSED";
-                Vector2 pSize = defFont.MeasureString(pauseText);
-                spriteBatch.DrawStringOutlinedSnapped(defFont, pauseText, new Vector2(Global.VIRTUAL_WIDTH / 2f - pSize.X / 2f, 30), _global.Palette_Sun, _global.Palette_Off);
-
-                foreach (var btn in _ui.PauseButtons) btn.Draw(spriteBatch, defFont, gameTime, transform);
-
-                if (_ui.ConfirmationDialog.IsActive) _ui.ConfirmationDialog.DrawContent(spriteBatch, defFont, gameTime, transform);
+                _ui.DrawPauseMenu(spriteBatch, gameTime, transform);
             }
         }
     }

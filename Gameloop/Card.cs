@@ -60,9 +60,10 @@ namespace ProjectVagabond.Scenes
 
         public void Update(float dt)
         {
-            Position = Vector2.Lerp(Position, TargetPosition, LERP_SPEED * dt);
-            Scale = Vector2.Lerp(Scale, TargetScale, LERP_SPEED * dt);
-            Rotation = MathHelper.Lerp(Rotation, TargetRotation, LERP_SPEED * dt);
+            float damping = 1.0f - MathF.Exp(-LERP_SPEED * dt);
+            Position = Vector2.Lerp(Position, TargetPosition, damping);
+            Scale = Vector2.Lerp(Scale, TargetScale, damping);
+            Rotation = MathHelper.Lerp(Rotation, TargetRotation, damping);
 
             if (_isFlipping && Scale.X < 0.05f)
             {

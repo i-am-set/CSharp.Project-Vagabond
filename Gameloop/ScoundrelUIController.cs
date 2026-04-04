@@ -2,10 +2,14 @@
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
+using ProjectVagabond.Particles;
+using ProjectVagabond.Scenes;
+using ProjectVagabond.Transitions;
 using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace ProjectVagabond.Scenes
 {
@@ -35,60 +39,65 @@ namespace ProjectVagabond.Scenes
 
         private Global _global;
         private Core _core;
+        private Texture2D _pixel;
+        private ScoundrelScene _scene;
 
         public ScoundrelUIController(ScoundrelScene scene)
         {
+            _scene = scene;
             _global = ServiceLocator.Get<Global>();
             _core = ServiceLocator.Get<Core>();
+            _pixel = ServiceLocator.Get<Texture2D>();
             ConfirmationDialog = new ConfirmationDialog(scene);
+        }
 
+        private Button CreatePauseBtn(string text, int y, BitmapFont font)
+        {
+            int w = (int)font.MeasureString(text).Width + 16;
+            int x = Global.VIRTUAL_WIDTH / 2 - w / 2;
+            return new Button(new Rectangle(x, y, w, 16), text, font: font) { DrawBorderOnHover = true };
+        }
+
+        public void Initialize()
+        {
             var secFont = _core.SecondaryFont;
             var defFont = _core.DefaultFont;
 
             TryAgainButton = new Button(new Rectangle(Global.VIRTUAL_WIDTH / 2 - 35, 110, 70, 15), "TRY AGAIN", font: secFont) { DrawBorderOnHover = true };
             ExitButton = new Button(new Rectangle(Global.VIRTUAL_WIDTH / 2 - 35, 125, 70, 15), "MAIN MENU", font: secFont) { DrawBorderOnHover = true };
 
-            int pauseBtnWidth = 100;
-            int pauseBtnHeight = 16;
             int startY = Global.VIRTUAL_HEIGHT / 2 - 30;
             int spacing = 18;
-            int centerX = Global.VIRTUAL_WIDTH / 2 - pauseBtnWidth / 2;
 
-            var resumeBtn = new Button(new Rectangle(centerX, startY, pauseBtnWidth, pauseBtnHeight), "RESUME", font: defFont);
+            var resumeBtn = CreatePauseBtn("RESUME", startY, defFont);
             PauseButtons.Add(resumeBtn);
             PauseNavGroup.Add(resumeBtn);
 
-            var settingsBtn = new Button(new Rectangle(centerX, startY + spacing, pauseBtnWidth, pauseBtnHeight), "SETTINGS", font: defFont);
+            var settingsBtn = CreatePauseBtn("SETTINGS", startY + spacing, defFont);
             PauseButtons.Add(settingsBtn);
             PauseNavGroup.Add(settingsBtn);
 
-            var menuBtn = new Button(new Rectangle(centerX, startY + spacing * 2, pauseBtnWidth, pauseBtnHeight), "MAIN MENU", font: defFont);
+            var menuBtn = CreatePauseBtn("EXIT TO MAIN MENU", startY + spacing * 2, defFont);
             PauseButtons.Add(menuBtn);
             PauseNavGroup.Add(menuBtn);
 
-            var desktopBtn = new Button(new Rectangle(centerX, startY + spacing * 3, pauseBtnWidth, pauseBtnHeight), "EXIT TO DESKTOP", font: defFont);
+            var desktopBtn = CreatePauseBtn("EXIT TO DESKTOP", startY + spacing * 3, defFont);
             PauseButtons.Add(desktopBtn);
             PauseNavGroup.Add(desktopBtn);
-        }
 
-        public void Initialize()
-        {
-            var scene = ServiceLocator.Get<SceneManager>().CurrentActiveScene as ScoundrelScene;
-            if (scene == null) return;
+            TryAgainButton.OnClick += () => _scene.ResetBoard();
+            ExitButton.OnClick += () => _scene.ExitToMainMenu();
 
-            TryAgainButton.OnClick += () => scene.ResetBoard();
-            ExitButton.OnClick += () => scene.ExitToMainMenu();
-
-            PauseButtons[0].OnClick += () => scene.TogglePause();
+            PauseButtons[0].OnClick += () => _scene.TogglePause();
             PauseButtons[1].OnClick += () => ServiceLocator.Get<SceneManager>().ShowModal(GameSceneState.Settings);
-            PauseButtons[2].OnClick += () => ConfirmationDialog.Show("Return to Main Menu?\n[cred]Current run will be lost.[/]", new List<Tuple<string, Action>>
+            PauseButtons[2].OnClick += () => ConfirmationDialog.Show("Return to Main Menu?\n\n\n[cred]Current run will be lost.[/]", new List<Tuple<string, Action>>
             {
-                Tuple.Create("YES", new Action(() => scene.ExitToMainMenu())),
+                Tuple.Create("YES", new Action(() => _scene.ExitToMainMenu())),
                 Tuple.Create("[chighlight]NO", new Action(() => ConfirmationDialog.Hide()))
             });
-            PauseButtons[3].OnClick += () => ConfirmationDialog.Show("Exit to Desktop?\n[cred]Current run will be lost.[/]", new List<Tuple<string, Action>>
+            PauseButtons[3].OnClick += () => ConfirmationDialog.Show("Exit to Desktop?\n\n\n[cred]Current run will be lost.[/]", new List<Tuple<string, Action>>
             {
-                Tuple.Create("YES", new Action(() => ServiceLocator.Get<Core>().ExitApplication())),
+                Tuple.Create("YES", new Action(() => _core.ExitApplication())),
                 Tuple.Create("[chighlight]NO", new Action(() => ConfirmationDialog.Hide()))
             });
         }
@@ -151,11 +160,18 @@ namespace ProjectVagabond.Scenes
             RewardNavGroup.Add(maxHpBtn);
 
             var riskBtn = new Button(new Rectangle(centerX, startY + spacing * 2, btnWidth, btnHeight), "MAX HP +4, TAKE 2 DMG", font: defFont);
-            riskBtn.OnClick += () => scene.ApplyRewardAndAdvance(() => { runContext.MaxHealth += 4; combat.Health += 2; });
+            riskBtn.OnClick += () => scene.ApplyRewardAndAdvance(() => { runContext.MaxHealth += 4; combat.Health -= 2; });
             RewardButtons.Add(riskBtn);
             RewardNavGroup.Add(riskBtn);
 
-            RewardNavGroup.SelectFirst();
+            if (ServiceLocator.Get<InputManager>().CurrentInputDevice != InputDeviceType.Mouse)
+            {
+                RewardNavGroup.SelectFirst();
+            }
+            else
+            {
+                RewardNavGroup.DeselectAll();
+            }
         }
 
         public void DrawCounters(SpriteBatch spriteBatch, int deckCount, int discardCount, Vector2 deckPos, Vector2 discardPos)
@@ -371,6 +387,93 @@ namespace ProjectVagabond.Scenes
                 spriteBatch.DrawStringOutlinedSnapped(tertFont, hpLabel, pos1 + hpLabelOrigin, _global.Palette_DarkestPale, _global.Palette_Off, hpRot, hpLabelOrigin, hpScale, SpriteEffects.None, 0f);
                 spriteBatch.DrawStringOutlinedSnapped(defFont, currentHpText, pos2 + hpTextOrigin, currentHpTextColor, _global.Palette_Off, hpRot, hpTextOrigin, hpScale, SpriteEffects.None, 0f);
                 spriteBatch.DrawStringOutlinedSnapped(tertFont, maxHpText, pos3 + maxHpOrigin, valColor, _global.Palette_Off, hpRot, maxHpOrigin, hpScale, SpriteEffects.None, 0f);
+            }
+        }
+
+        public void DrawRestartBar(SpriteBatch spriteBatch, float restartHoldTimer, float holdDuration)
+        {
+            if (restartHoldTimer <= 0f) return;
+
+            var secFont = _core.SecondaryFont;
+            float progress = Math.Clamp(restartHoldTimer / holdDuration, 0f, 1f);
+            string restartText = "HOLD R TO RESTART";
+            Vector2 rSize = secFont.MeasureString(restartText);
+            Vector2 rPos = new Vector2(Global.VIRTUAL_WIDTH / 2f - rSize.X / 2f, Global.VIRTUAL_HEIGHT - 20);
+
+            spriteBatch.DrawStringOutlinedSnapped(secFont, restartText, rPos, _global.Palette_LightPale, _global.Palette_Off);
+
+            int barWidth = 100;
+            int barHeight = 4;
+            int barX = Global.VIRTUAL_WIDTH / 2 - barWidth / 2;
+            int barY = (int)rPos.Y + (int)rSize.Y + 4;
+
+            spriteBatch.Draw(_pixel, new Rectangle(barX - 1, barY - 1, barWidth + 2, barHeight + 2), _global.Palette_Off);
+            spriteBatch.Draw(_pixel, new Rectangle(barX, barY, barWidth, barHeight), _global.Palette_DarkShadow);
+            spriteBatch.Draw(_pixel, new Rectangle(barX, barY, (int)(barWidth * progress), barHeight), _global.Palette_Sun);
+        }
+
+        public void DrawFloorCleared(SpriteBatch spriteBatch)
+        {
+            var defFont = _core.DefaultFont;
+            spriteBatch.Draw(_pixel, new Rectangle(0, 0, Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT), Color.Black * 0.6f);
+            string text = "FLOOR CLEARED";
+            Vector2 size = defFont.MeasureString(text);
+            spriteBatch.DrawStringOutlinedSnapped(defFont, text, new Vector2(Global.VIRTUAL_WIDTH / 2f - size.X / 2f, Global.VIRTUAL_HEIGHT / 2f - size.Y / 2f), _global.Palette_Sun, _global.Palette_Off);
+        }
+
+        public void DrawRewardSelection(SpriteBatch spriteBatch, GameTime gameTime, Matrix transform)
+        {
+            var defFont = _core.DefaultFont;
+            spriteBatch.Draw(_pixel, new Rectangle(0, 0, Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT), Color.Black * 0.8f);
+            string text = "CHOOSE A REWARD";
+            Vector2 size = defFont.MeasureString(text);
+            spriteBatch.DrawStringOutlinedSnapped(defFont, text, new Vector2(Global.VIRTUAL_WIDTH / 2f - size.X / 2f, 30), _global.Palette_Sun, _global.Palette_Off);
+
+            foreach (var btn in RewardButtons)
+            {
+                btn.Draw(spriteBatch, defFont, gameTime, transform);
+            }
+        }
+
+        public void DrawGameOver(SpriteBatch spriteBatch, GameTime gameTime, Matrix transform, int health, int displayScore)
+        {
+            var defFont = _core.DefaultFont;
+            var secFont = _core.SecondaryFont;
+
+            spriteBatch.Draw(_pixel, new Rectangle(0, 0, Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT), Color.Black * 0.8f);
+
+            string result = health > 0 ? "VICTORY" : "DEFEAT";
+            Color resColor = health > 0 ? _global.Palette_Sun : _global.Palette_Rust;
+
+            Vector2 rSize = defFont.MeasureString(result);
+            spriteBatch.DrawStringOutlinedSnapped(defFont, result, new Vector2(Global.VIRTUAL_WIDTH / 2f - rSize.X / 2f, 60), resColor, _global.Palette_Off);
+
+            string scoreText = $"SCORE: {displayScore}";
+            Vector2 sSize = secFont.MeasureString(scoreText);
+            spriteBatch.DrawStringOutlinedSnapped(secFont, scoreText, new Vector2(Global.VIRTUAL_WIDTH / 2f - sSize.X / 2f, 90), _global.Palette_LightPale, _global.Palette_Off);
+
+            TryAgainButton.Draw(spriteBatch, secFont, gameTime, transform);
+            ExitButton.Draw(spriteBatch, secFont, gameTime, transform);
+        }
+
+        public void DrawPauseMenu(SpriteBatch spriteBatch, GameTime gameTime, Matrix transform)
+        {
+            var defFont = _core.DefaultFont;
+            var secFont = _core.SecondaryFont;
+            spriteBatch.Draw(_pixel, new Rectangle(0, 0, Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT), Color.Black * 0.7f);
+
+            string pauseText = "PAUSED";
+            Vector2 pSize = secFont.MeasureString(pauseText);
+            spriteBatch.DrawStringOutlinedSnapped(secFont, pauseText, new Vector2(Global.VIRTUAL_WIDTH / 2f - pSize.X / 2f, 30), _global.Palette_Sun, _global.Palette_Off);
+
+            foreach (var btn in PauseButtons)
+            {
+                btn.Draw(spriteBatch, defFont, gameTime, transform);
+            }
+
+            if (ConfirmationDialog.IsActive)
+            {
+                ConfirmationDialog.DrawContent(spriteBatch, defFont, gameTime, transform);
             }
         }
     }
