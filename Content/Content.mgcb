@@ -75,6 +75,30 @@
 /processorParam:Quality=Best
 /build:Audio/Music/Seven_Loop.wav;Audio/Music/Seven_Loop
 
+#begin Audio/Music/Tallbeard_Studios_-_Sketchbook_2024-02-21_01_Muffled.wav
+/importer:WavImporter
+/processor:SoundEffectProcessor
+/processorParam:Quality=Best
+/build:Audio/Music/Tallbeard_Studios_-_Sketchbook_2024-02-21_01_Muffled.wav;Audio/Music/Tallbeard_Studios_-_Sketchbook_2024-02-21_01_Muffled
+
+#begin Audio/Music/Tallbeard_Studios_-_Sketchbook_2024-02-21_01.wav
+/importer:WavImporter
+/processor:SoundEffectProcessor
+/processorParam:Quality=Best
+/build:Audio/Music/Tallbeard_Studios_-_Sketchbook_2024-02-21_01.wav;Audio/Music/Tallbeard_Studios_-_Sketchbook_2024-02-21_01
+
+#begin Audio/Music/Voltz_Supreme_-_Mind_Float_Muffled.wav
+/importer:WavImporter
+/processor:SoundEffectProcessor
+/processorParam:Quality=Best
+/build:Audio/Music/Voltz_Supreme_-_Mind_Float_Muffled.wav;Audio/Music/Voltz_Supreme_-_Mind_Float_Muffled
+
+#begin Audio/Music/Voltz_Supreme_-_Mind_Float.wav
+/importer:WavImporter
+/processor:SoundEffectProcessor
+/processorParam:Quality=Best
+/build:Audio/Music/Voltz_Supreme_-_Mind_Float.wav;Audio/Music/Voltz_Supreme_-_Mind_Float
+
 #begin Audio/SFX/combatant_heal.wav
 /importer:WavImporter
 /processor:SoundEffectProcessor

@@ -189,19 +189,12 @@ namespace ProjectVagabond.Scenes
             }
         }
 
-        public void CalculateSpeedGold(RunContext runContext, ScoundrelUIController ui)
+        public int GetSpeedGoldAmount()
         {
             float secondsPerCard = TotalCardsInFloor > 0 ? FloorTimer / TotalCardsInFloor : 0f;
             float t = Math.Clamp((SpeedGoldZeroSecondsPerCard - secondsPerCard) / (SpeedGoldZeroSecondsPerCard - SpeedGoldTargetSecondsPerCard), 0f, (float)SpeedGoldMaxAmount / SpeedGoldTargetAmount);
             int speedGold = (int)MathF.Round(t * SpeedGoldTargetAmount);
-            speedGold = Math.Clamp(speedGold, 0, SpeedGoldMaxAmount);
-
-            if (speedGold > 0)
-            {
-                runContext.Gold += speedGold;
-                ui.AddFloatingText(speedGold, false, true, new Vector2(Global.VIRTUAL_WIDTH - 30, 24f));
-                ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlayRoutedSfx("proc:wave=2;freq=1600;slide=200;atk=0.01;sus=0.05;dec=0.2;vol=0.05", 0.1f);
-            }
+            return Math.Clamp(speedGold, 0, SpeedGoldMaxAmount);
         }
 
         public void ApplyDamage(int amount, ScoundrelUIController ui, Core core, HapticsManager haptics)

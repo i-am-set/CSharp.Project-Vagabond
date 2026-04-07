@@ -9,6 +9,7 @@ using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 
 namespace ProjectVagabond.Scenes
@@ -58,6 +59,9 @@ namespace ProjectVagabond.Scenes
         private int _tallyPhase = 0;
         private int _tallyIndex = 0;
         private List<Card> _tallyPotions = new List<Card>();
+
+        private int _pendingSpeedGold = 0;
+        private bool _speedGoldApplied = false;
 
         private float _sweepTimer = 0f;
 
@@ -527,6 +531,23 @@ namespace ProjectVagabond.Scenes
 
             _board.Update(dt);
 
+            if (_state == ScoundrelState.FloorCleared || _state == ScoundrelState.TallyingPotions || _state == ScoundrelState.SweepingBoard || _state == ScoundrelState.Shop)
+            {
+                _ui.HealthBarOpacity = Math.Max(0f, _ui.HealthBarOpacity - dt * 5f);
+            }
+            else
+            {
+                _ui.HealthBarOpacity = Math.Min(1f, _ui.HealthBarOpacity + dt * 5f);
+            }
+
+            if (_state != ScoundrelState.TallyingPotions || _tallyPhase < 2)
+            {
+                _ui.TimerPosition = Vector2.Lerp(_ui.TimerPosition, new Vector2(Global.VIRTUAL_WIDTH / 2f, 12f), 10f * dt);
+                _ui.TimerOverrideText = null;
+                _ui.TimerColor = _global.Palette_LightPale;
+                _ui.TimerOpacity = 1f;
+            }
+
             switch (_state)
             {
                 case ScoundrelState.Intro: UpdateIntro(dt, justClicked); break;
@@ -859,13 +880,14 @@ namespace ProjectVagabond.Scenes
                 _tallyPotions.AddRange(_board.Room.Where(c => c.Type == CardType.Potion));
                 _tallyPotions.AddRange(_board.Deck.Where(c => c.Type == CardType.Potion));
 
+                _state = ScoundrelState.TallyingPotions;
+                _tallyPhase = _tallyPotions.Count > 0 ? 0 : 2;
+                _tallyTimer = 0f;
+                _tallyIndex = 0;
+                _speedGoldApplied = false;
+
                 if (_tallyPotions.Count > 0)
                 {
-                    _state = ScoundrelState.TallyingPotions;
-                    _tallyPhase = 0;
-                    _tallyTimer = 0f;
-                    _tallyIndex = 0;
-
                     float startX = (Global.VIRTUAL_WIDTH / 2f) - ((_tallyPotions.Count - 1) * 20f / 2f);
                     for (int i = 0; i < _tallyPotions.Count; i++)
                     {
@@ -876,10 +898,6 @@ namespace ProjectVagabond.Scenes
                         p.RoomSlotIndex = -1;
                     }
                     ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlayRoutedSfx("proc:wave=2;freq=300;slide=100;atk=0.05;sus=0.05;dec=0.2;vol=0.08", 0.15f);
-                }
-                else
-                {
-                    StartSweepingBoard();
                 }
             }
         }
@@ -928,7 +946,48 @@ namespace ProjectVagabond.Scenes
                         _board.Room.Remove(p);
                         _board.Deck.Remove(p);
                     }
-                    StartSweepingBoard();
+                    _tallyPhase = 2;
+                    _tallyTimer = 0f;
+                    _speedGoldApplied = false;
+                }
+            }
+            else if (_tallyPhase == 2)
+            {
+                Vector2 targetPos = new Vector2(Global.VIRTUAL_WIDTH / 2f, Global.VIRTUAL_HEIGHT / 2f);
+                _ui.TimerPosition = Vector2.Lerp(_ui.TimerPosition, targetPos, 10f * dt);
+
+                if (_ui.FloatingTexts.Count == 0 && !_speedGoldApplied)
+                {
+                    _tallyTimer += dt;
+                    if (_tallyTimer > 0.5f)
+                    {
+                        _speedGoldApplied = true;
+                        _ui.TimerOpacity = 0f;
+
+                        if (_pendingSpeedGold > 0)
+                        {
+                            _runContext.Gold += _pendingSpeedGold;
+                            _ui.AddFloatingText(_pendingSpeedGold, false, true, _ui.TimerPosition);
+                            ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlayRoutedSfx("proc:wave=2;freq=1600;slide=200;atk=0.01;sus=0.05;dec=0.2;vol=0.05", 0.1f);
+
+                            var psm = ServiceLocator.Get<ParticleSystemManager>();
+                            var emitter = psm.CreateEmitter(ParticleEffects.CreateUIPlink());
+                            emitter.Position = _ui.TimerPosition;
+                            emitter.EmitBurst(15);
+                        }
+                        else
+                        {
+                            _ui.AddFloatingText(0, false, true, _ui.TimerPosition);
+                        }
+                    }
+                }
+                else if (_speedGoldApplied)
+                {
+                    _tallyTimer += dt;
+                    if (_tallyTimer > 1.5f)
+                    {
+                        StartSweepingBoard();
+                    }
                 }
             }
         }
@@ -1156,7 +1215,7 @@ namespace ProjectVagabond.Scenes
                 }
                 else
                 {
-                    _combat.CalculateSpeedGold(_runContext, _ui);
+                    _pendingSpeedGold = _combat.GetSpeedGoldAmount();
                     _state = ScoundrelState.FloorCleared;
                     _floorClearedTimer = 1.5f;
                     _ui.FloorClearedTextTimer = 0f;
@@ -1274,7 +1333,6 @@ namespace ProjectVagabond.Scenes
             spriteBatch.End();
             spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp, null, null, null, transform);
 
-            _ui.DrawTimer(spriteBatch, _combat.FloorTimer);
             _ui.DrawCounters(spriteBatch, _board.Deck.Count, _board.Discard.Count, _board.DeckPos, _board.DiscardPos);
             _ui.DrawHoverIndicators(spriteBatch, _lastHoveredCard, _state, _board, _combat, _runContext.MaxHealth, _previewFlashTimer);
             _ui.DrawHealthBar(spriteBatch, _combat.Health, GetPreviewHealth(), _runContext.MaxHealth, _spriteManager);
@@ -1300,6 +1358,8 @@ namespace ProjectVagabond.Scenes
             {
                 _ui.DrawPauseMenu(spriteBatch, gameTime, transform);
             }
+
+            _ui.DrawTimer(spriteBatch, _combat.FloorTimer);
         }
     }
 }

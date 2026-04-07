@@ -40,6 +40,12 @@ namespace ProjectVagabond.Scenes
         public float FloorClearedTextTimer { get; set; }
         public float ShopFadeTimer { get; set; }
 
+        public float HealthBarOpacity { get; set; } = 1f;
+        public Vector2 TimerPosition { get; set; } = new Vector2(Global.VIRTUAL_WIDTH / 2f, 12f);
+        public string TimerOverrideText { get; set; } = null;
+        public Color TimerColor { get; set; } = Color.White;
+        public float TimerOpacity { get; set; } = 1f;
+
         private Global _global;
         private Core _core;
         private Texture2D _pixel;
@@ -66,8 +72,15 @@ namespace ProjectVagabond.Scenes
             var secFont = _core.SecondaryFont;
             var defFont = _core.DefaultFont;
 
-            TryAgainButton = new Button(new Rectangle(Global.VIRTUAL_WIDTH / 2 - 35, 110, 70, 15), "TRY AGAIN", font: secFont) { DrawBorderOnHover = true };
-            ExitButton = new Button(new Rectangle(Global.VIRTUAL_WIDTH / 2 - 35, 125, 70, 15), "MAIN MENU", font: secFont) { DrawBorderOnHover = true };
+            Vector2 tryAgainSize = secFont.MeasureString("TRY AGAIN");
+            int taWidth = (int)tryAgainSize.X + 8;
+            int taHeight = (int)tryAgainSize.Y + 7;
+            TryAgainButton = new Button(new Rectangle(Global.VIRTUAL_WIDTH / 2 - taWidth / 2, 110, taWidth, taHeight), "TRY AGAIN", font: secFont) { DrawBorderOnHover = true, TextRenderOffset = new Vector2(0, 0.5f) };
+
+            Vector2 exitSize = secFont.MeasureString("MAIN MENU");
+            int exWidth = (int)exitSize.X + 8;
+            int exHeight = (int)exitSize.Y + 7;
+            ExitButton = new Button(new Rectangle(Global.VIRTUAL_WIDTH / 2 - exWidth / 2, 125, exWidth, exHeight), "MAIN MENU", font: secFont) { DrawBorderOnHover = true, TextRenderOffset = new Vector2(0, 0.5f) };
 
             int startY = Global.VIRTUAL_HEIGHT / 2 - 30;
             int spacing = 18;
@@ -312,16 +325,24 @@ namespace ProjectVagabond.Scenes
 
         public void DrawTimer(SpriteBatch spriteBatch, float floorTimer)
         {
+            if (TimerOpacity <= 0.01f) return;
+
             var secFont = _core.SecondaryFont;
-            TimeSpan time = TimeSpan.FromSeconds(floorTimer);
-            string timeStr = time.ToString(@"mm\:ss");
+            string timeStr = TimerOverrideText;
+            if (timeStr == null)
+            {
+                TimeSpan time = TimeSpan.FromSeconds(floorTimer);
+                timeStr = time.ToString(@"mm\:ss");
+            }
             Vector2 size = secFont.MeasureString(timeStr);
-            Vector2 pos = new Vector2(MathF.Round(Global.VIRTUAL_WIDTH / 2f - size.X / 2f), 8f);
-            spriteBatch.DrawStringOutlinedSnapped(secFont, timeStr, pos, _global.Palette_LightPale, _global.Palette_Off);
+            Vector2 pos = new Vector2(MathF.Round(TimerPosition.X - size.X / 2f), MathF.Round(TimerPosition.Y - size.Y / 2f));
+            spriteBatch.DrawStringOutlinedSnapped(secFont, timeStr, pos, TimerColor * TimerOpacity, _global.Palette_Off * TimerOpacity);
         }
 
         public void DrawHealthBar(SpriteBatch spriteBatch, int health, int previewHealth, int maxHealth, SpriteManager spriteManager)
         {
+            if (HealthBarOpacity <= 0.01f) return;
+
             var heartSheet = spriteManager.HealthHearts7x6SpriteSheet;
             float hpScale = HealthPlink.IsActive ? HealthPlink.Scale : 1f;
 
@@ -334,6 +355,9 @@ namespace ProjectVagabond.Scenes
                 int totalWidth = maxHearts * heartWidth + (maxHearts - 1) * spacing;
 
                 Vector2 barCenter = new Vector2(Global.VIRTUAL_WIDTH / 2f, 24f);
+
+                Color offColor = _global.Palette_Off * HealthBarOpacity;
+                Color whiteColor = Color.White * HealthBarOpacity;
 
                 for (int i = 0; i < maxHearts; i++)
                 {
@@ -363,12 +387,12 @@ namespace ProjectVagabond.Scenes
                     Vector2 finalPos = barCenter + offset * hpScale;
                     Vector2 origin = new Vector2(heartWidth / 2f, heartHeight / 2f);
 
-                    spriteBatch.DrawSnapped(heartSheet, finalPos + new Vector2(-1, 0), sourceRect, _global.Palette_Off, 0f, origin, hpScale, SpriteEffects.None, 0f);
-                    spriteBatch.DrawSnapped(heartSheet, finalPos + new Vector2(1, 0), sourceRect, _global.Palette_Off, 0f, origin, hpScale, SpriteEffects.None, 0f);
-                    spriteBatch.DrawSnapped(heartSheet, finalPos + new Vector2(0, -1), sourceRect, _global.Palette_Off, 0f, origin, hpScale, SpriteEffects.None, 0f);
-                    spriteBatch.DrawSnapped(heartSheet, finalPos + new Vector2(0, 1), sourceRect, _global.Palette_Off, 0f, origin, hpScale, SpriteEffects.None, 0f);
+                    spriteBatch.DrawSnapped(heartSheet, finalPos + new Vector2(-1, 0), sourceRect, offColor, 0f, origin, hpScale, SpriteEffects.None, 0f);
+                    spriteBatch.DrawSnapped(heartSheet, finalPos + new Vector2(1, 0), sourceRect, offColor, 0f, origin, hpScale, SpriteEffects.None, 0f);
+                    spriteBatch.DrawSnapped(heartSheet, finalPos + new Vector2(0, -1), sourceRect, offColor, 0f, origin, hpScale, SpriteEffects.None, 0f);
+                    spriteBatch.DrawSnapped(heartSheet, finalPos + new Vector2(0, 1), sourceRect, offColor, 0f, origin, hpScale, SpriteEffects.None, 0f);
 
-                    spriteBatch.DrawSnapped(heartSheet, finalPos, sourceRect, Color.White, 0f, origin, hpScale, SpriteEffects.None, 0f);
+                    spriteBatch.DrawSnapped(heartSheet, finalPos, sourceRect, whiteColor, 0f, origin, hpScale, SpriteEffects.None, 0f);
                 }
 
                 string hpLabel = "HP ";
@@ -416,9 +440,14 @@ namespace ProjectVagabond.Scenes
 
                 float hpRot = HealthPlink.IsActive ? HealthPlink.Rotation : 0f;
 
-                spriteBatch.DrawStringOutlinedSnapped(tertFont, hpLabel, pos1 + hpLabelOrigin, _global.Palette_DarkestPale, _global.Palette_Off, hpRot, hpLabelOrigin, hpScale, SpriteEffects.None, 0f);
-                spriteBatch.DrawStringOutlinedSnapped(defFont, currentHpText, pos2 + hpTextOrigin, currentHpTextColor, _global.Palette_Off, hpRot, hpTextOrigin, hpScale, SpriteEffects.None, 0f);
-                spriteBatch.DrawStringOutlinedSnapped(tertFont, maxHpText, pos3 + maxHpOrigin, valColor, _global.Palette_Off, hpRot, maxHpOrigin, hpScale, SpriteEffects.None, 0f);
+                Color labelColor = _global.Palette_DarkestPale * HealthBarOpacity;
+                Color valColorOp = valColor * HealthBarOpacity;
+                Color currentHpTextColorOp = currentHpTextColor * HealthBarOpacity;
+                Color outlineColor = _global.Palette_Off * HealthBarOpacity;
+
+                spriteBatch.DrawStringOutlinedSnapped(tertFont, hpLabel, pos1 + hpLabelOrigin, labelColor, outlineColor, hpRot, hpLabelOrigin, hpScale, SpriteEffects.None, 0f);
+                spriteBatch.DrawStringOutlinedSnapped(defFont, currentHpText, pos2 + hpTextOrigin, currentHpTextColorOp, outlineColor, hpRot, hpTextOrigin, hpScale, SpriteEffects.None, 0f);
+                spriteBatch.DrawStringOutlinedSnapped(tertFont, maxHpText, pos3 + maxHpOrigin, valColorOp, outlineColor, hpRot, maxHpOrigin, hpScale, SpriteEffects.None, 0f);
             }
         }
 
@@ -471,7 +500,7 @@ namespace ProjectVagabond.Scenes
             var defFont = _core.DefaultFont;
             string text = "FLOOR CLEARED";
             Vector2 size = defFont.MeasureString(text);
-            Vector2 pos = new Vector2(Global.VIRTUAL_WIDTH / 2f - size.X / 2f, Global.VIRTUAL_HEIGHT / 2f - size.Y / 2f - 30);
+            Vector2 pos = new Vector2(Global.VIRTUAL_WIDTH / 2f - size.X / 2f, 24f - size.Y / 2f);
 
             TextAnimator.DrawTextWithEffectOutlined(
                 spriteBatch,
