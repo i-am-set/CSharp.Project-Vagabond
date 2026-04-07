@@ -8,6 +8,7 @@ namespace ProjectVagabond.UI
         public bool IsPooled { get; set; }
         public int Number;
         public bool IsHealing;
+        public bool IsGold;
         public bool IsCrit;
         public float Timer;
         public float Duration;
@@ -18,6 +19,7 @@ namespace ProjectVagabond.UI
         {
             Number = 0;
             IsHealing = false;
+            IsGold = false;
             IsCrit = false;
             Timer = 0f;
             Duration = 0f;

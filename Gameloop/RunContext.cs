@@ -13,12 +13,14 @@
         public int MaxFloors { get; set; } = 9;
         public int Health { get; set; } = 20;
         public int MaxHealth { get; set; } = 20;
+        public int Gold { get; set; } = 0;
 
         public void Reset()
         {
             Floor = 1;
             MaxHealth = 20;
             Health = MaxHealth;
+            Gold = 0;
         }
     }
 }

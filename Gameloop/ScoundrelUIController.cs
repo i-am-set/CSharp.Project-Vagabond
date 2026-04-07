@@ -19,8 +19,8 @@ namespace ProjectVagabond.Scenes
         public Button ExitButton { get; private set; }
         public List<Button> PauseButtons { get; } = new List<Button>();
         public NavigationGroup PauseNavGroup { get; } = new NavigationGroup(wrapNavigation: true);
-        public List<Button> RewardButtons { get; } = new List<Button>();
-        public NavigationGroup RewardNavGroup { get; } = new NavigationGroup(wrapNavigation: true);
+        public List<Button> ShopButtons { get; } = new List<Button>();
+        public NavigationGroup ShopNavGroup { get; } = new NavigationGroup(wrapNavigation: true);
         public ConfirmationDialog ConfirmationDialog { get; private set; }
 
         public PlinkAnimator DeckCountPlink { get; } = new PlinkAnimator { MaxScale = 1.5f, RestScale = 1.0f };
@@ -36,6 +36,9 @@ namespace ProjectVagabond.Scenes
         public const float HEART_FLASH_DURATION = 0.75f;
         public const float HEART_FLASH_BLINK_INTERVAL = 0.15f;
         public const float HEART_FLASH_BLINK_HALF = 0.075f;
+
+        public float FloorClearedTextTimer { get; set; }
+        public float ShopFadeTimer { get; set; }
 
         private Global _global;
         private Core _core;
@@ -108,11 +111,15 @@ namespace ProjectVagabond.Scenes
             Array.Clear(HeartFlashTimers, 0, 20);
             Array.Clear(HeartFlashFrames, 0, 20);
             HpTextFlashTimer = 0f;
+            FloorClearedTextTimer = 0f;
+            ShopFadeTimer = 0f;
         }
 
         public void Update(float dt, GameTime gameTime, Vector2 deckPos, Vector2 discardPos)
         {
             if (HpTextFlashTimer > 0) HpTextFlashTimer -= dt;
+            FloorClearedTextTimer += dt;
+            ShopFadeTimer += dt;
 
             for (int i = 0; i < 20; i++)
             {
@@ -132,15 +139,16 @@ namespace ProjectVagabond.Scenes
             HealthPlink.Update(gameTime, hpCenter);
         }
 
-        public void AddFloatingText(int amount, bool isHealing)
+        public void AddFloatingText(int amount, bool isHealing, bool isGold = false, Vector2? position = null)
         {
-            FloatingTexts.Add(new FloatingText { Number = amount, IsHealing = isHealing, Timer = 1.0f, LocalOffset = new Vector2(Global.VIRTUAL_WIDTH / 2f, 24f) });
+            Vector2 startPos = position ?? new Vector2(Global.VIRTUAL_WIDTH / 2f, 24f);
+            FloatingTexts.Add(new FloatingText { Number = amount, IsHealing = isHealing, IsGold = isGold, Timer = 1.0f, LocalOffset = startPos });
         }
 
-        public void GenerateRewards(ScoundrelScene scene, RunContext runContext, ScoundrelCombatController combat)
+        public void GenerateShop(ScoundrelScene scene, RunContext runContext, ScoundrelCombatController combat)
         {
-            RewardButtons.Clear();
-            RewardNavGroup.Clear();
+            ShopButtons.Clear();
+            ShopNavGroup.Clear();
 
             var defFont = _core.DefaultFont;
             int btnWidth = 160;
@@ -149,28 +157,42 @@ namespace ProjectVagabond.Scenes
             int spacing = 24;
             int centerX = Global.VIRTUAL_WIDTH / 2 - btnWidth / 2;
 
-            var healBtn = new Button(new Rectangle(centerX, startY, btnWidth, btnHeight), "HEAL 5 HP", font: defFont);
-            healBtn.OnClick += () => scene.ApplyRewardAndAdvance(() => { combat.Health = Math.Min(runContext.MaxHealth, combat.Health + 5); });
-            RewardButtons.Add(healBtn);
-            RewardNavGroup.Add(healBtn);
+            var healBtn = new Button(new Rectangle(centerX, startY, btnWidth, btnHeight), "HEAL 5 HP (3g)", font: defFont);
+            healBtn.OnClick += () =>
+            {
+                if (runContext.Gold >= 3 && combat.Health < runContext.MaxHealth)
+                {
+                    runContext.Gold -= 3;
+                    combat.Health = Math.Min(runContext.MaxHealth, combat.Health + 5);
+                    ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlayUi("ui_confirm");
+                }
+                else
+                {
+                    ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlayUi("ui_alert");
+                }
+            };
+            ShopButtons.Add(healBtn);
+            ShopNavGroup.Add(healBtn);
 
-            var maxHpBtn = new Button(new Rectangle(centerX, startY + spacing, btnWidth, btnHeight), "MAX HP +2", font: defFont);
-            maxHpBtn.OnClick += () => scene.ApplyRewardAndAdvance(() => { runContext.MaxHealth += 2; combat.Health += 2; });
-            RewardButtons.Add(maxHpBtn);
-            RewardNavGroup.Add(maxHpBtn);
+            var leaveBtn = new Button(new Rectangle(centerX, startY + spacing, btnWidth, btnHeight), "LEAVE SHOP", font: defFont);
+            leaveBtn.OnClick += () => scene.ApplyRewardAndAdvance(null);
+            ShopButtons.Add(leaveBtn);
+            ShopNavGroup.Add(leaveBtn);
 
-            var riskBtn = new Button(new Rectangle(centerX, startY + spacing * 2, btnWidth, btnHeight), "MAX HP +4, TAKE 2 DMG", font: defFont);
-            riskBtn.OnClick += () => scene.ApplyRewardAndAdvance(() => { runContext.MaxHealth += 4; combat.Health -= 2; });
-            RewardButtons.Add(riskBtn);
-            RewardNavGroup.Add(riskBtn);
+            float delay = 0f;
+            foreach (var btn in ShopButtons)
+            {
+                btn.PlayEntrance(delay);
+                delay += 0.1f;
+            }
 
             if (ServiceLocator.Get<InputManager>().CurrentInputDevice != InputDeviceType.Mouse)
             {
-                RewardNavGroup.SelectFirst();
+                ShopNavGroup.SelectFirst();
             }
             else
             {
-                RewardNavGroup.DeselectAll();
+                ShopNavGroup.DeselectAll();
             }
         }
 
@@ -245,8 +267,8 @@ namespace ProjectVagabond.Scenes
             var secFont = _core.SecondaryFont;
             foreach (var ft in FloatingTexts)
             {
-                Color c = ft.IsHealing ? _global.Palette_Leaf : _global.Palette_Rust;
-                string text = (ft.IsHealing ? "+" : "-") + ft.Number;
+                Color c = ft.IsGold ? _global.Palette_Sun : (ft.IsHealing ? _global.Palette_Leaf : _global.Palette_Rust);
+                string text = ft.IsGold ? $"+{ft.Number}g" : ((ft.IsHealing ? "+" : "-") + ft.Number);
                 Vector2 size = secFont.MeasureString(text);
                 Vector2 drawPos = new Vector2(MathF.Round(ft.LocalOffset.X - size.X / 2f), MathF.Round(ft.LocalOffset.Y));
                 spriteBatch.DrawStringOutlinedSnapped(secFont, text, drawPos, c, _global.Palette_Off);
@@ -286,6 +308,16 @@ namespace ProjectVagabond.Scenes
                 Vector2 startX = new Vector2(MathF.Round(hoverPos.X - dmgSize.X / 2f), MathF.Round(hoverPos.Y - dmgSize.Y / 2f));
                 spriteBatch.DrawStringOutlinedSnapped(defFont, dmgText, startX, _global.Palette_Rust, _global.Palette_Off);
             }
+        }
+
+        public void DrawTimer(SpriteBatch spriteBatch, float floorTimer)
+        {
+            var secFont = _core.SecondaryFont;
+            TimeSpan time = TimeSpan.FromSeconds(floorTimer);
+            string timeStr = time.ToString(@"mm\:ss");
+            Vector2 size = secFont.MeasureString(timeStr);
+            Vector2 pos = new Vector2(MathF.Round(Global.VIRTUAL_WIDTH / 2f - size.X / 2f), 8f);
+            spriteBatch.DrawStringOutlinedSnapped(secFont, timeStr, pos, _global.Palette_LightPale, _global.Palette_Off);
         }
 
         public void DrawHealthBar(SpriteBatch spriteBatch, int health, int previewHealth, int maxHealth, SpriteManager spriteManager)
@@ -390,6 +422,28 @@ namespace ProjectVagabond.Scenes
             }
         }
 
+        public void DrawGold(SpriteBatch spriteBatch, int gold)
+        {
+            var defFont = _core.DefaultFont;
+            var tertFont = _core.TertiaryFont;
+
+            string goldText = gold.ToString();
+            string gText = "g";
+
+            Vector2 goldSize = defFont.MeasureString(goldText);
+            Vector2 gSize = tertFont.MeasureString(gText);
+
+            float totalWidth = goldSize.X + gSize.X + 1;
+            float startX = Global.VIRTUAL_WIDTH - totalWidth - 10;
+            float startY = 10;
+
+            Vector2 goldPos = new Vector2(MathF.Round(startX), MathF.Round(startY));
+            Vector2 gPos = new Vector2(MathF.Round(startX + goldSize.X + 1), MathF.Round(startY + goldSize.Y - gSize.Y));
+
+            spriteBatch.DrawStringOutlinedSnapped(defFont, goldText, goldPos, _global.Palette_Sun, _global.Palette_Off);
+            spriteBatch.DrawStringOutlinedSnapped(tertFont, gText, gPos, _global.Palette_Sun, _global.Palette_Off);
+        }
+
         public void DrawRestartBar(SpriteBatch spriteBatch, float restartHoldTimer, float holdDuration)
         {
             if (restartHoldTimer <= 0f) return;
@@ -415,21 +469,44 @@ namespace ProjectVagabond.Scenes
         public void DrawFloorCleared(SpriteBatch spriteBatch)
         {
             var defFont = _core.DefaultFont;
-            spriteBatch.Draw(_pixel, new Rectangle(0, 0, Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT), Color.Black * 0.6f);
             string text = "FLOOR CLEARED";
             Vector2 size = defFont.MeasureString(text);
-            spriteBatch.DrawStringOutlinedSnapped(defFont, text, new Vector2(Global.VIRTUAL_WIDTH / 2f - size.X / 2f, Global.VIRTUAL_HEIGHT / 2f - size.Y / 2f), _global.Palette_Sun, _global.Palette_Off);
+            Vector2 pos = new Vector2(Global.VIRTUAL_WIDTH / 2f - size.X / 2f, Global.VIRTUAL_HEIGHT / 2f - size.Y / 2f - 30);
+
+            TextAnimator.DrawTextWithEffectOutlined(
+                spriteBatch,
+                defFont,
+                text,
+                pos,
+                _global.Palette_Sun,
+                _global.Palette_Off,
+                TextEffectType.TypewriterPop,
+                FloorClearedTextTimer
+            );
         }
 
-        public void DrawRewardSelection(SpriteBatch spriteBatch, GameTime gameTime, Matrix transform)
+        public void DrawShop(SpriteBatch spriteBatch, GameTime gameTime, Matrix transform)
         {
             var defFont = _core.DefaultFont;
-            spriteBatch.Draw(_pixel, new Rectangle(0, 0, Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT), Color.Black * 0.8f);
-            string text = "CHOOSE A REWARD";
-            Vector2 size = defFont.MeasureString(text);
-            spriteBatch.DrawStringOutlinedSnapped(defFont, text, new Vector2(Global.VIRTUAL_WIDTH / 2f - size.X / 2f, 30), _global.Palette_Sun, _global.Palette_Off);
 
-            foreach (var btn in RewardButtons)
+            float alpha = Math.Clamp(ShopFadeTimer / 0.3f, 0f, 1f);
+            spriteBatch.Draw(_pixel, new Rectangle(0, 0, Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT), Color.Black * (0.8f * alpha));
+
+            string text = "SHOP";
+            Vector2 size = defFont.MeasureString(text);
+
+            TextAnimator.DrawTextWithEffectOutlined(
+                spriteBatch,
+                defFont,
+                text,
+                new Vector2(Global.VIRTUAL_WIDTH / 2f - size.X / 2f, 30),
+                _global.Palette_Sun * alpha,
+                _global.Palette_Off * alpha,
+                TextEffectType.TypewriterPop,
+                ShopFadeTimer
+            );
+
+            foreach (var btn in ShopButtons)
             {
                 btn.Draw(spriteBatch, defFont, gameTime, transform);
             }

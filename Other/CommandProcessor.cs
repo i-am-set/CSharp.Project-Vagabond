@@ -48,6 +48,7 @@ namespace ProjectVagabond
                 sb.AppendLine("    exit                               - Exits game.");
                 sb.AppendLine("    fps                                - Toggles FPS counter.");
                 sb.AppendLine("    debug_consolefont <0|1|2>          - Sets the debug console font.");
+                sb.AppendLine("    debug_godmode <true|false>         - Toggles player damage immunity.");
 
                 foreach (var line in sb.ToString().Split(new[] { Environment.NewLine }, StringSplitOptions.None))
                 {
@@ -164,6 +165,17 @@ namespace ProjectVagabond
                 ServiceLocator.Get<DebugConsole>().SetFontIndex(index);
                 Log($"[Palette_Sky]Debug Console Font set to index {index}.");
             }, "debug_consolefont <0|1|2> - Sets the debug console font.");
+
+            _commands["debug_godmode"] = new Command("debug_godmode", (args) =>
+            {
+                if (args.Length < 2 || !bool.TryParse(args[1], out bool result))
+                {
+                    Log("[error]Usage: debug_godmode <true|false>");
+                    return;
+                }
+                Global.Instance.DebugGodMode = result;
+                Log($"[Palette_Sky]God Mode set to {result}.");
+            }, "debug_godmode <true|false> - Toggles player damage immunity.");
 
             _commands["fps"] = new Command("fps", (args) =>
             {

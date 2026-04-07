@@ -64,6 +64,8 @@ namespace ProjectVagabond
 
         public const float UniversalSlowFadeDuration = 3.0f;
 
+        public bool DebugGodMode { get; set; } = false;
+
         public float HoverHapticStrength { get; set; } = 0.25f;
         public float ButtonHapticStrength { get; set; } = 0.5f;
         public float ButtonHapticDuration { get; set; } = 0.15f;

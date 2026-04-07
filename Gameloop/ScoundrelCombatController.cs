@@ -14,6 +14,14 @@ namespace ProjectVagabond.Scenes
         public int PotionsUsedThisRoom { get; set; }
         public bool CanSkip { get; set; }
 
+        public float FloorTimer { get; set; }
+        public int TotalCardsInFloor { get; set; }
+
+        public float SpeedGoldTargetSecondsPerCard = 1.0f;
+        public int SpeedGoldTargetAmount = 5;
+        public float SpeedGoldZeroSecondsPerCard = 6.0f;
+        public int SpeedGoldMaxAmount = 15;
+
         public Card? ResolvingMonster { get; set; }
         public float ResolveTimer { get; set; }
         public int ResolveDamage { get; set; }
@@ -36,6 +44,9 @@ namespace ProjectVagabond.Scenes
             CardsResolvedThisRoom = 0;
             PotionsUsedThisRoom = 0;
             CanSkip = true;
+
+            FloorTimer = 0f;
+            TotalCardsInFloor = 0;
 
             ResolvingMonster = null;
             ResolveTimer = 0f;
@@ -84,7 +95,7 @@ namespace ProjectVagabond.Scenes
             ResolveTargetRotation = (minRot + (float)_random.NextDouble() * (maxRot - minRot)) * (_random.Next(2) == 0 ? 1 : -1);
         }
 
-        public void UpdateResolution(float dt, ScoundrelBoardController board, ScoundrelUIController ui, Core core, HapticsManager haptics, Action onComplete)
+        public void UpdateResolution(float dt, ScoundrelBoardController board, ScoundrelUIController ui, Core core, HapticsManager haptics, RunContext runContext, Action onComplete)
         {
             ResolveTimer += dt;
 
@@ -102,6 +113,13 @@ namespace ProjectVagabond.Scenes
                 if (!ResolveDamageApplied)
                 {
                     if (ResolveDamage > 0) ApplyDamage(ResolveDamage, ui, core, haptics);
+                    else if (ResolveWeaponUsed && ResolveDamage == 0)
+                    {
+                        runContext.Gold += 1;
+                        Vector2 popupPos = ResolvingMonster != null ? ResolvingMonster.Position + new Vector2(0, -20) : new Vector2(Global.VIRTUAL_WIDTH / 2f, 24f);
+                        ui.AddFloatingText(1, false, true, popupPos);
+                        ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlayRoutedSfx("proc:wave=2;freq=1600;slide=200;atk=0.01;sus=0.05;dec=0.2;vol=0.05", 0.1f);
+                    }
 
                     if (ResolveWeaponUsed)
                     {
@@ -171,9 +189,28 @@ namespace ProjectVagabond.Scenes
             }
         }
 
+        public void CalculateSpeedGold(RunContext runContext, ScoundrelUIController ui)
+        {
+            float secondsPerCard = TotalCardsInFloor > 0 ? FloorTimer / TotalCardsInFloor : 0f;
+            float t = Math.Clamp((SpeedGoldZeroSecondsPerCard - secondsPerCard) / (SpeedGoldZeroSecondsPerCard - SpeedGoldTargetSecondsPerCard), 0f, (float)SpeedGoldMaxAmount / SpeedGoldTargetAmount);
+            int speedGold = (int)MathF.Round(t * SpeedGoldTargetAmount);
+            speedGold = Math.Clamp(speedGold, 0, SpeedGoldMaxAmount);
+
+            if (speedGold > 0)
+            {
+                runContext.Gold += speedGold;
+                ui.AddFloatingText(speedGold, false, true, new Vector2(Global.VIRTUAL_WIDTH - 30, 24f));
+                ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlayRoutedSfx("proc:wave=2;freq=1600;slide=200;atk=0.01;sus=0.05;dec=0.2;vol=0.05", 0.1f);
+            }
+        }
+
         public void ApplyDamage(int amount, ScoundrelUIController ui, Core core, HapticsManager haptics)
         {
-            Health -= amount;
+            if (!ServiceLocator.Get<Global>().DebugGodMode)
+            {
+                Health -= amount;
+            }
+
             ui.HealthPlink.Start(0f, 0.3f);
             haptics.TriggerShake(amount * 1.5f, 0.2f);
             core.TriggerFullscreenFlash(Color.White * 0.4f, 0.05f);

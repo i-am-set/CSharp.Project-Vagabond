@@ -38,7 +38,11 @@ namespace ProjectVagabond.Scenes
         public Vector2 ShakeOffset { get; set; }
         public float FlashWhiteIntensity { get; set; }
 
+        public bool IsFlipping => _isFlipping;
         private bool _isFlipping;
+        private bool _isFlippingHalf2;
+        private float _flipTimer;
+        private const float FLIP_HALF_DURATION = 0.075f;
         private const float LERP_SPEED = 25f;
 
         public Card(CardSuit suit, CardType type, int rank, int value)
@@ -54,22 +58,46 @@ namespace ProjectVagabond.Scenes
 
         public void Flip()
         {
+            if (_isFlipping) return;
             _isFlipping = true;
-            TargetScale = new Vector2(0f, TargetScale.Y);
+            _isFlippingHalf2 = false;
+            _flipTimer = 0f;
         }
 
         public void Update(float dt)
         {
             float damping = 1.0f - MathF.Exp(-LERP_SPEED * dt);
             Position = Vector2.Lerp(Position, TargetPosition, damping);
-            Scale = Vector2.Lerp(Scale, TargetScale, damping);
             Rotation = MathHelper.Lerp(Rotation, TargetRotation, damping);
 
-            if (_isFlipping && Scale.X < 0.05f)
+            if (_isFlipping)
             {
-                IsFaceUp = !IsFaceUp;
-                _isFlipping = false;
-                TargetScale = new Vector2(1f, TargetScale.Y);
+                _flipTimer += dt;
+                float p = Math.Clamp(_flipTimer / FLIP_HALF_DURATION, 0f, 1f);
+
+                if (!_isFlippingHalf2)
+                {
+                    Scale = new Vector2(TargetScale.X * (1f - Easing.EaseInCubic(p)), MathHelper.Lerp(Scale.Y, TargetScale.Y, damping));
+                    if (p >= 1f)
+                    {
+                        IsFaceUp = !IsFaceUp;
+                        _isFlippingHalf2 = true;
+                        _flipTimer = 0f;
+                    }
+                }
+                else
+                {
+                    Scale = new Vector2(TargetScale.X * Easing.EaseOutCubic(p), MathHelper.Lerp(Scale.Y, TargetScale.Y, damping));
+                    if (p >= 1f)
+                    {
+                        _isFlipping = false;
+                        Scale = new Vector2(TargetScale.X, Scale.Y);
+                    }
+                }
+            }
+            else
+            {
+                Scale = Vector2.Lerp(Scale, TargetScale, damping);
             }
         }
 
