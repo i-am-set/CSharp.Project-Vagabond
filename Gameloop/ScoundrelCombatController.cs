@@ -205,11 +205,16 @@ namespace ProjectVagabond.Scenes
             }
 
             ui.HealthPlink.Start(0f, 0.3f);
-            haptics.TriggerShake(amount * 1.5f, 0.2f);
-            core.TriggerFullscreenFlash(Color.White * 0.4f, 0.05f);
 
-            ui.HpTextFlashTimer = 0.3f;
-            ui.HpTextFlashColor = Color.White;
+            haptics.TriggerShake(amount * 1.5f, 0.2f);
+            haptics.TriggerImpactTwist(amount * 0.3f, amount * 0.025f);
+
+            core.TriggerFullscreenFlash(Color.Red * 0.6f, 0.15f);
+
+            core.TriggerFullscreenGlitch(0.2f);
+
+            ui.HpTextFlashTimer = 0.4f;
+            ui.HpTextFlashColor = ServiceLocator.Get<Global>().Palette_Rust;
 
             ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlayRoutedSfx("proc:wave=1;freq=200;slide=-100;atk=0.01;sus=0.1;dec=0.2;dist=0.5;vol=0.15", 0.2f);
 

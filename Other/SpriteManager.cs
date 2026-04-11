@@ -45,6 +45,7 @@ namespace ProjectVagabond
         public Texture2D CountdownNumbersSpriteSheet { get; private set; }
 
         public Texture2D ScoundrelCardsSpriteSheet { get; private set; }
+        public Texture2D ScoundrelCardsSilhouetteSpriteSheet { get; private set; }
         public Rectangle[,] ScoundrelCardRects { get; private set; }
 
         public Texture2D LogoSprite => _logoSprite;
@@ -123,6 +124,8 @@ namespace ProjectVagabond
             CountdownNumbersSpriteSheet = LoadTex("Sprites/UI/BasicIcons/Countdown_3_2_1_Numbers", 96, 32, Color.Magenta);
 
             ScoundrelCardsSpriteSheet = LoadTex("Sprites/Cards/base_cards_36x50_spritesheet", 504, 200, Color.Magenta);
+            ScoundrelCardsSilhouetteSpriteSheet = CreateSilhouette(ScoundrelCardsSpriteSheet);
+
             ScoundrelCardRects = new Rectangle[4, 14];
             for (int r = 0; r < 4; r++)
             {

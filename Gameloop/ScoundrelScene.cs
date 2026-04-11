@@ -14,7 +14,7 @@ using System.Linq;
 
 namespace ProjectVagabond.Scenes
 {
-    public enum ScoundrelState { Intro, Dealing, Playing, Focused, ResolvingMonster, GameOver, Restarting, FloorCleared, TallyingPotions, SweepingBoard, Shop }
+    public enum ScoundrelState { Intro, Dealing, Playing, Focused, ResolvingMonster, GameOver, Restarting, FloorCleared, CleaningUp, SweepingBoard, Shop }
 
     public class ScoundrelScene : GameScene
     {
@@ -57,8 +57,6 @@ namespace ProjectVagabond.Scenes
 
         private float _tallyTimer = 0f;
         private int _tallyPhase = 0;
-        private int _tallyIndex = 0;
-        private List<Card> _tallyPotions = new List<Card>();
 
         private int _pendingSpeedGold = 0;
         private bool _speedGoldApplied = false;
@@ -246,7 +244,7 @@ namespace ProjectVagabond.Scenes
 
         private void SaveCurrentState()
         {
-            if (_state == ScoundrelState.GameOver || _state == ScoundrelState.Restarting || _state == ScoundrelState.Intro || _state == ScoundrelState.TallyingPotions || _state == ScoundrelState.SweepingBoard) return;
+            if (_state == ScoundrelState.GameOver || _state == ScoundrelState.Restarting || _state == ScoundrelState.Intro || _state == ScoundrelState.CleaningUp || _state == ScoundrelState.SweepingBoard) return;
 
             if (_combat.Health <= 0)
             {
@@ -531,7 +529,7 @@ namespace ProjectVagabond.Scenes
 
             _board.Update(dt);
 
-            if (_state == ScoundrelState.FloorCleared || _state == ScoundrelState.TallyingPotions || _state == ScoundrelState.SweepingBoard || _state == ScoundrelState.Shop)
+            if (_state == ScoundrelState.Shop)
             {
                 _ui.HealthBarOpacity = Math.Max(0f, _ui.HealthBarOpacity - dt * 5f);
             }
@@ -540,12 +538,13 @@ namespace ProjectVagabond.Scenes
                 _ui.HealthBarOpacity = Math.Min(1f, _ui.HealthBarOpacity + dt * 5f);
             }
 
-            if (_state != ScoundrelState.TallyingPotions || _tallyPhase < 2)
+            if (_state != ScoundrelState.CleaningUp || _tallyPhase < 2)
             {
                 _ui.TimerPosition = Vector2.Lerp(_ui.TimerPosition, new Vector2(Global.VIRTUAL_WIDTH / 2f, 12f), 10f * dt);
                 _ui.TimerOverrideText = null;
                 _ui.TimerColor = _global.Palette_LightPale;
                 _ui.TimerOpacity = 1f;
+                _ui.TimerScale = 1f;
             }
 
             switch (_state)
@@ -557,7 +556,7 @@ namespace ProjectVagabond.Scenes
                 case ScoundrelState.Focused: UpdateFocused(justClicked, mousePos); break;
                 case ScoundrelState.ResolvingMonster: UpdateResolvingMonster(dt); break;
                 case ScoundrelState.FloorCleared: UpdateFloorCleared(dt); break;
-                case ScoundrelState.TallyingPotions: UpdateTallyingPotions(dt); break;
+                case ScoundrelState.CleaningUp: UpdateCleaningUp(dt); break;
                 case ScoundrelState.SweepingBoard: UpdateSweepingBoard(dt); break;
                 case ScoundrelState.Shop: UpdateShop(mouseState); break;
                 case ScoundrelState.GameOver: UpdateGameOver(dt, justClicked, mousePos, mouseState); break;
@@ -602,10 +601,6 @@ namespace ProjectVagabond.Scenes
                 if (_board.FocusedCard != null) _board.FocusedCard.IsSelectable = true;
                 if (_board.WeaponSlot != null) _board.WeaponSlot.IsSelectable = true;
                 _board.FistCard.IsSelectable = true;
-            }
-            else if (_state == ScoundrelState.TallyingPotions)
-            {
-                foreach (var p in _tallyPotions) p.ForceRenderAboveVeil = true;
             }
 
             _selectableCardsCache.Clear();
@@ -876,118 +871,143 @@ namespace ProjectVagabond.Scenes
             _floorClearedTimer -= dt;
             if (_floorClearedTimer <= 0)
             {
-                _tallyPotions.Clear();
-                _tallyPotions.AddRange(_board.Room.Where(c => c.Type == CardType.Potion));
-                _tallyPotions.AddRange(_board.Deck.Where(c => c.Type == CardType.Potion));
-
-                _state = ScoundrelState.TallyingPotions;
-                _tallyPhase = _tallyPotions.Count > 0 ? 0 : 2;
+                _state = ScoundrelState.CleaningUp;
+                _tallyPhase = 0;
                 _tallyTimer = 0f;
-                _tallyIndex = 0;
                 _speedGoldApplied = false;
-
-                if (_tallyPotions.Count > 0)
-                {
-                    float startX = (Global.VIRTUAL_WIDTH / 2f) - ((_tallyPotions.Count - 1) * 20f / 2f);
-                    for (int i = 0; i < _tallyPotions.Count; i++)
-                    {
-                        var p = _tallyPotions[i];
-                        p.TargetPosition = new Vector2(startX + i * 20f, Global.VIRTUAL_HEIGHT / 2f);
-                        p.IsFaceUp = true;
-                        p.ZIndex = 600 + i;
-                        p.RoomSlotIndex = -1;
-                    }
-                    ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlayRoutedSfx("proc:wave=2;freq=300;slide=100;atk=0.05;sus=0.05;dec=0.2;vol=0.08", 0.15f);
-                }
             }
         }
 
-        private void UpdateTallyingPotions(float dt)
+        private void UpdateCleaningUp(float dt)
         {
             _tallyTimer += dt;
-            if (_tallyPhase == 0 && _tallyTimer > 0.5f)
-            {
-                _tallyPhase = 1;
-                _tallyTimer = 0f;
-            }
-            else if (_tallyPhase == 1)
-            {
-                if (_tallyIndex < _tallyPotions.Count)
-                {
-                    if (_tallyTimer > 0.15f)
-                    {
-                        _tallyTimer = 0f;
-                        var p = _tallyPotions[_tallyIndex];
-                        p.TargetScale = Vector2.Zero;
 
-                        int goldVal = p.Value / 2;
-                        if (goldVal > 0)
+            if (_tallyPhase == 0) // Process Room
+            {
+                if (_tallyTimer > 0.3f)
+                {
+                    if (_board.Room.Count > 0)
+                    {
+                        var card = _board.Room[0];
+
+                        if (card.Type == CardType.Weapon)
                         {
-                            _runContext.Gold += goldVal;
-                            _ui.AddFloatingText(goldVal, false, true, p.Position);
+                            _runContext.Gold += 1;
+                            _ui.AddFloatingText(1, false, true, card.Position);
                             ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlayRoutedSfx("proc:wave=2;freq=1600;slide=200;atk=0.01;sus=0.05;dec=0.2;vol=0.05", 0.1f);
+                        }
+                        else if (card.Type == CardType.Potion)
+                        {
+                            int actualHeal = Math.Min(card.Value, _runContext.MaxHealth - _combat.Health);
+                            int overHeal = card.Value - actualHeal;
+                            int goldVal = overHeal / 2;
+
+                            if (actualHeal > 0 || goldVal > 0) card.FlashWhiteIntensity = 1f;
+
+                            if (actualHeal > 0)
+                            {
+                                _combat.ApplyHeal(actualHeal, _runContext.MaxHealth, _ui);
+                            }
+
+                            if (goldVal > 0)
+                            {
+                                _runContext.Gold += goldVal;
+                                _ui.AddFloatingText(goldVal, false, true, card.Position);
+                                ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlayRoutedSfx("proc:wave=2;freq=1600;slide=200;atk=0.01;sus=0.05;dec=0.2;vol=0.05", 0.1f);
+                            }
                         }
 
                         var psm = ServiceLocator.Get<ParticleSystemManager>();
                         var emitter = psm.CreateEmitter(ParticleEffects.CreateUIPlink());
-                        emitter.Position = p.Position;
+                        emitter.Position = card.Position;
                         emitter.EmitBurst(10);
 
                         ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlayUi("ui_plink", 0.2f);
                         _hapticsManager.TriggerZoomPulse(_global.LightHapticZoomPulseStrength, _global.HapticZoomPulseDuration);
 
-                        _tallyIndex++;
+                        _board.MoveToDiscard(card);
+                        _tallyTimer = 0f;
                     }
-                }
-                else if (_tallyTimer > 0.5f)
-                {
-                    foreach (var p in _tallyPotions)
+                    else
                     {
-                        _board.Room.Remove(p);
-                        _board.Deck.Remove(p);
+                        _tallyPhase = 1;
+                        _tallyTimer = 0f;
                     }
-                    _tallyPhase = 2;
-                    _tallyTimer = 0f;
-                    _speedGoldApplied = false;
                 }
             }
-            else if (_tallyPhase == 2)
+            else if (_tallyPhase == 1) // Deal from Deck
             {
-                Vector2 targetPos = new Vector2(Global.VIRTUAL_WIDTH / 2f, Global.VIRTUAL_HEIGHT / 2f);
-                _ui.TimerPosition = Vector2.Lerp(_ui.TimerPosition, targetPos, 10f * dt);
-
-                if (_ui.FloatingTexts.Count == 0 && !_speedGoldApplied)
+                if (_board.Deck.Count > 0)
                 {
-                    _tallyTimer += dt;
-                    if (_tallyTimer > 0.5f)
+                    if (_tallyTimer > 0.15f)
                     {
-                        _speedGoldApplied = true;
-                        _ui.TimerOpacity = 0f;
+                        var card = _board.Deck.Last();
+                        _board.Deck.RemoveAt(_board.Deck.Count - 1);
+                        _board.Room.Add(card);
 
-                        if (_pendingSpeedGold > 0)
-                        {
-                            _runContext.Gold += _pendingSpeedGold;
-                            _ui.AddFloatingText(_pendingSpeedGold, false, true, _ui.TimerPosition);
-                            ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlayRoutedSfx("proc:wave=2;freq=1600;slide=200;atk=0.01;sus=0.05;dec=0.2;vol=0.05", 0.1f);
+                        int slot = _board.Room.Count - 1;
 
-                            var psm = ServiceLocator.Get<ParticleSystemManager>();
-                            var emitter = psm.CreateEmitter(ParticleEffects.CreateUIPlink());
-                            emitter.Position = _ui.TimerPosition;
-                            emitter.EmitBurst(15);
-                        }
-                        else
+                        card.RoomSlotIndex = slot;
+                        card.TargetPosition = _board.RoomPositions[slot];
+                        card.ZIndex = 100 + slot;
+                        card.Flip();
+
+                        ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlayRoutedSfx("proc:wave=2;freq=900;atk=0.01;sus=0.0;dec=0.15;exp=1;vol=0.05", 0.1f);
+                        _tallyTimer = 0f;
+
+                        if (_board.Room.Count == 4 || _board.Deck.Count == 0)
                         {
-                            _ui.AddFloatingText(0, false, true, _ui.TimerPosition);
+                            _tallyPhase = 0; // Go back to processing room
                         }
                     }
                 }
-                else if (_speedGoldApplied)
+                else
                 {
-                    _tallyTimer += dt;
-                    if (_tallyTimer > 1.5f)
+                    _tallyPhase = 2;
+                    _tallyTimer = 0f;
+                }
+            }
+            else if (_tallyPhase == 2) // Speed Gold & Finish
+            {
+                Vector2 targetPos = new Vector2(Global.VIRTUAL_WIDTH / 2f, Global.VIRTUAL_HEIGHT / 2f);
+
+                if (_tallyTimer < 0.6f)
+                {
+                    float p = _tallyTimer / 0.6f;
+                    _ui.TimerPosition = Vector2.Lerp(new Vector2(Global.VIRTUAL_WIDTH / 2f, 12f), targetPos, Easing.EaseOutCubic(p));
+                    _ui.TimerScale = 1.0f + Easing.EaseOutCubic(p) * 1.0f;
+                }
+                else if (_tallyTimer < 0.8f)
+                {
+                    float p = (_tallyTimer - 0.6f) / 0.2f;
+                    _ui.TimerPosition = targetPos;
+                    _ui.TimerScale = 2.0f - Easing.EaseInCubic(p) * 1.0f;
+                }
+                else if (!_speedGoldApplied)
+                {
+                    _speedGoldApplied = true;
+                    _ui.TimerOpacity = 0f;
+                    _ui.TimerScale = 1f;
+
+                    if (_pendingSpeedGold > 0)
                     {
-                        StartSweepingBoard();
+                        _runContext.Gold += _pendingSpeedGold;
+                        _ui.AddFloatingText(_pendingSpeedGold, false, true, _ui.TimerPosition);
+                        ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlayRoutedSfx("proc:wave=2;freq=1600;slide=200;atk=0.01;sus=0.05;dec=0.2;vol=0.05", 0.1f);
+
+                        var psm = ServiceLocator.Get<ParticleSystemManager>();
+                        var emitter = psm.CreateEmitter(ParticleEffects.CreateUIPlink());
+                        emitter.Position = _ui.TimerPosition;
+                        emitter.EmitBurst(15);
                     }
+                    else
+                    {
+                        _ui.AddFloatingText(0, false, true, _ui.TimerPosition);
+                    }
+                }
+                else if (_tallyTimer > 1.8f)
+                {
+                    StartSweepingBoard();
                 }
             }
         }
@@ -1074,6 +1094,7 @@ namespace ProjectVagabond.Scenes
             if (card.Type == CardType.Potion)
             {
                 int healAmount = _combat.PotionsUsedThisRoom == 0 ? card.Value : 0;
+                if (healAmount > 0) card.FlashWhiteIntensity = 1f;
                 _combat.ApplyHeal(healAmount, _runContext.MaxHealth, _ui);
                 _combat.PotionsUsedThisRoom++;
                 _board.MoveToDiscard(card);
@@ -1187,12 +1208,34 @@ namespace ProjectVagabond.Scenes
             _combat.CardsResolvedThisRoom++;
             _combat.CanSkip = true;
 
-            if (_combat.CardsResolvedThisRoom >= 3 && _board.Deck.Count > 0)
+            if (!HasMonsterInRoom() && !HasMonsterInDeck())
+            {
+                // Do nothing, let CheckGameOver handle it next frame
+            }
+            else if (_combat.CardsResolvedThisRoom >= 3 && _board.Deck.Count > 0)
             {
                 _state = ScoundrelState.Dealing;
                 _dealTimer = DEAL_INTERVAL;
             }
             SaveCurrentState();
+        }
+
+        private bool HasMonsterInRoom()
+        {
+            foreach (var c in _board.Room)
+            {
+                if (c.Type == CardType.Monster) return true;
+            }
+            return false;
+        }
+
+        private bool HasMonsterInDeck()
+        {
+            foreach (var c in _board.Deck)
+            {
+                if (c.Type == CardType.Monster) return true;
+            }
+            return false;
         }
 
         private void CheckGameOver()
@@ -1204,7 +1247,7 @@ namespace ProjectVagabond.Scenes
                 _combat.PlayDefeatSequence();
                 _combat.CalculateTargetScore(_board, _runContext.MaxHealth);
             }
-            else if (_board.Deck.Count == 0 && !HasMonsterInRoom())
+            else if (!HasMonsterInRoom() && !HasMonsterInDeck())
             {
                 if (_runContext.Mode == GameMode.Classic || _runContext.Floor >= _runContext.MaxFloors)
                 {
@@ -1225,15 +1268,6 @@ namespace ProjectVagabond.Scenes
             }
         }
 
-        private bool HasMonsterInRoom()
-        {
-            foreach (var c in _board.Room)
-            {
-                if (c.Type == CardType.Monster) return true;
-            }
-            return false;
-        }
-
         private int GetPreviewHealth()
         {
             if (_lastHoveredCard == null || !_lastHoveredCard.IsFaceUp) return _combat.Health;
@@ -1250,7 +1284,7 @@ namespace ProjectVagabond.Scenes
                     bool canUseWeapon = _board.WeaponSlot != null && _lastHoveredCard.Value <= _combat.LastSlainValue;
                     if (canUseWeapon)
                     {
-                        bool showWeaponDamage = (_previewFlashTimer % 1.5f) < 1.0f;
+                        bool showWeaponDamage = (_previewFlashTimer % 1.0f) < 0.5f;
                         if (showWeaponDamage) return _combat.Health - Math.Max(0, _lastHoveredCard.Value - _board.WeaponSlot!.Value);
                         return _combat.Health - _lastHoveredCard.Value;
                     }
@@ -1336,12 +1370,11 @@ namespace ProjectVagabond.Scenes
             _ui.DrawCounters(spriteBatch, _board.Deck.Count, _board.Discard.Count, _board.DeckPos, _board.DiscardPos);
             _ui.DrawHoverIndicators(spriteBatch, _lastHoveredCard, _state, _board, _combat, _runContext.MaxHealth, _previewFlashTimer);
             _ui.DrawHealthBar(spriteBatch, _combat.Health, GetPreviewHealth(), _runContext.MaxHealth, _spriteManager);
-            _ui.DrawGold(spriteBatch, _runContext.Gold);
-            _ui.DrawFloatingTexts(spriteBatch);
+            _ui.DrawGold(spriteBatch, _runContext.Gold, gameTime);
 
             _ui.DrawRestartBar(spriteBatch, _restartHoldTimer, RESTART_HOLD_DURATION);
 
-            if (_state == ScoundrelState.FloorCleared || _state == ScoundrelState.TallyingPotions || _state == ScoundrelState.SweepingBoard)
+            if (_state == ScoundrelState.FloorCleared || _state == ScoundrelState.CleaningUp || _state == ScoundrelState.SweepingBoard)
             {
                 _ui.DrawFloorCleared(spriteBatch);
             }
@@ -1360,6 +1393,7 @@ namespace ProjectVagabond.Scenes
             }
 
             _ui.DrawTimer(spriteBatch, _combat.FloorTimer);
+            _ui.DrawFloatingTexts(spriteBatch, gameTime);
         }
     }
 }

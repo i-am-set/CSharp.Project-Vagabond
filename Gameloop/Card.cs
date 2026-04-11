@@ -70,6 +70,8 @@ namespace ProjectVagabond.Scenes
             Position = Vector2.Lerp(Position, TargetPosition, damping);
             Rotation = MathHelper.Lerp(Rotation, TargetRotation, damping);
 
+            FlashWhiteIntensity = Math.Max(0f, FlashWhiteIntensity - dt * 3f);
+
             if (_isFlipping)
             {
                 _flipTimer += dt;
@@ -158,7 +160,7 @@ namespace ProjectVagabond.Scenes
 
         public void DrawFlash(SpriteBatch spriteBatch, SpriteManager spriteManager)
         {
-            if (FlashWhiteIntensity <= 0f || spriteManager.ScoundrelCardsSpriteSheet == null) return;
+            if (FlashWhiteIntensity <= 0f || spriteManager.ScoundrelCardsSilhouetteSpriteSheet == null) return;
 
             Rectangle sourceRect;
 
@@ -191,7 +193,7 @@ namespace ProjectVagabond.Scenes
             Vector2 origin = new Vector2(18f, 25f);
             Vector2 drawPos = new Vector2(MathF.Round(Position.X + ShakeOffset.X), MathF.Round(Position.Y + VisualYOffset + ShakeOffset.Y));
 
-            spriteBatch.DrawSnapped(spriteManager.ScoundrelCardsSpriteSheet, drawPos, sourceRect, Color.White * FlashWhiteIntensity, Rotation, origin, Scale, SpriteEffects.None, 0f);
+            spriteBatch.DrawSnapped(spriteManager.ScoundrelCardsSilhouetteSpriteSheet, drawPos, sourceRect, Color.White * FlashWhiteIntensity, Rotation, origin, Scale, SpriteEffects.None, 0f);
         }
 
         public Rectangle GetBounds()

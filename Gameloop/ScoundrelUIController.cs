@@ -26,6 +26,7 @@ namespace ProjectVagabond.Scenes
         public PlinkAnimator DeckCountPlink { get; } = new PlinkAnimator { MaxScale = 1.5f, RestScale = 1.0f };
         public PlinkAnimator DiscardCountPlink { get; } = new PlinkAnimator { MaxScale = 1.5f, RestScale = 1.0f };
         public PlinkAnimator HealthPlink { get; } = new PlinkAnimator { MaxScale = 1.5f, RestScale = 1.0f };
+        public PlinkAnimator GoldPlink { get; } = new PlinkAnimator { MaxScale = 1.5f, RestScale = 1.0f };
 
         public float HpTextFlashTimer { get; set; }
         public Color HpTextFlashColor { get; set; } = Color.White;
@@ -39,17 +40,20 @@ namespace ProjectVagabond.Scenes
 
         public float FloorClearedTextTimer { get; set; }
         public float ShopFadeTimer { get; set; }
+        public float GoldFlashTimer { get; set; }
 
         public float HealthBarOpacity { get; set; } = 1f;
         public Vector2 TimerPosition { get; set; } = new Vector2(Global.VIRTUAL_WIDTH / 2f, 12f);
         public string TimerOverrideText { get; set; } = null;
         public Color TimerColor { get; set; } = Color.White;
         public float TimerOpacity { get; set; } = 1f;
+        public float TimerScale { get; set; } = 1f;
 
         private Global _global;
         private Core _core;
         private Texture2D _pixel;
         private ScoundrelScene _scene;
+        private int _previousGold = -1;
 
         public ScoundrelUIController(ScoundrelScene scene)
         {
@@ -126,11 +130,14 @@ namespace ProjectVagabond.Scenes
             HpTextFlashTimer = 0f;
             FloorClearedTextTimer = 0f;
             ShopFadeTimer = 0f;
+            GoldFlashTimer = 0f;
+            _previousGold = -1;
         }
 
         public void Update(float dt, GameTime gameTime, Vector2 deckPos, Vector2 discardPos)
         {
             if (HpTextFlashTimer > 0) HpTextFlashTimer -= dt;
+            if (GoldFlashTimer > 0) GoldFlashTimer -= dt;
             FloorClearedTextTimer += dt;
             ShopFadeTimer += dt;
 
@@ -142,7 +149,7 @@ namespace ProjectVagabond.Scenes
             for (int i = FloatingTexts.Count - 1; i >= 0; i--)
             {
                 FloatingTexts[i].Timer -= dt;
-                FloatingTexts[i].LocalOffset.Y -= 10f * dt;
+                FloatingTexts[i].LocalOffset.Y -= 5f * dt;
                 if (FloatingTexts[i].Timer <= 0) FloatingTexts.RemoveAt(i);
             }
 
@@ -155,7 +162,14 @@ namespace ProjectVagabond.Scenes
         public void AddFloatingText(int amount, bool isHealing, bool isGold = false, Vector2? position = null)
         {
             Vector2 startPos = position ?? new Vector2(Global.VIRTUAL_WIDTH / 2f, 24f);
-            FloatingTexts.Add(new FloatingText { Number = amount, IsHealing = isHealing, IsGold = isGold, Timer = 1.0f, LocalOffset = startPos });
+            var ft = Pool<FloatingText>.Get();
+            ft.Number = amount;
+            ft.IsHealing = isHealing;
+            ft.IsGold = isGold;
+            ft.Timer = 1.0f;
+            ft.LocalOffset = startPos;
+            ft.Plink.Start(0f, 0.3f);
+            FloatingTexts.Add(ft);
         }
 
         public void GenerateShop(ScoundrelScene scene, RunContext runContext, ScoundrelCombatController combat)
@@ -258,7 +272,7 @@ namespace ProjectVagabond.Scenes
                 if (hoveredCard.Type == CardType.Monster)
                 {
                     bool canUseWeapon = board.WeaponSlot != null && hoveredCard.Value <= combat.LastSlainValue;
-                    DrawMonsterDamageText(spriteBatch, defFont, tertFont, hoveredCard, canUseWeapon, board.WeaponSlot);
+                    DrawMonsterDamageText(spriteBatch, defFont, tertFont, hoveredCard, canUseWeapon, board.WeaponSlot, previewFlashTimer);
                 }
                 else if (hoveredCard.Type == CardType.Potion)
                 {
@@ -275,16 +289,25 @@ namespace ProjectVagabond.Scenes
             }
         }
 
-        public void DrawFloatingTexts(SpriteBatch spriteBatch)
+        public void DrawFloatingTexts(SpriteBatch spriteBatch, GameTime gameTime)
         {
             var secFont = _core.SecondaryFont;
             foreach (var ft in FloatingTexts)
             {
+                ft.Plink.Update(gameTime, ft.LocalOffset);
+
+                float alpha = Math.Clamp(ft.Timer / 0.3f, 0f, 1f);
+
                 Color c = ft.IsGold ? _global.Palette_Sun : (ft.IsHealing ? _global.Palette_Leaf : _global.Palette_Rust);
+                c *= alpha;
+                Color outline = _global.Palette_Off * alpha;
+
                 string text = ft.IsGold ? $"+{ft.Number}g" : ((ft.IsHealing ? "+" : "-") + ft.Number);
                 Vector2 size = secFont.MeasureString(text);
-                Vector2 drawPos = new Vector2(MathF.Round(ft.LocalOffset.X - size.X / 2f), MathF.Round(ft.LocalOffset.Y));
-                spriteBatch.DrawStringOutlinedSnapped(secFont, text, drawPos, c, _global.Palette_Off);
+                Vector2 origin = new Vector2(MathF.Round(size.X / 2f), MathF.Round(size.Y / 2f));
+                Vector2 drawPos = new Vector2(MathF.Round(ft.LocalOffset.X), MathF.Round(ft.LocalOffset.Y));
+
+                spriteBatch.DrawStringOutlinedSnapped(secFont, text, drawPos, c, outline, ft.Plink.Rotation, origin, ft.Plink.Scale, SpriteEffects.None, 0f);
             }
         }
 
@@ -295,15 +318,17 @@ namespace ProjectVagabond.Scenes
             spriteBatch.DrawStringOutlinedSnapped(font, text, startX, color, _global.Palette_Off);
         }
 
-        private void DrawMonsterDamageText(SpriteBatch spriteBatch, BitmapFont defFont, BitmapFont tertFont, Card monsterCard, bool showWeaponDamage, Card? weaponSlot)
+        private void DrawMonsterDamageText(SpriteBatch spriteBatch, BitmapFont defFont, BitmapFont tertFont, Card monsterCard, bool showWeaponDamage, Card? weaponSlot, float previewFlashTimer)
         {
             Vector2 hoverPos = monsterCard.Position + new Vector2(0, -32);
             string dmgText = $"-{monsterCard.Value}";
             Vector2 dmgSize = defFont.MeasureString(dmgText);
 
-            if (showWeaponDamage && weaponSlot != null)
+            bool showWeapon = showWeaponDamage && weaponSlot != null && (previewFlashTimer % 1.0f) < 0.5f;
+
+            if (showWeapon)
             {
-                int wDmg = Math.Max(0, monsterCard.Value - weaponSlot.Value);
+                int wDmg = Math.Max(0, monsterCard.Value - weaponSlot!.Value);
                 string wText = $"(-{wDmg})";
                 Vector2 wSize = tertFont.MeasureString(wText);
 
@@ -335,8 +360,9 @@ namespace ProjectVagabond.Scenes
                 timeStr = time.ToString(@"mm\:ss");
             }
             Vector2 size = secFont.MeasureString(timeStr);
-            Vector2 pos = new Vector2(MathF.Round(TimerPosition.X - size.X / 2f), MathF.Round(TimerPosition.Y - size.Y / 2f));
-            spriteBatch.DrawStringOutlinedSnapped(secFont, timeStr, pos, TimerColor * TimerOpacity, _global.Palette_Off * TimerOpacity);
+            Vector2 origin = new Vector2(MathF.Round(size.X / 2f), MathF.Round(size.Y / 2f));
+            Vector2 drawPos = new Vector2(MathF.Round(TimerPosition.X), MathF.Round(TimerPosition.Y));
+            spriteBatch.DrawStringOutlinedSnapped(secFont, timeStr, drawPos, TimerColor * TimerOpacity, _global.Palette_Off * TimerOpacity, 0f, origin, TimerScale, SpriteEffects.None, 0f);
         }
 
         public void DrawHealthBar(SpriteBatch spriteBatch, int health, int previewHealth, int maxHealth, SpriteManager spriteManager)
@@ -451,8 +477,19 @@ namespace ProjectVagabond.Scenes
             }
         }
 
-        public void DrawGold(SpriteBatch spriteBatch, int gold)
+        public void DrawGold(SpriteBatch spriteBatch, int gold, GameTime gameTime)
         {
+            if (_previousGold == -1) _previousGold = gold;
+            if (gold > _previousGold)
+            {
+                GoldPlink.Start(0f, 0.3f);
+            }
+            else if (gold < _previousGold)
+            {
+                GoldFlashTimer = 0.4f;
+            }
+            _previousGold = gold;
+
             var defFont = _core.DefaultFont;
             var tertFont = _core.TertiaryFont;
 
@@ -469,8 +506,22 @@ namespace ProjectVagabond.Scenes
             Vector2 goldPos = new Vector2(MathF.Round(startX), MathF.Round(startY));
             Vector2 gPos = new Vector2(MathF.Round(startX + goldSize.X + 1), MathF.Round(startY + goldSize.Y - gSize.Y));
 
-            spriteBatch.DrawStringOutlinedSnapped(defFont, goldText, goldPos, _global.Palette_Sun, _global.Palette_Off);
-            spriteBatch.DrawStringOutlinedSnapped(tertFont, gText, gPos, _global.Palette_Sun, _global.Palette_Off);
+            GoldPlink.Update(gameTime, goldPos + new Vector2(totalWidth / 2f, goldSize.Y / 2f));
+
+            Color goldColor = _global.Palette_Sun;
+            if (GoldFlashTimer > 0)
+            {
+                goldColor = Color.Lerp(_global.Palette_Sun, _global.Palette_Rust, GoldFlashTimer / 0.4f);
+            }
+
+            Vector2 goldOrigin = new Vector2(MathF.Round(goldSize.X / 2f), MathF.Round(goldSize.Y / 2f));
+            Vector2 gOrigin = new Vector2(MathF.Round(gSize.X / 2f), MathF.Round(gSize.Y / 2f));
+
+            Vector2 goldDrawPos = goldPos + goldOrigin;
+            Vector2 gDrawPos = gPos + gOrigin;
+
+            spriteBatch.DrawStringOutlinedSnapped(defFont, goldText, goldDrawPos, goldColor, _global.Palette_Off, GoldPlink.Rotation, goldOrigin, GoldPlink.Scale, SpriteEffects.None, 0f);
+            spriteBatch.DrawStringOutlinedSnapped(tertFont, gText, gDrawPos, goldColor, _global.Palette_Off, GoldPlink.Rotation, gOrigin, GoldPlink.Scale, SpriteEffects.None, 0f);
         }
 
         public void DrawRestartBar(SpriteBatch spriteBatch, float restartHoldTimer, float holdDuration)
@@ -500,18 +551,29 @@ namespace ProjectVagabond.Scenes
             var defFont = _core.DefaultFont;
             string text = "FLOOR CLEARED";
             Vector2 size = defFont.MeasureString(text);
-            Vector2 pos = new Vector2(Global.VIRTUAL_WIDTH / 2f - size.X / 2f, 24f - size.Y / 2f);
 
-            TextAnimator.DrawTextWithEffectOutlined(
-                spriteBatch,
-                defFont,
-                text,
-                pos,
-                _global.Palette_Sun,
-                _global.Palette_Off,
-                TextEffectType.TypewriterPop,
-                FloorClearedTextTimer
-            );
+            float startY = Global.VIRTUAL_HEIGHT / 2f;
+            Vector2 pos = new Vector2(Global.VIRTUAL_WIDTH / 2f - size.X / 2f, startY - size.Y / 2f);
+
+            float alpha = 1f;
+            if (FloorClearedTextTimer > 1.0f)
+            {
+                alpha = 1.0f - Math.Clamp((FloorClearedTextTimer - 1.0f) / 0.5f, 0f, 1f);
+            }
+
+            if (alpha > 0f)
+            {
+                TextAnimator.DrawTextWithEffectOutlined(
+                    spriteBatch,
+                    defFont,
+                    text,
+                    pos,
+                    _global.Palette_Sun * alpha,
+                    _global.Palette_Off * alpha,
+                    TextEffectType.TypewriterPop,
+                    FloorClearedTextTimer
+                );
+            }
         }
 
         public void DrawShop(SpriteBatch spriteBatch, GameTime gameTime, Matrix transform)

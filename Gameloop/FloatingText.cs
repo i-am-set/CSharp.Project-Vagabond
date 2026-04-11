@@ -15,6 +15,8 @@ namespace ProjectVagabond.UI
         public Vector2 LocalOffset;
         public Vector2 StartOffset;
 
+        public PlinkAnimator Plink { get; } = new PlinkAnimator { MaxScale = 2.0f, RestScale = 1.0f };
+
         public void Reset()
         {
             Number = 0;
