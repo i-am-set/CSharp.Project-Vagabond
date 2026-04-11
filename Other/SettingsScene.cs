@@ -752,7 +752,7 @@ namespace ProjectVagabond.Scenes
                 if (item.IsSelected)
                 {
                     var hoverRect = new Rectangle((int)currentPos.X - 5, (int)currentPos.Y, SETTINGS_PANEL_WIDTH + 10, ITEM_VERTICAL_SPACING);
-                    DrawRectangleBorder(spriteBatch, pixel, new Rectangle(hoverRect.X, hoverRect.Y - 1, hoverRect.Width, hoverRect.Height + 1), 1, _global.ButtonHoverColor);
+                    DrawRectangleBorder(spriteBatch, pixel, new Rectangle(hoverRect.X, hoverRect.Y - 1, hoverRect.Width, hoverRect.Height + 1), 1, _global.Palette_Fruit);
                 }
 
                 item.Draw(spriteBatch, secondaryFont, font, new Vector2(currentPos.X, currentPos.Y + 2), gameTime);

@@ -155,7 +155,7 @@ namespace ProjectVagabond.UI
             if (isActivated && DrawBorderOnHover)
             {
                 var core = ServiceLocator.Get<Core>();
-                Color borderColor = HoverBorderColor ?? _global.ButtonHoverColor;
+                Color borderColor = HoverBorderColor ?? _global.Palette_Fruit;
 
                 int bX = (int)MathF.Round(centerPos.X - width / 2f);
                 int bY = (int)MathF.Round(centerPos.Y - height / 2f) - 1;

@@ -495,7 +495,7 @@ namespace ProjectVagabond.UI
             if (isActivated && DrawBorderOnHover)
             {
                 var pixel = ServiceLocator.Get<Texture2D>();
-                Color borderColor = HoverBorderColor ?? _global.ButtonHoverColor;
+                Color borderColor = HoverBorderColor ?? _global.Palette_Fruit;
                 var core = ServiceLocator.Get<Core>();
 
                 int bX = (int)MathF.Round(Bounds.X + totalXOffset);
