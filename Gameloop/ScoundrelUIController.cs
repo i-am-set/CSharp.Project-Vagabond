@@ -279,7 +279,7 @@ namespace ProjectVagabond.Scenes
             {
                 if (hoveredCard.Type == CardType.Monster)
                 {
-                    bool canUseWeapon = board.WeaponSlot != null && hoveredCard.Value <= combat.LastSlainValue;
+                    bool canUseWeapon = board.WeaponSlot != null && hoveredCard.Value <= combat.GetLastSlainValue(board);
                     DrawMonsterDamageText(spriteBatch, defFont, tertFont, hoveredCard, canUseWeapon, board.WeaponSlot, previewFlashTimer);
                 }
                 else if (hoveredCard.Type == CardType.Potion)

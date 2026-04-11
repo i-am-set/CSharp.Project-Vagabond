@@ -137,7 +137,6 @@ namespace ProjectVagabond.Scenes
             _combat.Health = data.Health;
             _combat.FloorTimer = data.FloorTimer;
             _combat.TotalCardsInFloor = data.TotalCardsInFloor;
-            _combat.LastSlainValue = data.LastSlainValue;
             _combat.CardsResolvedThisRoom = data.CardsResolvedThisRoom;
             _combat.PotionsUsedThisRoom = data.PotionsUsedThisRoom;
             _combat.CanSkip = data.CanSkip;
@@ -261,7 +260,7 @@ namespace ProjectVagabond.Scenes
                 Gold = _runContext.Gold,
                 FloorTimer = _combat.FloorTimer,
                 TotalCardsInFloor = _combat.TotalCardsInFloor,
-                LastSlainValue = _combat.LastSlainValue,
+                LastSlainValue = _combat.GetLastSlainValue(_board),
                 CardsResolvedThisRoom = _combat.CardsResolvedThisRoom,
                 PotionsUsedThisRoom = _combat.PotionsUsedThisRoom,
                 CanSkip = _combat.CanSkip,
@@ -666,7 +665,7 @@ namespace ProjectVagabond.Scenes
 
             if (_state == ScoundrelState.Playing && newHovered != null && newHovered.Type == CardType.Monster && _board.WeaponSlot != null)
             {
-                if (newHovered.Value <= _combat.LastSlainValue)
+                if (newHovered.Value <= _combat.GetLastSlainValue(_board))
                 {
                     _board.WeaponSlot.OutlineColor = _global.Palette_Leaf;
                     _board.WeaponSlot.ForceRenderAboveVeil = true;
@@ -1106,12 +1105,11 @@ namespace ProjectVagabond.Scenes
             else if (card.Type == CardType.Weapon)
             {
                 _board.EquipWeapon(card);
-                _combat.LastSlainValue = 99;
                 OnCardResolved();
             }
             else if (card.Type == CardType.Monster)
             {
-                bool canUseWeapon = _board.WeaponSlot != null && card.Value <= _combat.LastSlainValue;
+                bool canUseWeapon = _board.WeaponSlot != null && card.Value <= _combat.GetLastSlainValue(_board);
 
                 if (canUseWeapon)
                 {
@@ -1179,7 +1177,7 @@ namespace ProjectVagabond.Scenes
         {
             if (_board.FocusedCard == null || _board.WeaponSlot == null) return;
 
-            if (_board.FocusedCard.Value > _combat.LastSlainValue)
+            if (_board.FocusedCard.Value > _combat.GetLastSlainValue(_board))
             {
                 ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlayRoutedSfx("proc:wave=4;freq=150;atk=0.01;sus=0.1;dec=0.1;detune=0.03;vol=0.15|wave=0;freq=150;atk=0.01;sus=0.1;dec=0.1;duty=0.2;vol=0.1", 0.2f);
                 return;
@@ -1284,7 +1282,7 @@ namespace ProjectVagabond.Scenes
             {
                 if (_lastHoveredCard.Type == CardType.Monster)
                 {
-                    bool canUseWeapon = _board.WeaponSlot != null && _lastHoveredCard.Value <= _combat.LastSlainValue;
+                    bool canUseWeapon = _board.WeaponSlot != null && _lastHoveredCard.Value <= _combat.GetLastSlainValue(_board);
                     if (canUseWeapon)
                     {
                         bool showWeaponDamage = (_previewFlashTimer % 1.0f) < 0.5f;

@@ -9,7 +9,6 @@ namespace ProjectVagabond.Scenes
     public class ScoundrelCombatController
     {
         public int Health { get; set; }
-        public int LastSlainValue { get; set; }
         public int CardsResolvedThisRoom { get; set; }
         public int PotionsUsedThisRoom { get; set; }
         public bool CanSkip { get; set; }
@@ -37,10 +36,15 @@ namespace ProjectVagabond.Scenes
         private Random _random = new Random();
         private readonly List<(float timer, string sfx)> _audioQueue = new List<(float, string)>();
 
+        public int GetLastSlainValue(ScoundrelBoardController board)
+        {
+            if (board.SlainPile.Count == 0) return 99;
+            return board.SlainPile.Last().Value;
+        }
+
         public void Reset(int startingHealth)
         {
             Health = startingHealth;
-            LastSlainValue = 99;
             CardsResolvedThisRoom = 0;
             PotionsUsedThisRoom = 0;
             CanSkip = true;
@@ -176,7 +180,6 @@ namespace ProjectVagabond.Scenes
 
                     if (ResolveWeaponUsed)
                     {
-                        LastSlainValue = ResolvingMonster.Value;
                         board.MoveToSlainPile(ResolvingMonster);
                     }
                     else
@@ -236,7 +239,6 @@ namespace ProjectVagabond.Scenes
 
             if (actualHeal == 0)
             {
-                // JUICE: Sad, flat, downward sliding "womp womp" sound for a dud heal
                 ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlayRoutedSfx("proc:wave=2;freq=220;slide=-50;atk=0.05;sus=0.1;dec=0.2;detune=0.02;vol=0.15|wave=2;freq=180;slide=-50;atk=0.05;sus=0.1;dec=0.3;delay=0.15;vol=0.15", 0.15f);
             }
             else if (Health == maxHealth)
