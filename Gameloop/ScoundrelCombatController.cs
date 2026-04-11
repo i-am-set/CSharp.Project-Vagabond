@@ -207,11 +207,11 @@ namespace ProjectVagabond.Scenes
             ui.HealthPlink.Start(0f, 0.3f);
 
             haptics.TriggerShake(amount * 1.5f, 0.2f);
-            haptics.TriggerImpactTwist(amount * 0.3f, amount * 0.025f);
+            haptics.TriggerImpactTwist(amount * 0.15f, amount * 0.015f);
 
-            core.TriggerFullscreenFlash(Color.Red * 0.6f, 0.15f);
+            core.TriggerFullscreenFlash(Color.Red * 0.6f, amount * 0.05f);
 
-            core.TriggerFullscreenGlitch(0.2f);
+            core.TriggerFullscreenGlitch(0.1f);
 
             ui.HpTextFlashTimer = 0.4f;
             ui.HpTextFlashColor = ServiceLocator.Get<Global>().Palette_Rust;
