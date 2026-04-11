@@ -57,10 +57,18 @@ namespace ProjectVagabond.UI
 
             var defaultFont = ServiceLocator.Get<BitmapFont>();
             var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
-            float dialogWidth = 280;
+
+            float maxAllowedWidth = 280;
             float currentHeight = 20;
 
-            _wrappedPromptLines = ParseAndWrapPrompt(_prompt.ToUpper(), dialogWidth - 40, secondaryFont);
+            _wrappedPromptLines = ParseAndWrapPrompt(_prompt.ToUpper(), maxAllowedWidth - 40, secondaryFont);
+
+            float maxContentWidth = 0;
+            foreach (var line in _wrappedPromptLines)
+            {
+                float lineWidth = line.Sum(t => secondaryFont.MeasureString(t.Text).Width);
+                if (lineWidth > maxContentWidth) maxContentWidth = lineWidth;
+            }
 
             currentHeight += _wrappedPromptLines.Count * secondaryFont.LineHeight;
             currentHeight += 10;
@@ -70,7 +78,12 @@ namespace ProjectVagabond.UI
                 currentHeight += 10;
                 foreach (var detail in _details)
                 {
-                    var wrappedDetail = WrapText(defaultFont, detail, dialogWidth - 60);
+                    var wrappedDetail = WrapText(defaultFont, detail, maxAllowedWidth - 60);
+                    foreach (var line in wrappedDetail)
+                    {
+                        float lw = defaultFont.MeasureString(line).Width;
+                        if (lw > maxContentWidth) maxContentWidth = lw;
+                    }
                     currentHeight += wrappedDetail.Count * (defaultFont.LineHeight + Global.APPLY_OPTION_DIFFERENCE_TEXT_LINE_SPACING);
                 }
                 currentHeight += 15;
@@ -78,10 +91,10 @@ namespace ProjectVagabond.UI
 
             _isHorizontalLayout = buttonActions.Count == 2;
 
-            // --- Pre-calculate button geometries to determine layout height ---
             var buttonGeometries = new List<(string text, Color? color, Action action, int width, int height)>();
             int maxButtonHeight = 0;
             int totalHorizontalButtonWidth = 0;
+            int maxSingleButtonWidth = 0;
             int interButtonGap = 12;
             int verticalButtonGap = 8;
 
@@ -97,9 +110,17 @@ namespace ProjectVagabond.UI
 
                 if (bH > maxButtonHeight) maxButtonHeight = bH;
                 totalHorizontalButtonWidth += bW;
+                if (bW > maxSingleButtonWidth) maxSingleButtonWidth = bW;
             }
 
             if (_isHorizontalLayout) totalHorizontalButtonWidth += interButtonGap;
+
+            float buttonAreaWidth = _isHorizontalLayout ? totalHorizontalButtonWidth : maxSingleButtonWidth;
+            if (buttonAreaWidth > maxContentWidth) maxContentWidth = buttonAreaWidth;
+
+            float dialogWidth = maxContentWidth + 40;
+            if (dialogWidth > maxAllowedWidth) dialogWidth = maxAllowedWidth;
+            if (dialogWidth < 120) dialogWidth = 120;
 
             float buttonAreaHeight;
             if (_isHorizontalLayout)

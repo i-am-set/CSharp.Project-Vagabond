@@ -35,7 +35,24 @@ namespace ProjectVagabond.UI
             _previousMouseState = Mouse.GetState();
             _core.IsMouseVisible = true;
 
-            int dialogWidth = 280;
+            var font = ServiceLocator.Get<BitmapFont>();
+            Vector2 promptSize = font.MeasureString(_prompt);
+
+            _stringBuilder.Clear();
+            _stringBuilder.Append("Reverting in 10 seconds...");
+            Vector2 timerSize = font.MeasureString(_stringBuilder.ToString());
+
+            int confirmW = (int)font.MeasureString("Confirm").Width + 8;
+            int revertW = (int)font.MeasureString("Revert").Width + 8;
+            int buttonHeight = 12;
+            int buttonGap = 10;
+            int buttonsW = confirmW + revertW + buttonGap;
+
+            float maxContentW = Math.Max(promptSize.X, Math.Max(timerSize.X, buttonsW));
+            int dialogWidth = (int)maxContentW + 40;
+            if (dialogWidth > 280) dialogWidth = 280;
+            if (dialogWidth < 120) dialogWidth = 120;
+
             int dialogHeight = 100;
             _dialogBounds = new Rectangle(
                 (Global.VIRTUAL_WIDTH - dialogWidth) / 2,
@@ -44,12 +61,7 @@ namespace ProjectVagabond.UI
                 dialogHeight
             );
 
-            var font = ServiceLocator.Get<BitmapFont>();
-            int confirmW = (int)font.MeasureString("Confirm").Width + 8;
-            int revertW = (int)font.MeasureString("Revert").Width + 8;
-            int buttonHeight = 12;
             int buttonY = _dialogBounds.Bottom - buttonHeight - 10;
-            int buttonGap = 10;
 
             _confirmButton = new Button(new Rectangle(_dialogBounds.Center.X - confirmW - buttonGap / 2, buttonY, confirmW, buttonHeight), "Confirm")
             {

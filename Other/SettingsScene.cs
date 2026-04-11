@@ -337,7 +337,7 @@ namespace ProjectVagabond.Scenes
             foreach (var button in _footerButtons)
             {
                 var textSize = font.MeasureString(button.Text);
-                int width = (int)textSize.Width + 20;
+                int width = (int)textSize.Width + 8;
                 int centeredX = (Global.VIRTUAL_WIDTH - width) / 2;
 
                 button.Bounds = new Rectangle(centeredX, (int)currentButtonPos.Y, width, BUTTON_VERTICAL_SPACING);
