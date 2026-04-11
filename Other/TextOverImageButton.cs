@@ -283,7 +283,7 @@ namespace ProjectVagabond.UI
                     }
                     else
                     {
-                        spriteBatch.DrawLineSnapped(p1, p2, _global.ButtonDisableColor);
+                        spriteBatch.DrawBresenhamLineSnapped(ServiceLocator.Get<Texture2D>(), p1, p2, _global.ButtonDisableColor);
                     }
                 }
             }

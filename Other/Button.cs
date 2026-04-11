@@ -1,9 +1,11 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
+using MonoGame.Extended;
 using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond.Utils;
 using System;
+using System.Collections.Generic;
 
 namespace ProjectVagabond.UI
 {
@@ -18,7 +20,14 @@ namespace ProjectVagabond.UI
         protected readonly Global _global;
 
         public Rectangle Bounds { get; set; }
-        public string Text { get; set; }
+
+        private string _text = "";
+        public string Text
+        {
+            get => _text;
+            set => _text = value?.ToUpperInvariant() ?? "";
+        }
+
         public string Function { get; set; }
         public Color? CustomDefaultTextColor { get; set; }
         public Color? CustomHoverTextColor { get; set; }
@@ -47,6 +56,9 @@ namespace ProjectVagabond.UI
 
         public bool DrawBorderOnHover { get; set; }
         public Color? HoverBorderColor { get; set; }
+
+        // Vacuum seal border gap (default 2 pixels)
+        public float VacuumGap { get; set; } = 2f;
 
         public HoverAnimationType HoverAnimation { get; set; } = HoverAnimationType.Hop;
         public bool EnableTextWave { get; set; } = true;
@@ -123,6 +135,10 @@ namespace ProjectVagabond.UI
         private DateTime _lastClickTime = DateTime.MinValue;
         private const double DEBOUNCE_DURATION = 0.1;
 
+        // Persistent lists for contour rendering
+        private readonly List<Vector2> _topContour = new List<Vector2>();
+        private readonly List<Vector2> _bottomContour = new List<Vector2>();
+
         // --- ENTRANCE ANIMATION STATE ---
         public PlinkAnimator Plink { get; } = new PlinkAnimator();
 
@@ -142,25 +158,6 @@ namespace ProjectVagabond.UI
             EnableHoverSway = enableHoverSway;
             Font = font;
             DrawBorderOnHover = true;
-
-            HoverLiftOffset = _global.UI_ButtonHoverLift;
-            HoverLiftDuration = _global.UI_ButtonHoverDuration;
-        }
-
-        public Button(Rectangle bounds, Texture2D? spriteSheet, Rectangle? defaultSourceRect, Rectangle? hoverSourceRect, Rectangle? clickedSourceRect, Rectangle? disabledSourceRect, string? function = null, bool enableHoverSway = true, Color? debugColor = null)
-        {
-            _global = ServiceLocator.Get<Global>();
-            Bounds = bounds;
-            Text = "";
-            Function = function ?? "";
-            EnableHoverSway = enableHoverSway;
-            _spriteSheet = spriteSheet;
-            _defaultSourceRect = defaultSourceRect;
-            _hoverSourceRect = hoverSourceRect;
-            _clickedSourceRect = clickedSourceRect;
-            _disabledSourceRect = disabledSourceRect;
-            DebugColor = debugColor;
-            DrawBorderOnHover = false;
 
             HoverLiftOffset = _global.UI_ButtonHoverLift;
             HoverLiftDuration = _global.UI_ButtonHoverDuration;
@@ -202,7 +199,7 @@ namespace ProjectVagabond.UI
 
         public void SetHiddenForEntrance()
         {
-            Plink.Start(100f); // Arbitrary long delay to keep it hidden
+            Plink.Start(100f);
             _currentScale = 0f;
         }
 
@@ -426,6 +423,31 @@ namespace ProjectVagabond.UI
             }
         }
 
+        private List<Vector2> SmoothContour(List<Vector2> points, int iterations = 2)
+        {
+            if (points.Count < 3) return points;
+            List<Vector2> current = points;
+
+            for (int iter = 0; iter < iterations; iter++)
+            {
+                List<Vector2> next = new List<Vector2>(current.Count * 2);
+                next.Add(current[0]);
+
+                for (int i = 0; i < current.Count - 1; i++)
+                {
+                    Vector2 p0 = current[i];
+                    Vector2 p1 = current[i + 1];
+
+                    next.Add(Vector2.Lerp(p0, p1, 0.25f));
+                    next.Add(Vector2.Lerp(p0, p1, 0.75f));
+                }
+
+                next.Add(current[current.Count - 1]);
+                current = next;
+            }
+            return current;
+        }
+
         private void DrawText(SpriteBatch spriteBatch, BitmapFont defaultFont, GameTime gameTime, Matrix transform, bool forceHover, float? horizontalOffset, float? verticalOffset, Color? tintColorOverride)
         {
             BitmapFont font = this.Font ?? defaultFont;
@@ -492,33 +514,6 @@ namespace ProjectVagabond.UI
             float totalXOffset = xHoverOffset + (horizontalOffset ?? 0f) + shakeOffset.X;
             float totalYOffset = yHoverOffset + (verticalOffset ?? 0f) + shakeOffset.Y;
 
-            if (isActivated && DrawBorderOnHover)
-            {
-                var pixel = ServiceLocator.Get<Texture2D>();
-                Color borderColor = HoverBorderColor ?? _global.Palette_Fruit;
-                var core = ServiceLocator.Get<Core>();
-
-                int bX = (int)MathF.Round(Bounds.X + totalXOffset);
-                int bY = (int)MathF.Round(Bounds.Y + totalYOffset - 1);
-                int bW = Bounds.Width;
-                int bH = Bounds.Height + 2;
-
-                if (font == core.DefaultFont)
-                {
-                    bY += 1;
-                    bH -= 2;
-                }
-                else if (font == core.SecondaryFont)
-                {
-                    bH -= 2;
-                }
-
-                spriteBatch.Draw(pixel, new Rectangle(bX, bY, bW, 1), borderColor);
-                spriteBatch.Draw(pixel, new Rectangle(bX, bY + bH - 1, bW, 1), borderColor);
-                spriteBatch.Draw(pixel, new Rectangle(bX, bY, 1, bH), borderColor);
-                spriteBatch.Draw(pixel, new Rectangle(bX + bW - 1, bY, 1, bH), borderColor);
-            }
-
             Vector2 textSize = font.MeasureString(Text);
             Vector2 textPosition;
 
@@ -528,11 +523,145 @@ namespace ProjectVagabond.UI
                 textPosition = new Vector2(Bounds.Center.X + totalXOffset - MathF.Round(textSize.X / 2f), Bounds.Center.Y + totalYOffset - MathF.Round(textSize.Y / 2f));
 
             textPosition += TextRenderOffset;
-
             textPosition = new Vector2(MathF.Round(textPosition.X), MathF.Round(textPosition.Y));
 
             Vector2 origin = new Vector2(MathF.Round(textSize.X / 2f), MathF.Round(textSize.Y / 2f));
             Vector2 drawPos = textPosition + origin;
+
+            if (isActivated && DrawBorderOnHover)
+            {
+                var pixel = ServiceLocator.Get<Texture2D>();
+                Color borderColor = HoverBorderColor ?? _global.Palette_Fruit;
+
+                _topContour.Clear();
+                _bottomContour.Clear();
+
+                Vector2 layoutScale = new Vector2(_currentScale);
+                Vector2 centeringOffset = (textSize * (Vector2.One - layoutScale)) / 2f;
+                centeringOffset = new Vector2(MathF.Round(centeringOffset.X), MathF.Round(centeringOffset.Y));
+
+                if (WaveEffectType == TextEffectType.LeftAlignedSmallWave || WaveEffectType == TextEffectType.RightAlignedSmallWave)
+                {
+                    centeringOffset = Vector2.Zero;
+                }
+
+                var glyphs = font.GetGlyphs(Text, textPosition);
+                int charIndex = 0;
+
+                float cosBase = MathF.Cos(_currentHoverRotation);
+                float sinBase = MathF.Sin(_currentHoverRotation);
+                Vector2 textCenterOffset = new Vector2(MathF.Round(textSize.X / 2f), MathF.Round(textSize.Y / 2f));
+                Vector2 pivotPoint = textPosition + textCenterOffset;
+
+                foreach (var glyph in glyphs)
+                {
+                    while (charIndex < Text.Length && Text[charIndex] == '\n') charIndex++;
+                    if (charIndex >= Text.Length) break;
+
+                    char c = Text[charIndex];
+                    if (char.IsWhiteSpace(c))
+                    {
+                        charIndex++;
+                        continue;
+                    }
+
+                    var character = glyph.Character;
+                    if (character != null && character.TextureRegion != null)
+                    {
+                        var region = character.TextureRegion;
+                        Vector2 charOrigin = new Vector2(MathF.Round(region.Width / 2f), MathF.Round(region.Height / 2f));
+
+                        Vector2 animOffset = Vector2.Zero;
+                        Vector2 effectScale = Vector2.One;
+                        float animRotation = 0f;
+
+                        if (EnableTextWave && (isActivated || AlwaysAnimateText))
+                        {
+                            var tempTransform = TextAnimator.GetTextEffectTransform(
+                                WaveEffectType, _waveTimer, charIndex, textColor, Text.Length, null);
+                            animOffset = tempTransform.Offset;
+                            effectScale = tempTransform.Scale;
+                            animRotation = tempTransform.Rotation;
+                        }
+
+                        Vector2 relativePos = glyph.Position - textPosition;
+                        Vector2 unrotatedPos = textPosition + (relativePos * layoutScale) + centeringOffset;
+
+                        Vector2 vecFromCenter = unrotatedPos - pivotPoint;
+                        Vector2 rotatedVec = new Vector2(
+                            vecFromCenter.X * cosBase - vecFromCenter.Y * sinBase,
+                            vecFromCenter.X * sinBase + vecFromCenter.Y * cosBase
+                        );
+                        Vector2 rotatedPos = pivotPoint + rotatedVec;
+
+                        Vector2 finalDrawPos = rotatedPos + charOrigin + animOffset;
+
+                        Vector2 finalScale = layoutScale * effectScale;
+                        float finalRotation = _currentHoverRotation + animRotation;
+
+                        float charCos = MathF.Cos(finalRotation);
+                        float charSin = MathF.Sin(finalRotation);
+
+                        Vector2 Rotate(Vector2 p) => new Vector2(p.X * charCos - p.Y * charSin, p.X * charSin + p.Y * charCos);
+
+                        Vector2 tlLocal = new Vector2(-charOrigin.X, -charOrigin.Y - VacuumGap) * finalScale;
+                        Vector2 trLocal = new Vector2(region.Width - charOrigin.X, -charOrigin.Y - VacuumGap) * finalScale;
+                        Vector2 blLocal = new Vector2(-charOrigin.X, region.Height - charOrigin.Y + VacuumGap) * finalScale;
+                        Vector2 brLocal = new Vector2(region.Width - charOrigin.X, region.Height - charOrigin.Y + VacuumGap) * finalScale;
+
+                        Vector2 rotatedTl = finalDrawPos + Rotate(tlLocal);
+                        Vector2 rotatedTr = finalDrawPos + Rotate(trLocal);
+                        Vector2 rotatedBl = finalDrawPos + Rotate(blLocal);
+                        Vector2 rotatedBr = finalDrawPos + Rotate(brLocal);
+
+                        _topContour.Add(rotatedTl);
+                        _topContour.Add(rotatedTr);
+                        _bottomContour.Add(rotatedBl);
+                        _bottomContour.Add(rotatedBr);
+                    }
+                    charIndex++;
+                }
+
+                if (_topContour.Count > 0)
+                {
+                    var smoothedTop = SmoothContour(_topContour, 3);
+                    var smoothedBottom = SmoothContour(_bottomContour, 3);
+
+                    float bX = Bounds.X + totalXOffset;
+                    float bR = Bounds.Right + totalXOffset;
+
+                    smoothedTop.Insert(0, new Vector2(bX, smoothedTop[0].Y));
+                    smoothedTop.Add(new Vector2(bR, smoothedTop[smoothedTop.Count - 1].Y));
+
+                    smoothedBottom.Insert(0, new Vector2(bX, smoothedBottom[0].Y));
+                    smoothedBottom.Add(new Vector2(bR, smoothedBottom[smoothedBottom.Count - 1].Y));
+
+                    spriteBatch.DrawBresenhamLineSnapped(pixel, smoothedTop[0], smoothedBottom[0], borderColor);
+
+                    spriteBatch.DrawBresenhamLineSnapped(pixel, smoothedTop[smoothedTop.Count - 1], smoothedBottom[smoothedBottom.Count - 1], borderColor);
+
+                    for (int i = 0; i < smoothedTop.Count - 1; i++)
+                    {
+                        spriteBatch.DrawBresenhamLineSnapped(pixel, smoothedTop[i], smoothedTop[i + 1], borderColor);
+                    }
+
+                    for (int i = 0; i < smoothedBottom.Count - 1; i++)
+                    {
+                        spriteBatch.DrawBresenhamLineSnapped(pixel, smoothedBottom[i], smoothedBottom[i + 1], borderColor);
+                    }
+                }
+                else
+                {
+                    int bX = (int)MathF.Round(Bounds.X + totalXOffset);
+                    int bY = (int)MathF.Round(Bounds.Y + totalYOffset - 1);
+                    int bW = Bounds.Width;
+                    int bH = Bounds.Height + 2;
+                    spriteBatch.Draw(pixel, new Rectangle(bX, bY, bW, 1), borderColor);
+                    spriteBatch.Draw(pixel, new Rectangle(bX, bY + bH - 1, bW, 1), borderColor);
+                    spriteBatch.Draw(pixel, new Rectangle(bX, bY, 1, bH), borderColor);
+                    spriteBatch.Draw(pixel, new Rectangle(bX + bW - 1, bY, 1, bH), borderColor);
+                }
+            }
 
             Color outlineColor = TextOutlineColor ?? _global.Palette_Black;
 

@@ -9,6 +9,7 @@ using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace ProjectVagabond.Scenes
 {
@@ -310,6 +311,13 @@ namespace ProjectVagabond.Scenes
             exitButton.OnClick += ConfirmExit;
             _buttons.Add(exitButton);
             _navigationGroup.Add(exitButton);
+
+            var activeButtons = _buttons.Where(b => b.IsEnabled).ToList();
+            for (int i = 0; i < activeButtons.Count; i++)
+            {
+                activeButtons[i].NeighborUp = activeButtons[(i - 1 + activeButtons.Count) % activeButtons.Count];
+                activeButtons[i].NeighborDown = activeButtons[(i + 1) % activeButtons.Count];
+            }
         }
 
         private void StartNewRun()

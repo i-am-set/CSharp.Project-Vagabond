@@ -666,11 +666,6 @@ namespace ProjectVagabond.Scenes
         {
             if (_inputManager.CurrentInputDevice == InputDeviceType.Mouse) return;
 
-            if (_currentInputDelay <= 0)
-            {
-                ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlayUi("ui_hover");
-            }
-
             if (selection == null || !(selection is ISettingControl)) return;
 
             int index = _settingControls.IndexOf((ISettingControl)selection);

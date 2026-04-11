@@ -719,17 +719,20 @@ namespace ProjectVagabond.Scenes
 
                     _introAligning = true;
                     _introTimer = 0f;
-
+                }
+            }
+            else
+            {
+                if (_introTimer >= 0.25f && _board.Deck.Count > 0 && _board.Deck[0].TargetRotation != 0f)
+                {
                     for (int i = 0; i < _board.Deck.Count; i++)
                     {
                         _board.Deck[i].TargetRotation = 0f;
                     }
                     ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlayRoutedSfx("proc:wave=5;freq=300;atk=0.02;sus=0.0;dec=0.15;lpf=1000;vol=0.1", 0.1f);
                 }
-            }
-            else
-            {
-                if (_introTimer >= 0.3f)
+
+                if (_introTimer >= 0.55f)
                 {
                     _state = ScoundrelState.Dealing;
                     _dealTimer = 0f;

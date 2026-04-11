@@ -216,7 +216,11 @@ namespace ProjectVagabond.Scenes
             ui.HpTextFlashTimer = 0.4f;
             ui.HpTextFlashColor = ServiceLocator.Get<Global>().Palette_Rust;
 
-            ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlayRoutedSfx("proc:wave=1;freq=200;slide=-100;atk=0.01;sus=0.1;dec=0.2;dist=0.5;vol=0.15", 0.2f);
+            float freq = MathHelper.Lerp(300f, 100f, Math.Clamp((amount - 2f) / 12f, 0f, 1f));
+            float slide = -freq * 0.5f;
+            string sfx = $"proc:wave=1;freq={freq:F0};slide={slide:F0};atk=0.01;sus=0.1;dec=0.2;dist=0.5;vol=0.15";
+
+            ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlayRoutedSfx(sfx, 0.2f);
 
             ui.AddFloatingText(amount, false);
         }

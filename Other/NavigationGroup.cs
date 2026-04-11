@@ -70,6 +70,11 @@ namespace ProjectVagabond.UI
             _items[_currentIndex].IsSelected = true;
             _items[_currentIndex].OnSelect();
 
+            if (ServiceLocator.Get<InputManager>().CurrentInputDevice != InputDeviceType.Mouse)
+            {
+                ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlayUi("ui_hover");
+            }
+
             OnSelectionChanged?.Invoke(_items[_currentIndex]);
         }
 
