@@ -134,7 +134,7 @@ namespace ProjectVagabond.Scenes
             _previousGold = -1;
         }
 
-        public void Update(float dt, GameTime gameTime, Vector2 deckPos, Vector2 discardPos)
+        public void Update(float dt, GameTime gameTime, Vector2 deckPos, Vector2 discardPos, int deckCount, int discardCount)
         {
             if (HpTextFlashTimer > 0) HpTextFlashTimer -= dt;
             if (GoldFlashTimer > 0) GoldFlashTimer -= dt;
@@ -154,9 +154,15 @@ namespace ProjectVagabond.Scenes
             }
 
             Vector2 hpCenter = new Vector2(Global.VIRTUAL_WIDTH / 2f, 24f);
-            DeckCountPlink.Update(gameTime, deckPos + new Vector2(0, 32));
-            DiscardCountPlink.Update(gameTime, discardPos + new Vector2(0, -32));
             HealthPlink.Update(gameTime, hpCenter);
+
+            float deckBottomY = deckPos.Y + 25f;
+            Vector2 deckCounterPos = new Vector2(deckPos.X, deckBottomY + 3f + (_core.SecondaryFont.LineHeight / 2f));
+            DeckCountPlink.Update(gameTime, deckCounterPos);
+
+            float discardTopY = discardPos.Y - (discardCount * 0.5f) - 25f;
+            Vector2 discardCounterPos = new Vector2(discardPos.X, discardTopY - 3f - (_core.SecondaryFont.LineHeight / 2f));
+            DiscardCountPlink.Update(gameTime, discardCounterPos);
         }
 
         public void AddFloatingText(int amount, bool isHealing, bool isGold = false, Vector2? position = null)
@@ -231,7 +237,8 @@ namespace ProjectVagabond.Scenes
                 string deckText = deckCount.ToString();
                 Vector2 deckSize = secFont.MeasureString(deckText);
                 Vector2 origin = new Vector2(MathF.Round(deckSize.X / 2f), MathF.Round(deckSize.Y / 2f));
-                Vector2 pos = deckPos + new Vector2(0, 32);
+                float deckBottomY = deckPos.Y + 25f;
+                Vector2 pos = new Vector2(deckPos.X, deckBottomY + 3f + (secFont.LineHeight / 2f));
                 spriteBatch.DrawStringOutlinedSnapped(secFont, deckText, pos, _global.Palette_DarkestPale, _global.Palette_Off, DeckCountPlink.Rotation, origin, DeckCountPlink.Scale, SpriteEffects.None, 0f);
             }
 
@@ -240,7 +247,8 @@ namespace ProjectVagabond.Scenes
                 string discardText = discardCount.ToString();
                 Vector2 discardSize = secFont.MeasureString(discardText);
                 Vector2 origin = new Vector2(MathF.Round(discardSize.X / 2f), MathF.Round(discardSize.Y / 2f));
-                Vector2 pos = discardPos + new Vector2(0, -32);
+                float discardTopY = discardPos.Y - (discardCount * 0.5f) - 25f;
+                Vector2 pos = new Vector2(discardPos.X, discardTopY - 3f - (secFont.LineHeight / 2f));
                 spriteBatch.DrawStringOutlinedSnapped(secFont, discardText, pos, _global.Palette_DarkestPale, _global.Palette_Off, DiscardCountPlink.Rotation, origin, DiscardCountPlink.Scale, SpriteEffects.None, 0f);
             }
         }

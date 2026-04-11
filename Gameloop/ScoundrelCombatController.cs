@@ -232,7 +232,8 @@ namespace ProjectVagabond.Scenes
 
             if (actualHeal == 0)
             {
-                ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlayRoutedSfx("proc:wave=2;freq=300;slide=-50;atk=0.02;sus=0.05;dec=0.15;detune=0.01;vol=0.15", 0.15f);
+                // JUICE: Sad, flat, downward sliding "womp womp" sound for a dud heal
+                ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlayRoutedSfx("proc:wave=2;freq=220;slide=-50;atk=0.05;sus=0.1;dec=0.2;detune=0.02;vol=0.15|wave=2;freq=180;slide=-50;atk=0.05;sus=0.1;dec=0.3;delay=0.15;vol=0.15", 0.15f);
             }
             else if (Health == maxHealth)
             {

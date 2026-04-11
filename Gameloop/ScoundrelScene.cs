@@ -521,7 +521,7 @@ namespace ProjectVagabond.Scenes
             }
             else _restartHoldTimer = 0f;
 
-            _ui.Update(dt, gameTime, _board.DeckPos, _board.DiscardPos);
+            _ui.Update(dt, gameTime, _board.DeckPos, _board.DiscardPos, _board.Deck.Count, _board.Discard.Count);
             _board.UpdateWaves(dt);
             _combat.Update(dt);
 
@@ -1374,6 +1374,8 @@ namespace ProjectVagabond.Scenes
 
             _ui.DrawRestartBar(spriteBatch, _restartHoldTimer, RESTART_HOLD_DURATION);
 
+            _ui.DrawTimer(spriteBatch, _combat.FloorTimer);
+
             if (_state == ScoundrelState.FloorCleared || _state == ScoundrelState.CleaningUp || _state == ScoundrelState.SweepingBoard)
             {
                 _ui.DrawFloorCleared(spriteBatch);
@@ -1392,7 +1394,6 @@ namespace ProjectVagabond.Scenes
                 _ui.DrawPauseMenu(spriteBatch, gameTime, transform);
             }
 
-            _ui.DrawTimer(spriteBatch, _combat.FloorTimer);
             _ui.DrawFloatingTexts(spriteBatch, gameTime);
         }
     }
