@@ -132,6 +132,7 @@ namespace ProjectVagabond.Scenes
             _runContext.MaxHealth = data.MaxHealth;
             _runContext.Health = data.Health;
             _runContext.Gold = data.Gold;
+            _runContext.CardModifiers = data.CardModifiers ?? new Dictionary<string, int>();
 
             _combat.Reset(_runContext.Health);
             _combat.Health = data.Health;
@@ -258,6 +259,7 @@ namespace ProjectVagabond.Scenes
                 MaxHealth = _runContext.MaxHealth,
                 Health = _combat.Health,
                 Gold = _runContext.Gold,
+                CardModifiers = new Dictionary<string, int>(_runContext.CardModifiers),
                 FloorTimer = _combat.FloorTimer,
                 TotalCardsInFloor = _combat.TotalCardsInFloor,
                 LastSlainValue = _combat.GetLastSlainValue(_board),
@@ -287,7 +289,8 @@ namespace ProjectVagabond.Scenes
                 Suit = c.Suit,
                 Type = c.Type,
                 Rank = c.Rank,
-                Value = c.Value,
+                BaseValue = c.BaseValue,
+                Modifier = c.Modifier,
                 IsFaceUp = c.IsFaceUp,
                 RoomSlotIndex = c.RoomSlotIndex
             };
@@ -295,11 +298,28 @@ namespace ProjectVagabond.Scenes
 
         private Card CreateCardFromData(CardData d)
         {
-            return new Card(d.Suit, d.Type, d.Rank, d.Value)
+            return new Card(d.Suit, d.Type, d.Rank, d.BaseValue)
             {
+                Modifier = d.Modifier,
                 IsFaceUp = d.IsFaceUp,
                 RoomSlotIndex = d.RoomSlotIndex
             };
+        }
+
+        public void ApplyModifierToAllCards(int amount)
+        {
+            for (int i = 2; i <= 10; i++) _runContext.SetCardModifier(CardSuit.Hearts, i, _runContext.GetCardModifier(CardSuit.Hearts, i) + amount);
+            for (int i = 2; i <= 10; i++) _runContext.SetCardModifier(CardSuit.Diamonds, i, _runContext.GetCardModifier(CardSuit.Diamonds, i) + amount);
+            for (int i = 2; i <= 14; i++) _runContext.SetCardModifier(CardSuit.Spades, i, _runContext.GetCardModifier(CardSuit.Spades, i) + amount);
+            for (int i = 2; i <= 14; i++) _runContext.SetCardModifier(CardSuit.Clubs, i, _runContext.GetCardModifier(CardSuit.Clubs, i) + amount);
+
+            foreach (var c in _board.GetAllCards(true, true))
+            {
+                if (c.Type != CardType.Outline && c.Type != CardType.Blank && c.Suit != CardSuit.None)
+                {
+                    c.Modifier += amount;
+                }
+            }
         }
 
         private void RestartGame()

@@ -8,7 +8,8 @@ namespace ProjectVagabond
         public CardSuit Suit { get; set; }
         public CardType Type { get; set; }
         public int Rank { get; set; }
-        public int Value { get; set; }
+        public int BaseValue { get; set; }
+        public int Modifier { get; set; }
         public bool IsFaceUp { get; set; }
         public int RoomSlotIndex { get; set; }
     }
@@ -31,6 +32,8 @@ namespace ProjectVagabond
         public int ResolvingMonsterRoomSlotIndex { get; set; }
         public int ResolveDamage { get; set; }
         public bool ResolveWeaponUsed { get; set; }
+
+        public Dictionary<string, int> CardModifiers { get; set; } = new Dictionary<string, int>();
 
         public List<CardData> Deck { get; set; } = new List<CardData>();
         public List<CardData> Room { get; set; } = new List<CardData>();

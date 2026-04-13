@@ -13,7 +13,9 @@ namespace ProjectVagabond.Scenes
         public CardSuit Suit { get; set; }
         public CardType Type { get; set; }
         public int Rank { get; set; }
-        public int Value { get; set; }
+        public int BaseValue { get; set; }
+        public int Modifier { get; set; }
+        public int Value => Math.Max(0, BaseValue + Modifier);
 
         public Vector2 Position { get; set; }
         public Vector2 TargetPosition { get; set; }
@@ -42,15 +44,16 @@ namespace ProjectVagabond.Scenes
         private bool _isFlipping;
         private bool _isFlippingHalf2;
         private float _flipTimer;
+        private float _totalTime;
         private const float FLIP_HALF_DURATION = 0.075f;
         private const float LERP_SPEED = 25f;
 
-        public Card(CardSuit suit, CardType type, int rank, int value)
+        public Card(CardSuit suit, CardType type, int rank, int baseValue)
         {
             Suit = suit;
             Type = type;
             Rank = rank;
-            Value = value;
+            BaseValue = baseValue;
             Scale = Vector2.One;
             TargetScale = Vector2.One;
             IsFaceUp = false;
@@ -66,6 +69,7 @@ namespace ProjectVagabond.Scenes
 
         public void Update(float dt)
         {
+            _totalTime += dt;
             float damping = 1.0f - MathF.Exp(-LERP_SPEED * dt);
             Position = Vector2.Lerp(Position, TargetPosition, damping);
             Rotation = MathHelper.Lerp(Rotation, TargetRotation, damping);
@@ -140,15 +144,15 @@ namespace ProjectVagabond.Scenes
 
             if (IsHovered && !IsFocused) drawPos.Y -= 1f;
 
+            Texture2D pixel = ServiceLocator.Get<Texture2D>();
+
             if (OutlineColor.HasValue && Scale.X > 0.05f)
             {
-                Texture2D pixel = ServiceLocator.Get<Texture2D>();
                 int w = (int)MathF.Round(38 * Scale.X);
                 int h = (int)MathF.Round(52 * Scale.Y);
                 int x = (int)MathF.Round(drawPos.X) - w / 2;
                 int y = (int)MathF.Round(drawPos.Y) - h / 2;
 
-                // 1px thick border with 1px beveled corners
                 spriteBatch.Draw(pixel, new Rectangle(x + 1, y, w - 2, 1), OutlineColor.Value);
                 spriteBatch.Draw(pixel, new Rectangle(x + 1, y + h - 1, w - 2, 1), OutlineColor.Value);
                 spriteBatch.Draw(pixel, new Rectangle(x, y + 1, 1, h - 2), OutlineColor.Value);
@@ -156,6 +160,42 @@ namespace ProjectVagabond.Scenes
             }
 
             spriteBatch.DrawSnapped(spriteManager.ScoundrelCardsSpriteSheet, drawPos, sourceRect, Color.White, Rotation, origin, Scale, SpriteEffects.None, 0f);
+
+            if (IsFaceUp && Type != CardType.Outline && Modifier != 0)
+            {
+                var global = ServiceLocator.Get<Global>();
+                var core = ServiceLocator.Get<Core>();
+                var defFont = core.DefaultFont;
+
+                Vector2 RotateOffset(Vector2 local)
+                {
+                    float cos = MathF.Cos(Rotation);
+                    float sin = MathF.Sin(Rotation);
+                    return new Vector2(local.X * cos - local.Y * sin, local.X * sin + local.Y * cos) * Scale;
+                }
+
+                string modText = Value.ToString();
+                Vector2 textSize = defFont.MeasureString(modText);
+                Vector2 textOrigin = Vector2.Zero;
+
+                Color textOutlineColor = VisualYOffset < 0f ? global.Palette_DarkSun : global.Palette_Off;
+
+                // Top Left
+                Vector2 topLeftLocal = new Vector2(-16, -23);
+                Vector2 topLeftOffset = RotateOffset(topLeftLocal);
+                Vector2 topLeftDrawPos = new Vector2(MathF.Round(drawPos.X + topLeftOffset.X), MathF.Round(drawPos.Y + topLeftOffset.Y));
+
+                spriteBatch.Draw(pixel, topLeftDrawPos, null, global.Palette_Off, Rotation, textOrigin, textSize * Scale, SpriteEffects.None, 0f);
+                spriteBatch.DrawStringOutlinedSnapped(defFont, modText, topLeftDrawPos, global.Palette_Sun, textOutlineColor, Rotation, textOrigin, Scale, SpriteEffects.None, 0f);
+
+                // Bottom Right (Rotated 180 degrees)
+                Vector2 bottomRightLocal = new Vector2(16, 23);
+                Vector2 bottomRightOffset = RotateOffset(bottomRightLocal);
+                Vector2 bottomRightDrawPos = new Vector2(MathF.Round(drawPos.X + bottomRightOffset.X), MathF.Round(drawPos.Y + bottomRightOffset.Y));
+
+                spriteBatch.Draw(pixel, bottomRightDrawPos, null, global.Palette_Off, Rotation + MathHelper.Pi, textOrigin, textSize * Scale, SpriteEffects.None, 0f);
+                spriteBatch.DrawStringOutlinedSnapped(defFont, modText, bottomRightDrawPos, global.Palette_Sun, textOutlineColor, Rotation + MathHelper.Pi, textOrigin, Scale, SpriteEffects.None, 0f);
+            }
         }
 
         public void DrawFlash(SpriteBatch spriteBatch, SpriteManager spriteManager)

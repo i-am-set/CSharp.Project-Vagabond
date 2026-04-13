@@ -8,28 +8,36 @@ namespace ProjectVagabond.Scenes
     {
         private static readonly Random _random = new Random();
 
+        private static Card CreateCard(RunContext context, CardSuit suit, CardType type, int rank, int baseValue)
+        {
+            var card = new Card(suit, type, rank, baseValue);
+            card.Modifier = context.GetCardModifier(suit, rank);
+            return card;
+        }
+
         public static List<Card> Generate(RunContext context)
         {
             if (context.Mode == GameMode.Classic)
             {
-                return GenerateClassic();
+                return GenerateClassic(context);
             }
-            return GenerateRoguelike(context.Floor);
+            return GenerateRoguelike(context);
         }
 
-        private static List<Card> GenerateClassic()
+        private static List<Card> GenerateClassic(RunContext context)
         {
             var deck = new List<Card>();
-            for (int i = 2; i <= 10; i++) deck.Add(new Card(CardSuit.Hearts, CardType.Potion, i, i));
-            for (int i = 2; i <= 10; i++) deck.Add(new Card(CardSuit.Diamonds, CardType.Weapon, i, i));
-            for (int i = 2; i <= 14; i++) deck.Add(new Card(CardSuit.Spades, CardType.Monster, i, i));
-            for (int i = 2; i <= 14; i++) deck.Add(new Card(CardSuit.Clubs, CardType.Monster, i, i));
+            for (int i = 2; i <= 10; i++) deck.Add(CreateCard(context, CardSuit.Hearts, CardType.Potion, i, i));
+            for (int i = 2; i <= 10; i++) deck.Add(CreateCard(context, CardSuit.Diamonds, CardType.Weapon, i, i));
+            for (int i = 2; i <= 14; i++) deck.Add(CreateCard(context, CardSuit.Spades, CardType.Monster, i, i));
+            for (int i = 2; i <= 14; i++) deck.Add(CreateCard(context, CardSuit.Clubs, CardType.Monster, i, i));
 
             return deck.OrderBy(x => _random.Next()).ToList();
         }
 
-        private static List<Card> GenerateRoguelike(int floor)
+        private static List<Card> GenerateRoguelike(RunContext context)
         {
+            int floor = context.Floor;
             int deckSize = 16 + (floor * 4);
             int monsterBudget = 60 + (floor * 10);
             int numPotions = floor <= 3 ? 3 : (floor <= 6 ? 3 : 4);
@@ -39,10 +47,10 @@ namespace ProjectVagabond.Scenes
             var masterWeapons = new List<Card>();
             var masterMonsters = new List<Card>();
 
-            for (int i = 2; i <= 10; i++) masterPotions.Add(new Card(CardSuit.Hearts, CardType.Potion, i, i));
-            for (int i = 2; i <= 10; i++) masterWeapons.Add(new Card(CardSuit.Diamonds, CardType.Weapon, i, i));
-            for (int i = 2; i <= 14; i++) masterMonsters.Add(new Card(CardSuit.Spades, CardType.Monster, i, i));
-            for (int i = 2; i <= 14; i++) masterMonsters.Add(new Card(CardSuit.Clubs, CardType.Monster, i, i));
+            for (int i = 2; i <= 10; i++) masterPotions.Add(CreateCard(context, CardSuit.Hearts, CardType.Potion, i, i));
+            for (int i = 2; i <= 10; i++) masterWeapons.Add(CreateCard(context, CardSuit.Diamonds, CardType.Weapon, i, i));
+            for (int i = 2; i <= 14; i++) masterMonsters.Add(CreateCard(context, CardSuit.Spades, CardType.Monster, i, i));
+            for (int i = 2; i <= 14; i++) masterMonsters.Add(CreateCard(context, CardSuit.Clubs, CardType.Monster, i, i));
 
             masterPotions = masterPotions.OrderBy(x => _random.Next()).ToList();
             masterWeapons = masterWeapons.OrderBy(x => _random.Next()).ToList();
