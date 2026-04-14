@@ -19,8 +19,13 @@ namespace ProjectVagabond.Scenes
         public Button ExitButton { get; private set; }
         public List<Button> PauseButtons { get; } = new List<Button>();
         public NavigationGroup PauseNavGroup { get; } = new NavigationGroup(wrapNavigation: true);
+
         public List<Button> ShopButtons { get; } = new List<Button>();
         public NavigationGroup ShopNavGroup { get; } = new NavigationGroup(wrapNavigation: true);
+        public Button OpenBoosterButton { get; private set; }
+        public Button SkipBoosterButton { get; private set; }
+        public Button ContinueBoosterButton { get; private set; }
+
         public ConfirmationDialog ConfirmationDialog { get; private set; }
 
         public PlinkAnimator DeckCountPlink { get; } = new PlinkAnimator { MaxScale = 1.5f, RestScale = 1.0f };
@@ -178,39 +183,28 @@ namespace ProjectVagabond.Scenes
             FloatingTexts.Add(ft);
         }
 
-        public void GenerateShop(ScoundrelScene scene, RunContext runContext, ScoundrelCombatController combat)
+        public void GenerateBoosterOffer(int cost, bool canAfford, Action onOpen, Action onSkip)
         {
             ShopButtons.Clear();
             ShopNavGroup.Clear();
 
             var defFont = _core.DefaultFont;
-            int btnWidth = 160;
+            int btnWidth = 120;
             int btnHeight = 20;
-            int startY = Global.VIRTUAL_HEIGHT / 2 - 20;
+            int startY = Global.VIRTUAL_HEIGHT / 2 + 30;
             int spacing = 24;
             int centerX = Global.VIRTUAL_WIDTH / 2 - btnWidth / 2;
 
-            var healBtn = new Button(new Rectangle(centerX, startY, btnWidth, btnHeight), "HEAL 5 HP (3g)", font: defFont);
-            healBtn.OnClick += () =>
-            {
-                if (runContext.Gold >= 3 && combat.Health < runContext.MaxHealth)
-                {
-                    runContext.Gold -= 3;
-                    combat.Health = Math.Min(runContext.MaxHealth, combat.Health + 5);
-                    ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlayUi("ui_confirm");
-                }
-                else
-                {
-                    ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlayUi("ui_alert");
-                }
-            };
-            ShopButtons.Add(healBtn);
-            ShopNavGroup.Add(healBtn);
+            OpenBoosterButton = new Button(new Rectangle(centerX, startY, btnWidth, btnHeight), $"OPEN PACK ({cost}g)", font: defFont);
+            OpenBoosterButton.IsEnabled = canAfford;
+            OpenBoosterButton.OnClick += onOpen;
+            ShopButtons.Add(OpenBoosterButton);
+            ShopNavGroup.Add(OpenBoosterButton);
 
-            var leaveBtn = new Button(new Rectangle(centerX, startY + spacing, btnWidth, btnHeight), "LEAVE SHOP", font: defFont);
-            leaveBtn.OnClick += () => scene.ApplyRewardAndAdvance(null);
-            ShopButtons.Add(leaveBtn);
-            ShopNavGroup.Add(leaveBtn);
+            SkipBoosterButton = new Button(new Rectangle(centerX, startY + spacing, btnWidth, btnHeight), "SKIP", font: defFont);
+            SkipBoosterButton.OnClick += onSkip;
+            ShopButtons.Add(SkipBoosterButton);
+            ShopNavGroup.Add(SkipBoosterButton);
 
             float delay = 0f;
             foreach (var btn in ShopButtons)
@@ -218,6 +212,34 @@ namespace ProjectVagabond.Scenes
                 btn.PlayEntrance(delay);
                 delay += 0.1f;
             }
+
+            if (ServiceLocator.Get<InputManager>().CurrentInputDevice != InputDeviceType.Mouse)
+            {
+                ShopNavGroup.SelectFirst();
+            }
+            else
+            {
+                ShopNavGroup.DeselectAll();
+            }
+        }
+
+        public void GenerateBoosterContinue(Action onContinue)
+        {
+            ShopButtons.Clear();
+            ShopNavGroup.Clear();
+
+            var defFont = _core.DefaultFont;
+            int btnWidth = 120;
+            int btnHeight = 20;
+            int startY = Global.VIRTUAL_HEIGHT - 30;
+            int centerX = Global.VIRTUAL_WIDTH / 2 - btnWidth / 2;
+
+            ContinueBoosterButton = new Button(new Rectangle(centerX, startY, btnWidth, btnHeight), "CONTINUE", font: defFont);
+            ContinueBoosterButton.OnClick += onContinue;
+            ShopButtons.Add(ContinueBoosterButton);
+            ShopNavGroup.Add(ContinueBoosterButton);
+
+            ContinueBoosterButton.PlayEntrance(0f);
 
             if (ServiceLocator.Get<InputManager>().CurrentInputDevice != InputDeviceType.Mouse)
             {
@@ -584,26 +606,29 @@ namespace ProjectVagabond.Scenes
             }
         }
 
-        public void DrawShop(SpriteBatch spriteBatch, GameTime gameTime, Matrix transform)
+        public void DrawBooster(SpriteBatch spriteBatch, GameTime gameTime, Matrix transform, int state)
         {
             var defFont = _core.DefaultFont;
 
             float alpha = Math.Clamp(ShopFadeTimer / 0.3f, 0f, 1f);
             spriteBatch.Draw(_pixel, new Rectangle(0, 0, Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT), Color.Black * (0.8f * alpha));
 
-            string text = "SHOP";
-            Vector2 size = defFont.MeasureString(text);
+            if (state == 0) // Offer
+            {
+                string text = "BOOSTER PACK";
+                Vector2 size = defFont.MeasureString(text);
 
-            TextAnimator.DrawTextWithEffectOutlined(
-                spriteBatch,
-                defFont,
-                text,
-                new Vector2(Global.VIRTUAL_WIDTH / 2f - size.X / 2f, 30),
-                _global.Palette_Sun * alpha,
-                _global.Palette_Off * alpha,
-                TextEffectType.TypewriterPop,
-                ShopFadeTimer
-            );
+                TextAnimator.DrawTextWithEffectOutlined(
+                    spriteBatch,
+                    defFont,
+                    text,
+                    new Vector2(Global.VIRTUAL_WIDTH / 2f - size.X / 2f, 30),
+                    _global.Palette_Sun * alpha,
+                    _global.Palette_Off * alpha,
+                    TextEffectType.TypewriterPop,
+                    ShopFadeTimer
+                );
+            }
 
             foreach (var btn in ShopButtons)
             {

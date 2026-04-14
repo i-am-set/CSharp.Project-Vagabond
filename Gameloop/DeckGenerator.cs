@@ -133,6 +133,11 @@ namespace ProjectVagabond.Scenes
                 }
             }
 
+            foreach (var extra in context.ExtraCards)
+            {
+                deck.Add(CreateCard(context, extra.Suit, extra.Type, extra.Rank, extra.BaseValue));
+            }
+
             deck = deck.OrderBy(x => _random.Next()).ToList();
 
             bool isSafe = false;

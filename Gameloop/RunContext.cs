@@ -18,6 +18,7 @@ namespace ProjectVagabond
         public int Gold { get; set; } = 0;
 
         public Dictionary<string, int> CardModifiers { get; set; } = new Dictionary<string, int>();
+        public List<CardData> ExtraCards { get; set; } = new List<CardData>();
 
         public void Reset()
         {
@@ -26,6 +27,7 @@ namespace ProjectVagabond
             Health = MaxHealth;
             Gold = 0;
             CardModifiers.Clear();
+            ExtraCards.Clear();
         }
 
         public int GetCardModifier(Scenes.CardSuit suit, int rank)

@@ -34,6 +34,7 @@ namespace ProjectVagabond
         public bool ResolveWeaponUsed { get; set; }
 
         public Dictionary<string, int> CardModifiers { get; set; } = new Dictionary<string, int>();
+        public List<CardData> ExtraCards { get; set; } = new List<CardData>();
 
         public List<CardData> Deck { get; set; } = new List<CardData>();
         public List<CardData> Room { get; set; } = new List<CardData>();

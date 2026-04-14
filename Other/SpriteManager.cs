@@ -123,11 +123,11 @@ namespace ProjectVagabond
 
             CountdownNumbersSpriteSheet = LoadTex("Sprites/UI/BasicIcons/Countdown_3_2_1_Numbers", 96, 32, Color.Magenta);
 
-            ScoundrelCardsSpriteSheet = LoadTex("Sprites/Cards/base_cards_36x50_spritesheet", 504, 200, Color.Magenta);
+            ScoundrelCardsSpriteSheet = LoadTex("Sprites/Cards/base_cards_36x50_spritesheet", 504, 250, Color.Magenta);
             ScoundrelCardsSilhouetteSpriteSheet = CreateSilhouette(ScoundrelCardsSpriteSheet);
 
-            ScoundrelCardRects = new Rectangle[4, 14];
-            for (int r = 0; r < 4; r++)
+            ScoundrelCardRects = new Rectangle[5, 14];
+            for (int r = 0; r < 5; r++)
             {
                 for (int c = 0; c < 14; c++)
                 {
