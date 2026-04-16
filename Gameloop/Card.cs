@@ -98,20 +98,7 @@ namespace ProjectVagabond.Scenes
                         IsFaceUp = !IsFaceUp;
                         _isFlippingHalf2 = true;
                         _flipTimer = 0f;
-                        FlashWhiteIntensity = 0.6f; // Flash brightly right as the card is revealed
-
-                        if (Type == CardType.Booster)
-                        {
-                            FlashWhiteIntensity = 1.0f;
-                            ServiceLocator.Get<HapticsManager>().TriggerZoomPulse(1.04f, 0.15f);
-                            ServiceLocator.Get<HapticsManager>().TriggerShake(3f, 0.15f);
-                            ServiceLocator.Get<Core>().TriggerFullscreenFlash(Color.White * 0.3f, 0.15f);
-
-                            var psm = ServiceLocator.Get<ParticleSystemManager>();
-                            var emitter = psm.CreateEmitter(ProjectVagabond.Particles.ParticleEffects.CreateUIPlink());
-                            emitter.Position = this.Position;
-                            emitter.EmitBurst(20);
-                        }
+                        FlashWhiteIntensity = 0.6f;
                     }
                 }
                 else
