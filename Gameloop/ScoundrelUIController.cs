@@ -354,7 +354,7 @@ namespace ProjectVagabond.Scenes
             string dmgText = $"-{monsterCard.Value}";
             Vector2 dmgSize = defFont.MeasureString(dmgText);
 
-            bool showWeapon = showWeaponDamage && weaponSlot != null && (previewFlashTimer % 1.0f) < 0.5f;
+            bool showWeapon = showWeaponDamage && weaponSlot != null;
 
             if (showWeapon)
             {

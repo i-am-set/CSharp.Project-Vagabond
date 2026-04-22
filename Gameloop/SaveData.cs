@@ -27,6 +27,7 @@ namespace ProjectVagabond
         public int CardsResolvedThisRoom { get; set; }
         public int PotionsUsedThisRoom { get; set; }
         public bool CanSkip { get; set; }
+        public bool PocketLocked { get; set; }
         public ScoundrelState State { get; set; }
         public int FocusedRoomSlotIndex { get; set; }
         public int ResolvingMonsterRoomSlotIndex { get; set; }

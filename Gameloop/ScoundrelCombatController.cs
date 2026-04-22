@@ -12,6 +12,7 @@ namespace ProjectVagabond.Scenes
         public int CardsResolvedThisRoom { get; set; }
         public int PotionsUsedThisRoom { get; set; }
         public bool CanSkip { get; set; }
+        public bool PocketLocked { get; set; }
 
         public float FloorTimer { get; set; }
         public int TotalCardsInFloor { get; set; }
@@ -48,6 +49,7 @@ namespace ProjectVagabond.Scenes
             CardsResolvedThisRoom = 0;
             PotionsUsedThisRoom = 0;
             CanSkip = true;
+            PocketLocked = false;
 
             FloorTimer = 0f;
             TotalCardsInFloor = 0;
