@@ -20,11 +20,9 @@ namespace ProjectVagabond.Scenes
         public List<Button> PauseButtons { get; } = new List<Button>();
         public NavigationGroup PauseNavGroup { get; } = new NavigationGroup(wrapNavigation: true);
 
-        public List<Button> ShopButtons { get; } = new List<Button>();
-        public NavigationGroup ShopNavGroup { get; } = new NavigationGroup(wrapNavigation: true);
-        public Button OpenBoosterButton { get; private set; }
-        public Button SkipBoosterButton { get; private set; }
-        public Button ContinueBoosterButton { get; private set; }
+        public List<Button> RewardButtons { get; } = new List<Button>();
+        public NavigationGroup RewardNavGroup { get; } = new NavigationGroup(wrapNavigation: true);
+        public Button RewardContinueButton { get; private set; }
 
         public ConfirmationDialog ConfirmationDialog { get; private set; }
 
@@ -44,7 +42,7 @@ namespace ProjectVagabond.Scenes
         public const float HEART_FLASH_BLINK_HALF = 0.075f;
 
         public float FloorClearedTextTimer { get; set; }
-        public float ShopFadeTimer { get; set; }
+        public float RewardFadeTimer { get; set; }
         public float GoldFlashTimer { get; set; }
 
         public float HealthBarOpacity { get; set; } = 1f;
@@ -134,7 +132,7 @@ namespace ProjectVagabond.Scenes
             Array.Clear(HeartFlashFrames, 0, 20);
             HpTextFlashTimer = 0f;
             FloorClearedTextTimer = 0f;
-            ShopFadeTimer = 0f;
+            RewardFadeTimer = 0f;
             GoldFlashTimer = 0f;
             _previousGold = -1;
         }
@@ -144,7 +142,7 @@ namespace ProjectVagabond.Scenes
             if (HpTextFlashTimer > 0) HpTextFlashTimer -= dt;
             if (GoldFlashTimer > 0) GoldFlashTimer -= dt;
             FloorClearedTextTimer += dt;
-            ShopFadeTimer += dt;
+            RewardFadeTimer += dt;
 
             for (int i = 0; i < 20; i++)
             {
@@ -183,71 +181,31 @@ namespace ProjectVagabond.Scenes
             FloatingTexts.Add(ft);
         }
 
-        public void GenerateBoosterOffer(int cost, bool canAfford, Action onOpen, Action onSkip)
+        public void GenerateRewardScreen(Action onContinue)
         {
-            ShopButtons.Clear();
-            ShopNavGroup.Clear();
+            RewardButtons.Clear();
+            RewardNavGroup.Clear();
 
             var defFont = _core.DefaultFont;
             int btnWidth = 120;
             int btnHeight = 20;
-            int startY = Global.VIRTUAL_HEIGHT / 2 + 30;
-            int spacing = 24;
+            int startY = Global.VIRTUAL_HEIGHT - 40;
             int centerX = Global.VIRTUAL_WIDTH / 2 - btnWidth / 2;
 
-            OpenBoosterButton = new Button(new Rectangle(centerX, startY, btnWidth, btnHeight), $"OPEN PACK ({cost}g)", font: defFont);
-            OpenBoosterButton.IsEnabled = canAfford;
-            OpenBoosterButton.OnClick += onOpen;
-            ShopButtons.Add(OpenBoosterButton);
-            ShopNavGroup.Add(OpenBoosterButton);
+            RewardContinueButton = new Button(new Rectangle(centerX, startY, btnWidth, btnHeight), "CONTINUE", font: defFont);
+            RewardContinueButton.OnClick += onContinue;
+            RewardButtons.Add(RewardContinueButton);
+            RewardNavGroup.Add(RewardContinueButton);
 
-            SkipBoosterButton = new Button(new Rectangle(centerX, startY + spacing, btnWidth, btnHeight), "SKIP", font: defFont);
-            SkipBoosterButton.OnClick += onSkip;
-            ShopButtons.Add(SkipBoosterButton);
-            ShopNavGroup.Add(SkipBoosterButton);
-
-            float delay = 0f;
-            foreach (var btn in ShopButtons)
-            {
-                btn.PlayEntrance(delay);
-                delay += 0.1f;
-            }
+            RewardContinueButton.PlayEntrance(0f);
 
             if (ServiceLocator.Get<InputManager>().CurrentInputDevice != InputDeviceType.Mouse)
             {
-                ShopNavGroup.SelectFirst();
+                RewardNavGroup.SelectFirst();
             }
             else
             {
-                ShopNavGroup.DeselectAll();
-            }
-        }
-
-        public void GenerateBoosterContinue(Action onContinue)
-        {
-            ShopButtons.Clear();
-            ShopNavGroup.Clear();
-
-            var defFont = _core.DefaultFont;
-            int btnWidth = 120;
-            int btnHeight = 20;
-            int startY = Global.VIRTUAL_HEIGHT - 30;
-            int centerX = Global.VIRTUAL_WIDTH / 2 - btnWidth / 2;
-
-            ContinueBoosterButton = new Button(new Rectangle(centerX, startY, btnWidth, btnHeight), "CONTINUE", font: defFont);
-            ContinueBoosterButton.OnClick += onContinue;
-            ShopButtons.Add(ContinueBoosterButton);
-            ShopNavGroup.Add(ContinueBoosterButton);
-
-            ContinueBoosterButton.PlayEntrance(0f);
-
-            if (ServiceLocator.Get<InputManager>().CurrentInputDevice != InputDeviceType.Mouse)
-            {
-                ShopNavGroup.SelectFirst();
-            }
-            else
-            {
-                ShopNavGroup.DeselectAll();
+                RewardNavGroup.DeselectAll();
             }
         }
 
@@ -606,31 +564,28 @@ namespace ProjectVagabond.Scenes
             }
         }
 
-        public void DrawBooster(SpriteBatch spriteBatch, GameTime gameTime, Matrix transform, int state)
+        public void DrawRewardScreen(SpriteBatch spriteBatch, GameTime gameTime, Matrix transform)
         {
             var defFont = _core.DefaultFont;
 
-            float alpha = Math.Clamp(ShopFadeTimer / 0.3f, 0f, 1f);
+            float alpha = Math.Clamp(RewardFadeTimer / 0.3f, 0f, 1f);
             spriteBatch.Draw(_pixel, new Rectangle(0, 0, Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT), Color.Black * (0.8f * alpha));
 
-            if (state == 0) // Offer
-            {
-                string text = "BOOSTER PACK";
-                Vector2 size = defFont.MeasureString(text);
+            string text = "REWARDS";
+            Vector2 size = defFont.MeasureString(text);
 
-                TextAnimator.DrawTextWithEffectOutlined(
-                    spriteBatch,
-                    defFont,
-                    text,
-                    new Vector2(Global.VIRTUAL_WIDTH / 2f - size.X / 2f, 30),
-                    _global.Palette_Sun * alpha,
-                    _global.Palette_Off * alpha,
-                    TextEffectType.TypewriterPop,
-                    ShopFadeTimer
-                );
-            }
+            TextAnimator.DrawTextWithEffectOutlined(
+                spriteBatch,
+                defFont,
+                text,
+                new Vector2(Global.VIRTUAL_WIDTH / 2f - size.X / 2f, 30),
+                _global.Palette_Sun * alpha,
+                _global.Palette_Off * alpha,
+                TextEffectType.TypewriterPop,
+                RewardFadeTimer
+            );
 
-            foreach (var btn in ShopButtons)
+            foreach (var btn in RewardButtons)
             {
                 btn.Draw(spriteBatch, defFont, gameTime, transform);
             }

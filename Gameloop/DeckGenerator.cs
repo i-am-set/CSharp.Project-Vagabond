@@ -10,9 +10,7 @@ namespace ProjectVagabond.Scenes
 
         private static Card CreateCard(RunContext context, CardSuit suit, CardType type, int rank, int baseValue)
         {
-            var card = new Card(suit, type, rank, baseValue);
-            card.Modifier = context.GetCardModifier(suit, rank);
-            return card;
+            return new Card(suit, type, rank, baseValue);
         }
 
         public static List<Card> Generate(RunContext context)
@@ -131,11 +129,6 @@ namespace ProjectVagabond.Scenes
                 {
                     break;
                 }
-            }
-
-            foreach (var extra in context.ExtraCards)
-            {
-                deck.Add(CreateCard(context, extra.Suit, extra.Type, extra.Rank, extra.BaseValue));
             }
 
             deck = deck.OrderBy(x => _random.Next()).ToList();

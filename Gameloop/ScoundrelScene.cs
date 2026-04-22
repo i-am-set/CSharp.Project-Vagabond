@@ -14,7 +14,7 @@ using System.Linq;
 
 namespace ProjectVagabond.Scenes
 {
-    public enum ScoundrelState { Intro, Dealing, Playing, Focused, ResolvingMonster, GameOver, Restarting, FloorCleared, CleaningUp, SweepingBoard, Booster }
+    public enum ScoundrelState { Intro, Dealing, Playing, Focused, ResolvingMonster, GameOver, Restarting, FloorCleared, CleaningUp, SweepingBoard, Reward }
 
     public class ScoundrelScene : GameScene
     {
@@ -68,30 +68,7 @@ namespace ProjectVagabond.Scenes
 
         private readonly Random _random = new Random();
 
-        // Booster State
-        private int _boosterPhase = 0; // 0: Offer, 1: Opening, 2: Spreading, 3: Interactive, 4: Done, 5: Closing, 6: Returning
-        private float _boosterTimer = 0f;
-        private List<Card> _boosterCards = new List<Card>();
-        private List<Card> _boosterRevealedCards = new List<Card>();
-        private List<Card> _pendingBoosterEffects = new List<Card>();
-        private List<Card> _cardsToPlink = new List<Card>();
-        private int _boosterCost = 5;
-
-        private float _boosterWaveTimer = 0f;
-        private float _boosterWaveInterval = 3f;
-        private float _currentBoosterWaveTime = -1f;
-
-        private class BoosterText
-        {
-            public string Text;
-            public Color Color;
-            public Vector2 Position;
-            public Vector2 TargetPosition;
-            public float VisualYOffset;
-            public bool IsSecondaryFont;
-        }
-
-        private List<BoosterText> _boosterTexts = new List<BoosterText>();
+        private float _rewardTimer = 0f;
 
         public ScoundrelScene()
         {
@@ -157,8 +134,6 @@ namespace ProjectVagabond.Scenes
             _runContext.MaxHealth = data.MaxHealth;
             _runContext.Health = data.Health;
             _runContext.Gold = data.Gold;
-            _runContext.CardModifiers = data.CardModifiers ?? new Dictionary<string, int>();
-            _runContext.ExtraCards = data.ExtraCards ?? new List<CardData>();
 
             _combat.Reset(_runContext.Health);
             _combat.Health = data.Health;
@@ -268,15 +243,10 @@ namespace ProjectVagabond.Scenes
                     _state = ScoundrelState.Playing;
                 }
             }
-            else if (_state == ScoundrelState.Booster)
+            else if (_state == ScoundrelState.Reward)
             {
-                _boosterPhase = 0;
-                _boosterCost = 5 + (_runContext.Floor * 2);
-                _ui.GenerateBoosterOffer(_boosterCost, _runContext.Gold >= _boosterCost, OnOpenBooster, OnSkipBooster);
-
-                _boosterWaveTimer = 0f;
-                _boosterWaveInterval = 3f + (float)_random.NextDouble() * 2f;
-                _currentBoosterWaveTime = -1f;
+                _rewardTimer = 0f;
+                _ui.GenerateRewardScreen(OnRewardContinueClicked);
             }
 
             _ui.DeckCountPlink.Start(0.5f, 0.3f);
@@ -303,8 +273,6 @@ namespace ProjectVagabond.Scenes
                 MaxHealth = _runContext.MaxHealth,
                 Health = _combat.Health,
                 Gold = _runContext.Gold,
-                CardModifiers = new Dictionary<string, int>(_runContext.CardModifiers),
-                ExtraCards = new List<CardData>(_runContext.ExtraCards),
                 FloorTimer = _combat.FloorTimer,
                 TotalCardsInFloor = _combat.TotalCardsInFloor,
                 LastSlainValue = _combat.GetLastSlainValue(_board),
@@ -337,7 +305,6 @@ namespace ProjectVagabond.Scenes
                 Type = c.Type,
                 Rank = c.Rank,
                 BaseValue = c.BaseValue,
-                Modifier = c.Modifier,
                 IsFaceUp = c.IsFaceUp,
                 RoomSlotIndex = c.RoomSlotIndex
             };
@@ -347,26 +314,9 @@ namespace ProjectVagabond.Scenes
         {
             return new Card(d.Suit, d.Type, d.Rank, d.BaseValue)
             {
-                Modifier = d.Modifier,
                 IsFaceUp = d.IsFaceUp,
                 RoomSlotIndex = d.RoomSlotIndex
             };
-        }
-
-        public void ApplyModifierToAllCards(int amount)
-        {
-            for (int i = 2; i <= 10; i++) _runContext.SetCardModifier(CardSuit.Hearts, i, _runContext.GetCardModifier(CardSuit.Hearts, i) + amount);
-            for (int i = 2; i <= 10; i++) _runContext.SetCardModifier(CardSuit.Diamonds, i, _runContext.GetCardModifier(CardSuit.Diamonds, i) + amount);
-            for (int i = 2; i <= 14; i++) _runContext.SetCardModifier(CardSuit.Spades, i, _runContext.GetCardModifier(CardSuit.Spades, i) + amount);
-            for (int i = 2; i <= 14; i++) _runContext.SetCardModifier(CardSuit.Clubs, i, _runContext.GetCardModifier(CardSuit.Clubs, i) + amount);
-
-            foreach (var c in _board.GetAllCards(true, true))
-            {
-                if (c.Type != CardType.Outline && c.Type != CardType.Blank && c.Suit != CardSuit.None)
-                {
-                    c.Modifier += amount;
-                }
-            }
         }
 
         private void RestartGame()
@@ -377,15 +327,7 @@ namespace ProjectVagabond.Scenes
             _previewFlashTimer = 0f;
             _lastHoveredCard = null;
 
-            _boosterCards.Clear();
-            _boosterRevealedCards.Clear();
-            _boosterTexts.Clear();
-            _pendingBoosterEffects.Clear();
-            _cardsToPlink.Clear();
-            _boosterPhase = 0;
-            _boosterWaveTimer = 0f;
-            _boosterWaveInterval = 3f + (float)_random.NextDouble() * 2f;
-            _currentBoosterWaveTime = -1f;
+            _rewardTimer = 0f;
 
             _board.Reset();
             _board.Deck.AddRange(DeckGenerator.Generate(_runContext));
@@ -425,15 +367,7 @@ namespace ProjectVagabond.Scenes
             _previewFlashTimer = 0f;
             _lastHoveredCard = null;
 
-            _boosterCards.Clear();
-            _boosterRevealedCards.Clear();
-            _boosterTexts.Clear();
-            _pendingBoosterEffects.Clear();
-            _cardsToPlink.Clear();
-            _boosterPhase = 0;
-            _boosterWaveTimer = 0f;
-            _boosterWaveInterval = 3f + (float)_random.NextDouble() * 2f;
-            _currentBoosterWaveTime = -1f;
+            _rewardTimer = 0f;
 
             _board.CardsToReturn.Clear();
             _board.CardsToReturn.AddRange(_board.Room);
@@ -537,12 +471,7 @@ namespace ProjectVagabond.Scenes
             _previewFlashTimer = 0f;
             _lastHoveredCard = null;
 
-            _boosterCards.Clear();
-            _boosterRevealedCards.Clear();
-            _boosterTexts.Clear();
-            _pendingBoosterEffects.Clear();
-            _cardsToPlink.Clear();
-            _boosterPhase = 0;
+            _rewardTimer = 0f;
 
             _board.Reset();
             _board.Deck.AddRange(DeckGenerator.Generate(_runContext));
@@ -624,7 +553,7 @@ namespace ProjectVagabond.Scenes
 
             _board.Update(dt);
 
-            if (_state == ScoundrelState.Booster)
+            if (_state == ScoundrelState.Reward)
             {
                 _ui.HealthBarOpacity = Math.Max(0f, _ui.HealthBarOpacity - dt * 5f);
             }
@@ -653,7 +582,7 @@ namespace ProjectVagabond.Scenes
                 case ScoundrelState.FloorCleared: UpdateFloorCleared(dt); break;
                 case ScoundrelState.CleaningUp: UpdateCleaningUp(dt); break;
                 case ScoundrelState.SweepingBoard: UpdateSweepingBoard(dt); break;
-                case ScoundrelState.Booster: UpdateBooster(dt, justClicked, mousePos, mouseState, gameTime); break;
+                case ScoundrelState.Reward: UpdateReward(dt, justClicked, mousePos, mouseState, gameTime); break;
                 case ScoundrelState.GameOver: UpdateGameOver(dt, justClicked, mousePos, mouseState); break;
             }
 
@@ -662,7 +591,7 @@ namespace ProjectVagabond.Scenes
 
         private void UpdateHoverStates(Vector2 mousePos, float dt)
         {
-            bool canSkipNow = _state == ScoundrelState.Playing && _board.Room.Count == 4 && _combat.CardsResolvedThisRoom == 0 && _combat.CanSkip;
+            bool canSkipNow = _state == ScoundrelState.Playing && _board.Room.Count == 4 && _combat.CardsResolvedThisRoom == 0 && _combat.CanSkip && _board.Deck.Count > 0;
             var allCards = _board.GetAllCards(_state == ScoundrelState.Focused, canSkipNow);
 
             foreach (var c in allCards)
@@ -673,26 +602,6 @@ namespace ProjectVagabond.Scenes
                 c.ForceRenderAboveVeil = false;
                 c.IsFocused = (c == _board.FocusedCard);
                 if (_state != ScoundrelState.ResolvingMonster || c != _combat.ResolvingMonster) c.VisualYOffset = 0f;
-            }
-
-            foreach (var c in _boosterCards)
-            {
-                c.IsSelectable = false;
-                c.ExpandHitboxX = false;
-                c.OutlineColor = null;
-                c.ForceRenderAboveVeil = false;
-                c.IsFocused = false;
-                c.VisualYOffset = 0f;
-            }
-
-            foreach (var c in _boosterRevealedCards)
-            {
-                c.IsSelectable = false;
-                c.ExpandHitboxX = false;
-                c.OutlineColor = null;
-                c.ForceRenderAboveVeil = false;
-                c.IsFocused = false;
-                c.VisualYOffset = 0f;
             }
 
             if (_state == ScoundrelState.Playing || _state == ScoundrelState.ResolvingMonster)
@@ -730,17 +639,6 @@ namespace ProjectVagabond.Scenes
                 _board.FistCard.IsSelectable = true;
                 _board.FistCard.ForceRenderAboveVeil = true;
             }
-            else if (_state == ScoundrelState.Booster && _boosterPhase == 3)
-            {
-                foreach (var c in _boosterCards)
-                {
-                    if (!c.IsFaceUp)
-                    {
-                        c.IsSelectable = true;
-                        c.ExpandHitboxX = true;
-                    }
-                }
-            }
 
             _selectableCardsCache.Clear();
             _unselectableCardsCache.Clear();
@@ -751,24 +649,11 @@ namespace ProjectVagabond.Scenes
                 else _unselectableCardsCache.Add(c);
             }
 
-            if (_state == ScoundrelState.Booster)
-            {
-                foreach (var c in _boosterCards)
-                {
-                    if (c.IsSelectable) _selectableCardsCache.Add(c);
-                    else _unselectableCardsCache.Add(c);
-                }
-                foreach (var c in _boosterRevealedCards)
-                {
-                    _unselectableCardsCache.Add(c);
-                }
-            }
-
             _selectableCardsCache.Sort((a, b) => a.ZIndex.CompareTo(b.ZIndex));
             _unselectableCardsCache.Sort((a, b) => a.ZIndex.CompareTo(b.ZIndex));
 
             Card? newHovered = null;
-            if ((_state == ScoundrelState.Playing || _state == ScoundrelState.Focused || (_state == ScoundrelState.Booster && _boosterPhase == 3)) && _inputManager.IsMouseClickAvailable())
+            if ((_state == ScoundrelState.Playing || _state == ScoundrelState.Focused) && _inputManager.IsMouseClickAvailable())
             {
                 for (int i = _selectableCardsCache.Count - 1; i >= 0; i--)
                 {
@@ -794,18 +679,6 @@ namespace ProjectVagabond.Scenes
                     ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlayUi("ui_hover");
                 }
                 c.IsHovered = (c == newHovered);
-            }
-
-            if (_state == ScoundrelState.Booster)
-            {
-                foreach (var c in _boosterCards)
-                {
-                    if (c == newHovered && !c.IsHovered)
-                    {
-                        ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlayUi("ui_hover");
-                    }
-                    c.IsHovered = (c == newHovered);
-                }
             }
 
             if (newHovered != null && !newHovered.IsFocused) newHovered.OutlineColor = _global.Palette_Sun;
@@ -1118,7 +991,6 @@ namespace ProjectVagabond.Scenes
         private void OnCardResolved(bool isFromPocket = false)
         {
             if (!isFromPocket) _combat.CardsResolvedThisRoom++;
-            _combat.CanSkip = true;
 
             if (_combat.Health <= 0)
             {
@@ -1130,10 +1002,20 @@ namespace ProjectVagabond.Scenes
             {
                 CheckGameOver();
             }
-            else if (_combat.CardsResolvedThisRoom >= 3 && _board.Deck.Count > 0)
+            else if (_combat.CardsResolvedThisRoom >= 3)
             {
-                _state = ScoundrelState.Dealing;
-                _dealTimer = DEAL_INTERVAL;
+                if (_board.Deck.Count > 0)
+                {
+                    _state = ScoundrelState.Dealing;
+                    _dealTimer = DEAL_INTERVAL;
+                    _combat.CanSkip = true;
+                }
+                else
+                {
+                    _combat.PocketLocked = false;
+                    _combat.CardsResolvedThisRoom = 0;
+                    _combat.CanSkip = true;
+                }
             }
             SaveCurrentState();
         }
@@ -1365,15 +1247,10 @@ namespace ProjectVagabond.Scenes
                 else
                 {
                     ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlayRoutedSfx("proc:wave=2;freq=880;atk=0.02;sus=0.05;dec=0.3;vol=0.1|wave=2;freq=1108.73;atk=0.02;sus=0.05;dec=0.3;delay=0.05;vol=0.1", 0.1f);
-                    _state = ScoundrelState.Booster;
-                    _boosterPhase = 0;
-                    _boosterCost = 5 + (_runContext.Floor * 2);
-                    _ui.ShopFadeTimer = 0f;
-                    _ui.GenerateBoosterOffer(_boosterCost, _runContext.Gold >= _boosterCost, OnOpenBooster, OnSkipBooster);
-
-                    _boosterWaveTimer = 0f;
-                    _boosterWaveInterval = 3f + (float)_random.NextDouble() * 2f;
-                    _currentBoosterWaveTime = -1f;
+                    _state = ScoundrelState.Reward;
+                    _rewardTimer = 0f;
+                    _ui.RewardFadeTimer = 0f;
+                    _ui.GenerateRewardScreen(OnRewardContinueClicked);
 
                     foreach (var c in _board.Deck) c.TargetRotation = 0f;
 
@@ -1382,405 +1259,24 @@ namespace ProjectVagabond.Scenes
             }
         }
 
-        private void OnOpenBooster()
-        {
-            _runContext.Gold -= _boosterCost;
-            ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlayUi("ui_confirm");
-            _boosterPhase = 1;
-            _boosterTimer = 0f;
-            _ui.ShopButtons.Clear();
-            _ui.ShopNavGroup.Clear();
-
-            _boosterCards.Clear();
-            _boosterRevealedCards.Clear();
-            _boosterTexts.Clear();
-            _pendingBoosterEffects.Clear();
-
-            _boosterWaveTimer = 0f;
-            _boosterWaveInterval = 3f + (float)_random.NextDouble() * 2f;
-            _currentBoosterWaveTime = -1f;
-
-            int numCards = 3;
-            for (int i = 0; i < numCards; i++)
-            {
-                int type = _random.Next(1, 7);
-                var card = new Card(CardSuit.None, CardType.Booster, 0, type);
-                card.Position = new Vector2(Global.VIRTUAL_WIDTH / 2f, Global.VIRTUAL_HEIGHT + 50);
-                card.TargetPosition = new Vector2(Global.VIRTUAL_WIDTH / 2f, Global.VIRTUAL_HEIGHT / 2f + 16f);
-                card.ZIndex = 600 + i;
-                _boosterCards.Add(card);
-            }
-        }
-
-        private void OnSkipBooster()
+        private void OnRewardContinueClicked()
         {
             ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlayUi("ui_click");
             ApplyRewardAndAdvance(null);
         }
 
-        private void OnBoosterContinueClicked()
+        private void UpdateReward(float dt, bool justClicked, Vector2 mousePos, MouseState mouseState, GameTime gameTime)
         {
-            ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlayUi("ui_click");
-            _boosterPhase = 5;
-            _boosterTimer = 0f;
-            _ui.ShopButtons.Clear();
-            _ui.ShopNavGroup.Clear();
-        }
+            _rewardTimer += dt;
 
-        private void UpdateBooster(float dt, bool justClicked, Vector2 mousePos, MouseState mouseState, GameTime gameTime)
-        {
-            foreach (var c in _boosterCards) c.Update(dt);
-            foreach (var c in _boosterRevealedCards) c.Update(dt);
-
-            for (int i = _cardsToPlink.Count - 1; i >= 0; i--)
+            for (int i = 0; i < _ui.RewardButtons.Count; i++)
             {
-                var c = _cardsToPlink[i];
-                if (Vector2.Distance(c.Position, c.TargetPosition) < 2f && !c.IsFlipping)
-                {
-                    c.FlashWhiteIntensity = 1.0f;
-                    c.Scale = new Vector2(1.3f, 1.3f);
-                    ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlayUi("ui_plink");
-
-                    var psm = ServiceLocator.Get<ParticleSystemManager>();
-                    var emitter = psm.CreateEmitter(ProjectVagabond.Particles.ParticleEffects.CreateUIPlink());
-                    emitter.Position = c.Position;
-                    emitter.EmitBurst(15);
-
-                    _cardsToPlink.RemoveAt(i);
-                }
+                _ui.RewardButtons[i].Update(mouseState);
             }
 
-            float time = (float)gameTime.TotalGameTime.TotalSeconds;
-            foreach (var c in _boosterRevealedCards)
+            if (_inputManager.CurrentInputDevice != InputDeviceType.Mouse)
             {
-                c.VisualYOffset = MathF.Sin(time * 4f + c.TargetPosition.X * 0.05f) * 2f;
-            }
-            foreach (var t in _boosterTexts)
-            {
-                t.Position = Vector2.Lerp(t.Position, t.TargetPosition, 1.0f - MathF.Exp(-15f * dt));
-                t.VisualYOffset = MathF.Sin(time * 4f + t.TargetPosition.X * 0.05f) * 2f;
-            }
-
-            _boosterWaveTimer += dt;
-            if (_boosterWaveTimer >= _boosterWaveInterval)
-            {
-                _boosterWaveTimer = 0f;
-                _boosterWaveInterval = 3f + (float)_random.NextDouble() * 3f;
-                _currentBoosterWaveTime = 0f;
-            }
-
-            if (_currentBoosterWaveTime >= 0f)
-            {
-                _currentBoosterWaveTime += dt;
-                if (_currentBoosterWaveTime > 1.0f)
-                {
-                    _currentBoosterWaveTime = -1f;
-                }
-            }
-
-            for (int i = 0; i < _boosterCards.Count; i++)
-            {
-                var c = _boosterCards[i];
-                if (c.IsFaceUp && !c.IsFlipping)
-                {
-                    if (_currentBoosterWaveTime >= 0f)
-                    {
-                        float slotTime = i * 0.1f;
-                        float localTime = _currentBoosterWaveTime - slotTime;
-                        if (localTime > 0f && localTime < 0.2f)
-                        {
-                            float progress = localTime / 0.2f;
-                            c.VisualYOffset = -MathF.Sin(progress * MathHelper.Pi) * 1f;
-                        }
-                        else
-                        {
-                            c.VisualYOffset = 0f;
-                        }
-                    }
-                    else
-                    {
-                        c.VisualYOffset = 0f;
-                    }
-                }
-            }
-
-            if (_boosterPhase == 0) // Offer
-            {
-                for (int i = 0; i < _ui.ShopButtons.Count; i++)
-                {
-                    _ui.ShopButtons[i].Update(mouseState);
-                    if (_boosterPhase != 0 || _state != ScoundrelState.Booster) break;
-                }
-
-                if (_state == ScoundrelState.Booster && _boosterPhase == 0 && _inputManager.CurrentInputDevice != InputDeviceType.Mouse)
-                    _ui.ShopNavGroup.UpdateInput(_inputManager);
-            }
-            else if (_boosterPhase == 1) // Opening (Cards fly up)
-            {
-                _boosterTimer += dt;
-                if (_boosterTimer > 0.5f)
-                {
-                    _boosterPhase = 2;
-                    _boosterTimer = 0f;
-
-                    float spacing = 45f;
-                    float startX = (Global.VIRTUAL_WIDTH / 2f) - (spacing * (_boosterCards.Count - 1) / 2f);
-
-                    for (int i = 0; i < _boosterCards.Count; i++)
-                    {
-                        _boosterCards[i].TargetPosition = new Vector2(startX + (i * spacing), Global.VIRTUAL_HEIGHT / 2f + 16f);
-                    }
-                    ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlayRoutedSfx("proc:wave=2;freq=600;atk=0.05;sus=0.1;dec=0.3;detune=0.01;vol=0.15", 0.1f);
-                }
-            }
-            else if (_boosterPhase == 2) // Spreading
-            {
-                _boosterTimer += dt;
-                if (_boosterTimer > 0.5f)
-                {
-                    _boosterPhase = 3;
-                }
-            }
-            else if (_boosterPhase == 3) // Interactive
-            {
-                if (justClicked && _inputManager.IsMouseClickAvailable() && _lastHoveredCard != null && _boosterCards.Contains(_lastHoveredCard))
-                {
-                    if (!_lastHoveredCard.IsFaceUp && !_lastHoveredCard.IsFlipping)
-                    {
-                        _lastHoveredCard.Flip();
-                        ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlayRoutedSfx("proc:wave=2;freq=900;atk=0.01;sus=0.0;dec=0.15;exp=1;vol=0.05", 0.1f);
-                        _pendingBoosterEffects.Add(_lastHoveredCard);
-                        _inputManager.ConsumeMouseClick();
-                    }
-                }
-
-                for (int i = _pendingBoosterEffects.Count - 1; i >= 0; i--)
-                {
-                    var c = _pendingBoosterEffects[i];
-                    if (!c.IsFlipping && c.IsFaceUp)
-                    {
-                        ApplyBoosterEffect(c);
-                        _pendingBoosterEffects.RemoveAt(i);
-                    }
-                }
-
-                bool allRevealed = true;
-                foreach (var c in _boosterCards)
-                {
-                    if (!c.IsFaceUp || c.IsFlipping || _pendingBoosterEffects.Contains(c))
-                    {
-                        allRevealed = false;
-                        break;
-                    }
-                }
-
-                if (allRevealed)
-                {
-                    _boosterPhase = 4;
-                    _ui.GenerateBoosterContinue(OnBoosterContinueClicked);
-                }
-            }
-            else if (_boosterPhase == 4) // Done
-            {
-                for (int i = 0; i < _ui.ShopButtons.Count; i++)
-                {
-                    _ui.ShopButtons[i].Update(mouseState);
-                    if (_boosterPhase != 4 || _state != ScoundrelState.Booster) break;
-                }
-
-                if (_state == ScoundrelState.Booster && _boosterPhase == 4 && _inputManager.CurrentInputDevice != InputDeviceType.Mouse)
-                    _ui.ShopNavGroup.UpdateInput(_inputManager);
-            }
-            else if (_boosterPhase == 5) // Closing
-            {
-                _boosterTimer += dt;
-                if (_boosterTimer > 0.15f)
-                {
-                    _boosterTimer = 0f;
-                    var leftMost = _boosterCards.OrderBy(c => c.Position.X).FirstOrDefault();
-                    if (leftMost != null)
-                    {
-                        var psm = ServiceLocator.Get<ParticleSystemManager>();
-                        var emitter = psm.CreateEmitter(ProjectVagabond.Particles.ParticleEffects.CreateUIPlink());
-                        emitter.Position = leftMost.Position;
-                        emitter.EmitBurst(10);
-
-                        ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlayRoutedSfx("proc:wave=5;freq=400;slide=-200;atk=0.01;sus=0.05;dec=0.1;vol=0.1", 0.1f);
-
-                        _boosterTexts.RemoveAll(t => Math.Abs(t.TargetPosition.X - leftMost.TargetPosition.X) < 10f);
-                        _boosterCards.Remove(leftMost);
-                    }
-                    else
-                    {
-                        _boosterPhase = 6;
-                        _boosterTimer = 0f;
-                    }
-                }
-            }
-            else if (_boosterPhase == 6) // Returning to deck
-            {
-                _boosterTimer -= dt;
-                if (_boosterTimer <= 0f)
-                {
-                    if (_boosterRevealedCards.Count > 0)
-                    {
-                        var c = _boosterRevealedCards.Last();
-                        if (c.IsFaceUp && !c.IsFlipping)
-                        {
-                            c.Flip();
-                            _boosterTimer = 0.15f;
-                        }
-                        else if (!c.IsFlipping)
-                        {
-                            _boosterRevealedCards.RemoveAt(_boosterRevealedCards.Count - 1);
-
-                            c.TargetPosition = _board.DeckPos + new Vector2(0, -_board.Deck.Count * 0.5f);
-                            c.TargetRotation = 0f;
-                            c.ZIndex = _board.Deck.Count;
-
-                            _board.Deck.Add(c);
-
-                            ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlayRoutedSfx("proc:wave=2;freq=1200;atk=0.01;sus=0.0;dec=0.1;vol=0.05", 0.1f);
-
-                            _boosterTimer = 0.15f;
-                        }
-                    }
-                    else
-                    {
-                        bool allSettled = true;
-                        foreach (var c in _board.Deck)
-                        {
-                            if (Vector2.Distance(c.Position, c.TargetPosition) > 2f)
-                            {
-                                allSettled = false;
-                                break;
-                            }
-                        }
-
-                        if (allSettled)
-                        {
-                            ApplyRewardAndAdvance(null);
-                        }
-                    }
-                }
-            }
-        }
-
-        private void ApplyBoosterEffect(Card boosterCard)
-        {
-            boosterCard.Scale = new Vector2(1.4f, 1.4f);
-            boosterCard.FlashWhiteIntensity = 1.0f;
-            ServiceLocator.Get<HapticsManager>().TriggerZoomPulse(1.04f, 0.15f);
-            ServiceLocator.Get<HapticsManager>().TriggerShake(3f, 0.15f);
-            ServiceLocator.Get<Core>().TriggerFullscreenFlash(Color.White * 0.3f, 0.15f);
-
-            var psm = ServiceLocator.Get<ParticleSystemManager>();
-            var emitter = psm.CreateEmitter(ProjectVagabond.Particles.ParticleEffects.CreateUIPlink());
-            emitter.Position = boosterCard.Position;
-            emitter.EmitBurst(20);
-
-            int type = boosterCard.BaseValue;
-            Card revealedCard = null;
-            bool fromDeck = false;
-
-            if (type == 1) // Heal 5
-            {
-                int actualHeal = Math.Min(5, _runContext.MaxHealth - _combat.Health);
-                _combat.Health += actualHeal;
-                _ui.HealthPlink.Start(0f, 0.3f);
-                ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlayRoutedSfx("proc:wave=2;freq=400;slide=100;atk=0.02;sus=0.05;dec=0.15;detune=0.01;vol=0.15", 0.1f);
-
-                _boosterTexts.Add(new BoosterText { Text = $"+{actualHeal}", Color = _global.Palette_Leaf, Position = boosterCard.TargetPosition, TargetPosition = boosterCard.TargetPosition + new Vector2(0, -56), IsSecondaryFont = false });
-            }
-            else if (type == 2) // Full Heal
-            {
-                int actualHeal = _runContext.MaxHealth - _combat.Health;
-                _combat.Health = _runContext.MaxHealth;
-                _ui.HealthPlink.Start(0f, 0.3f);
-                _combat.PlayHealFull();
-                ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlayRoutedSfx("proc:wave=2;freq=400;slide=200;atk=0.02;sus=0.1;dec=0.3;detune=0.02;delfb=0.2;delay=0.1;vol=0.2", 0.1f);
-
-                _boosterTexts.Add(new BoosterText { Text = $"+{actualHeal}", Color = _global.Palette_Leaf, Position = boosterCard.TargetPosition, TargetPosition = boosterCard.TargetPosition + new Vector2(0, -56), IsSecondaryFont = false });
-            }
-            else if (type == 3) // Weaken Enemy
-            {
-                var monsters = _board.Deck.Where(c => c.Type == CardType.Monster).ToList();
-                if (monsters.Count > 0)
-                {
-                    var target = monsters[_random.Next(monsters.Count)];
-                    _board.Deck.Remove(target);
-                    _runContext.SetCardModifier(target.Suit, target.Rank, _runContext.GetCardModifier(target.Suit, target.Rank) - 1);
-                    target.Modifier -= 1;
-
-                    revealedCard = target;
-                    fromDeck = true;
-                }
-                ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlayRoutedSfx("proc:wave=4;freq=200;slide=-100;atk=0.02;sus=0.1;dec=0.2;dist=0.5;vol=0.15", 0.1f);
-            }
-            else if (type == 4) // Power Self
-            {
-                var items = _board.Deck.Where(c => c.Type == CardType.Weapon || c.Type == CardType.Potion).ToList();
-                if (items.Count > 0)
-                {
-                    var target = items[_random.Next(items.Count)];
-                    _board.Deck.Remove(target);
-                    _runContext.SetCardModifier(target.Suit, target.Rank, _runContext.GetCardModifier(target.Suit, target.Rank) + 1);
-                    target.Modifier += 1;
-
-                    revealedCard = target;
-                    fromDeck = true;
-                }
-                ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlayRoutedSfx("proc:wave=0;freq=300;slide=200;atk=0.02;sus=0.1;dec=0.2;duty=0.2;vol=0.15", 0.1f);
-            }
-            else if (type == 5) // Add Weapon
-            {
-                int rank = _random.Next(2, 15);
-                var newCard = new Card(CardSuit.Diamonds, CardType.Weapon, rank, rank);
-                _runContext.ExtraCards.Add(new CardData { Suit = newCard.Suit, Type = newCard.Type, Rank = newCard.Rank, BaseValue = newCard.BaseValue });
-                _combat.TotalCardsInFloor++;
-
-                revealedCard = newCard;
-                ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlayRoutedSfx("proc:wave=6;freq=1200;slide=-200;atk=0.01;sus=0.05;dec=0.2;vol=0.15", 0.1f);
-            }
-            else if (type == 6) // Add Potion
-            {
-                int rank = _random.Next(2, 15);
-                var newCard = new Card(CardSuit.Hearts, CardType.Potion, rank, rank);
-                _runContext.ExtraCards.Add(new CardData { Suit = newCard.Suit, Type = newCard.Type, Rank = newCard.Rank, BaseValue = newCard.BaseValue });
-                _combat.TotalCardsInFloor++;
-
-                revealedCard = newCard;
-                ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlayRoutedSfx("proc:wave=2;freq=800;slide=100;atk=0.05;sus=0.1;dec=0.2;vol=0.15", 0.1f);
-            }
-
-            if (revealedCard != null)
-            {
-                string modText = "";
-                Color modColor = Color.White;
-                if (type == 3) { modText = "DOWNGRADED"; modColor = _global.Palette_Fruit; }
-                else if (type == 4) { modText = "UPGRADED"; modColor = _global.Palette_Sky; }
-                else if (type == 5 || type == 6) { modText = "ADDED"; modColor = _global.Palette_Leaf; }
-
-                if (!string.IsNullOrEmpty(modText))
-                {
-                    _boosterTexts.Add(new BoosterText { Text = modText, Color = modColor, Position = boosterCard.TargetPosition, TargetPosition = boosterCard.TargetPosition + new Vector2(0, -88), IsSecondaryFont = true });
-                }
-
-                revealedCard.IsFaceUp = false;
-                if (fromDeck)
-                {
-                    revealedCard.Position = _board.DeckPos + new Vector2(0, -_board.Deck.Count * 0.5f);
-                }
-                else
-                {
-                    revealedCard.Position = boosterCard.TargetPosition;
-                }
-                revealedCard.TargetPosition = boosterCard.TargetPosition + new Vector2(0, -56);
-                revealedCard.ZIndex = boosterCard.ZIndex + 10;
-                revealedCard.FlashWhiteIntensity = 0.0f;
-                revealedCard.Flip();
-                _boosterRevealedCards.Add(revealedCard);
-                _cardsToPlink.Add(revealedCard);
+                _ui.RewardNavGroup.UpdateInput(_inputManager);
             }
         }
 
@@ -2013,15 +1509,13 @@ namespace ProjectVagabond.Scenes
 
         protected override void DrawSceneContent(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Matrix transform)
         {
-            bool canSkipNow = _state == ScoundrelState.Playing && _board.Room.Count == 4 && _combat.CardsResolvedThisRoom == 0 && _combat.CanSkip;
+            bool canSkipNow = _state == ScoundrelState.Playing && _board.Room.Count == 4 && _combat.CardsResolvedThisRoom == 0 && _combat.CanSkip && _board.Deck.Count > 0;
 
             spriteBatch.Draw(_pixel, new Rectangle(0, 0, Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT), _global.GameBg);
 
             // 1. Draw ALL unselectable background cards (Deck, Discard, Idle Mobs, etc.)
             foreach (var card in _unselectableCardsCache)
             {
-                if (_state == ScoundrelState.Booster && (_boosterCards.Contains(card) || _boosterRevealedCards.Contains(card))) continue;
-
                 // STRICT SLAIN PILE FILTER: Hide older monsters so they never bleed through or pop on top
                 if (_board.SlainPile.Contains(card))
                 {
@@ -2037,6 +1531,24 @@ namespace ProjectVagabond.Scenes
                 }
 
                 card.Draw(spriteBatch, _spriteManager);
+            }
+
+            // 1.1 Draw Empty Pocket Slot (Shrouded)
+            if (_board.PocketSlot == null)
+            {
+                Rectangle outlineSource = _spriteManager.ScoundrelCardRects[1, 0];
+                Vector2 origin = new Vector2(18f, 25f);
+                Vector2 drawPos = new Vector2(MathF.Round(_board.PocketPos.X), MathF.Round(_board.PocketPos.Y));
+                spriteBatch.DrawSnapped(_spriteManager.ScoundrelCardsSpriteSheet, drawPos, outlineSource, Color.White * 0.15f, 0f, origin, 1f, SpriteEffects.None, 0f);
+
+                var secFont = _core.SecondaryFont;
+                string pocketText = "POCKET";
+                Vector2 pSize = secFont.MeasureString(pocketText);
+                Vector2 pTextPos = new Vector2(
+                    MathF.Round(_board.PocketPos.X - pSize.X / 2f),
+                    MathF.Round(_board.PocketPos.Y - 33f - pSize.Y / 2f)
+                );
+                spriteBatch.DrawStringOutlinedSnapped(secFont, pocketText, pTextPos, _global.Palette_DarkPale * 0.5f, _global.Palette_Off * 0.5f);
             }
 
             // 1.5 Draw Shrouded Pocket Text (If locked, it goes under the veil)
@@ -2118,7 +1630,6 @@ namespace ProjectVagabond.Scenes
             // 4. Draw true Selectable or forcibly pushed Forefront Cards cleanly on top of it all
             foreach (var card in _selectableCardsCache)
             {
-                if (_state == ScoundrelState.Booster && (_boosterCards.Contains(card) || _boosterRevealedCards.Contains(card))) continue;
                 card.Draw(spriteBatch, _spriteManager);
             }
 
@@ -2157,8 +1668,6 @@ namespace ProjectVagabond.Scenes
 
             foreach (var card in _unselectableCardsCache)
             {
-                if (_state == ScoundrelState.Booster && (_boosterCards.Contains(card) || _boosterRevealedCards.Contains(card))) continue;
-
                 // Apply the exact same filter to the flash layer
                 if (_board.SlainPile.Contains(card))
                 {
@@ -2175,14 +1684,13 @@ namespace ProjectVagabond.Scenes
             }
             foreach (var card in _selectableCardsCache)
             {
-                if (_state == ScoundrelState.Booster && (_boosterCards.Contains(card) || _boosterRevealedCards.Contains(card))) continue;
                 card.DrawFlash(spriteBatch, _spriteManager);
             }
 
             spriteBatch.End();
             spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp, null, null, null, transform);
 
-            if (_state != ScoundrelState.Booster)
+            if (_state != ScoundrelState.Reward)
             {
                 _ui.DrawCounters(spriteBatch, _board.Deck.Count, _board.Discard.Count, _board.DeckPos, _board.DiscardPos);
             }
@@ -2199,27 +1707,13 @@ namespace ProjectVagabond.Scenes
             {
                 _ui.DrawFloorCleared(spriteBatch);
             }
-            else if (_state == ScoundrelState.Booster)
+            else if (_state == ScoundrelState.Reward)
             {
-                _ui.DrawBooster(spriteBatch, gameTime, transform, _boosterPhase);
+                _ui.DrawRewardScreen(spriteBatch, gameTime, transform);
 
                 foreach (var c in _board.Deck) c.Draw(spriteBatch, _spriteManager);
                 foreach (var c in _board.Discard) c.Draw(spriteBatch, _spriteManager);
                 _ui.DrawCounters(spriteBatch, _board.Deck.Count, _board.Discard.Count, _board.DeckPos, _board.DiscardPos);
-
-                foreach (var c in _boosterRevealedCards) c.Draw(spriteBatch, _spriteManager);
-                foreach (var c in _boosterCards) c.Draw(spriteBatch, _spriteManager);
-
-                var defFont = _core.DefaultFont;
-                var secFont = _core.SecondaryFont;
-                foreach (var t in _boosterTexts)
-                {
-                    var fontToUse = t.IsSecondaryFont ? secFont : defFont;
-                    Vector2 size = fontToUse.MeasureString(t.Text);
-                    Vector2 origin = new Vector2(MathF.Round(size.X / 2f), MathF.Round(size.Y / 2f));
-                    Vector2 pos = new Vector2(MathF.Round(t.Position.X), MathF.Round(t.Position.Y + t.VisualYOffset));
-                    spriteBatch.DrawStringOutlinedSnapped(fontToUse, t.Text, pos, t.Color, _global.Palette_Off, 0f, origin, 1f, SpriteEffects.None, 0f);
-                }
             }
             else if (_state == ScoundrelState.GameOver)
             {

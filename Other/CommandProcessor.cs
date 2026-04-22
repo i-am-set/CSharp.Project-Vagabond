@@ -49,7 +49,6 @@ namespace ProjectVagabond
                 sb.AppendLine("    fps                                - Toggles FPS counter.");
                 sb.AppendLine("    debug_consolefont <0|1|2>          - Sets the debug console font.");
                 sb.AppendLine("    debug_godmode <true|false>         - Toggles player damage immunity.");
-                sb.AppendLine("    debug_modify_deck <amount>               - Adds amount to all cards in the deck.");
 
                 foreach (var line in sb.ToString().Split(new[] { Environment.NewLine }, StringSplitOptions.None))
                 {
@@ -177,26 +176,6 @@ namespace ProjectVagabond
                 Global.Instance.DebugGodMode = result;
                 Log($"[Palette_Sky]God Mode set to {result}.");
             }, "debug_godmode <true|false> - Toggles player damage immunity.");
-
-            _commands["debug_modify_deck"] = new Command("debug_modify_deck", (args) =>
-            {
-                if (args.Length < 2 || !int.TryParse(args[1], out int amount))
-                {
-                    Log("[error]Usage: debug_modify_deck <amount>");
-                    return;
-                }
-
-                var sceneManager = ServiceLocator.Get<SceneManager>();
-                if (sceneManager.CurrentActiveScene is Scenes.ScoundrelScene scoundrelScene)
-                {
-                    scoundrelScene.ApplyModifierToAllCards(amount);
-                    Log($"[Palette_Sky]Added {amount} to all cards in the deck.[/]");
-                }
-                else
-                {
-                    Log("[error]This command can only be used during a run.");
-                }
-            }, "debug_modify_deck <amount> - Adds the specified amount to all cards in the current run's deck.");
 
             _commands["fps"] = new Command("fps", (args) =>
             {

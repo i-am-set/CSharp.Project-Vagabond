@@ -7,7 +7,7 @@ using System;
 namespace ProjectVagabond.Scenes
 {
     public enum CardSuit { Hearts, Diamonds, Spades, Clubs, None }
-    public enum CardType { Potion, Weapon, Monster, Blank, Outline, BackRed, BackBlue, Booster }
+    public enum CardType { Potion, Weapon, Monster, Blank, Outline, BackRed, BackBlue }
 
     public class Card
     {
@@ -15,8 +15,7 @@ namespace ProjectVagabond.Scenes
         public CardType Type { get; set; }
         public int Rank { get; set; }
         public int BaseValue { get; set; }
-        public int Modifier { get; set; }
-        public int Value => Math.Max(0, BaseValue + Modifier);
+        public int Value => BaseValue;
 
         public Vector2 Position { get; set; }
         public Vector2 TargetPosition { get; set; }
@@ -86,7 +85,6 @@ namespace ProjectVagabond.Scenes
                 float p = Math.Clamp(_flipTimer / FLIP_HALF_DURATION, 0f, 1f);
                 float totalP = _isFlippingHalf2 ? 0.5f + (p * 0.5f) : p * 0.5f;
 
-                // Add a juicy hop and tilt during the flip
                 FlipYOffset = -MathF.Sin(totalP * MathHelper.Pi) * 12f;
                 FlipRotation = MathF.Sin(totalP * MathHelper.Pi) * 0.1f;
 
@@ -135,10 +133,6 @@ namespace ProjectVagabond.Scenes
             {
                 sourceRect = spriteManager.ScoundrelCardRects[1, 0];
             }
-            else if (Type == CardType.Booster)
-            {
-                sourceRect = spriteManager.ScoundrelCardRects[4, Value - 1];
-            }
             else
             {
                 int row = 0;
@@ -179,42 +173,6 @@ namespace ProjectVagabond.Scenes
             }
 
             spriteBatch.DrawSnapped(spriteManager.ScoundrelCardsSpriteSheet, drawPos, sourceRect, Color.White, finalRotation, origin, Scale, SpriteEffects.None, 0f);
-
-            if (IsFaceUp && Type != CardType.Outline && Type != CardType.Booster && Modifier != 0)
-            {
-                var global = ServiceLocator.Get<Global>();
-                var core = ServiceLocator.Get<Core>();
-                var defFont = core.DefaultFont;
-
-                Vector2 RotateOffset(Vector2 local)
-                {
-                    float cos = MathF.Cos(finalRotation);
-                    float sin = MathF.Sin(finalRotation);
-                    return new Vector2(local.X * cos - local.Y * sin, local.X * sin + local.Y * cos) * Scale;
-                }
-
-                string modText = Value.ToString();
-                Vector2 textSize = defFont.MeasureString(modText);
-                Vector2 textOrigin = Vector2.Zero;
-
-                Color textOutlineColor = VisualYOffset < 0f ? global.Palette_DarkSun : global.Palette_Off;
-
-                // Top Left
-                Vector2 topLeftLocal = new Vector2(-16, -23);
-                Vector2 topLeftOffset = RotateOffset(topLeftLocal);
-                Vector2 topLeftDrawPos = new Vector2(MathF.Round(drawPos.X + topLeftOffset.X), MathF.Round(drawPos.Y + topLeftOffset.Y));
-
-                spriteBatch.Draw(pixel, topLeftDrawPos, null, global.Palette_Off, finalRotation, textOrigin, textSize * Scale, SpriteEffects.None, 0f);
-                spriteBatch.DrawStringOutlinedSnapped(defFont, modText, topLeftDrawPos, global.Palette_Sun, textOutlineColor, finalRotation, textOrigin, Scale, SpriteEffects.None, 0f);
-
-                // Bottom Right (Rotated 180 degrees)
-                Vector2 bottomRightLocal = new Vector2(16, 23);
-                Vector2 bottomRightOffset = RotateOffset(bottomRightLocal);
-                Vector2 bottomRightDrawPos = new Vector2(MathF.Round(drawPos.X + bottomRightOffset.X), MathF.Round(drawPos.Y + bottomRightOffset.Y));
-
-                spriteBatch.Draw(pixel, bottomRightDrawPos, null, global.Palette_Off, finalRotation + MathHelper.Pi, textOrigin, textSize * Scale, SpriteEffects.None, 0f);
-                spriteBatch.DrawStringOutlinedSnapped(defFont, modText, bottomRightDrawPos, global.Palette_Sun, textOutlineColor, finalRotation + MathHelper.Pi, textOrigin, Scale, SpriteEffects.None, 0f);
-            }
         }
 
         public void DrawFlash(SpriteBatch spriteBatch, SpriteManager spriteManager)
@@ -230,10 +188,6 @@ namespace ProjectVagabond.Scenes
             else if (Type == CardType.Outline)
             {
                 sourceRect = spriteManager.ScoundrelCardRects[1, 0];
-            }
-            else if (Type == CardType.Booster)
-            {
-                sourceRect = spriteManager.ScoundrelCardRects[4, Value - 1];
             }
             else
             {
