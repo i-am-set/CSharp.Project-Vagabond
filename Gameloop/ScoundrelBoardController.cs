@@ -14,6 +14,7 @@ namespace ProjectVagabond.Scenes
         public List<Card> CardsToReturn { get; } = new List<Card>();
 
         public Card? WeaponSlot { get; set; }
+        public Card? PocketSlot { get; set; }
         public Card? FocusedCard { get; set; }
         public Card FistCard { get; private set; }
         public Card SkipCard { get; private set; }
@@ -21,6 +22,7 @@ namespace ProjectVagabond.Scenes
         public readonly Vector2 DeckPos = new Vector2(30, 40);
         public readonly Vector2 DiscardPos = new Vector2(30, 140);
         public readonly Vector2 WeaponPos = new Vector2(160, 140);
+        public readonly Vector2 PocketPos = new Vector2(276, 160);
         public readonly Vector2[] RoomPositions = new Vector2[]
         {
             new Vector2(103, 80),
@@ -41,8 +43,8 @@ namespace ProjectVagabond.Scenes
             FistCard = new Card(CardSuit.None, CardType.Outline, 0, 0)
             {
                 IsFaceUp = true,
-                Position = new Vector2(236, 140),
-                TargetPosition = new Vector2(236, 140),
+                Position = new Vector2(220, 140),
+                TargetPosition = new Vector2(220, 140),
                 ZIndex = 200
             };
 
@@ -61,6 +63,7 @@ namespace ProjectVagabond.Scenes
             SlainPile.Clear();
             CardsToReturn.Clear();
             WeaponSlot = null;
+            PocketSlot = null;
             FocusedCard = null;
             SkipCard.Position = DeckPos;
             SkipCard.TargetPosition = DeckPos;
@@ -78,6 +81,7 @@ namespace ProjectVagabond.Scenes
             foreach (var card in SlainPile) card.Update(dt);
             foreach (var card in CardsToReturn) card.Update(dt);
             WeaponSlot?.Update(dt);
+            PocketSlot?.Update(dt);
             FistCard.Update(dt);
             SkipCard.Update(dt);
         }
@@ -174,6 +178,7 @@ namespace ProjectVagabond.Scenes
             _allCardsCache.AddRange(Discard);
             _allCardsCache.AddRange(SlainPile);
             if (WeaponSlot != null) _allCardsCache.Add(WeaponSlot);
+            if (PocketSlot != null) _allCardsCache.Add(PocketSlot);
             _allCardsCache.AddRange(Room);
             if (includeFist) _allCardsCache.Add(FistCard);
             if (includeSkip) _allCardsCache.Add(SkipCard);

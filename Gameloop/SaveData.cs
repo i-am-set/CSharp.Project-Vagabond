@@ -41,5 +41,6 @@ namespace ProjectVagabond
         public List<CardData> Discard { get; set; } = new List<CardData>();
         public List<CardData> SlainPile { get; set; } = new List<CardData>();
         public CardData WeaponSlot { get; set; }
+        public CardData PocketSlot { get; set; }
     }
 }
