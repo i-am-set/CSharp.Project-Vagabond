@@ -1070,10 +1070,21 @@ namespace ProjectVagabond.Scenes
             {
                 if (_tallyTimer > 0.3f)
                 {
+                    Card card = null;
+                    bool isFromPocket = false;
+
                     if (_board.Room.Count > 0)
                     {
-                        var card = _board.Room[0];
+                        card = _board.Room[0];
+                    }
+                    else if (_board.PocketSlot != null)
+                    {
+                        card = _board.PocketSlot;
+                        isFromPocket = true;
+                    }
 
+                    if (card != null)
+                    {
                         if (card.Type == CardType.Weapon)
                         {
                             _runContext.Gold += 1;
@@ -1108,6 +1119,11 @@ namespace ProjectVagabond.Scenes
 
                         ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlayUi("ui_plink", 0.2f);
                         _hapticsManager.TriggerZoomPulse(_global.LightHapticZoomPulseStrength, _global.HapticZoomPulseDuration);
+
+                        if (isFromPocket)
+                        {
+                            _board.PocketSlot = null;
+                        }
 
                         _board.MoveToDiscard(card);
                         _tallyTimer = 0f;
