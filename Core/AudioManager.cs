@@ -669,9 +669,10 @@ namespace ProjectVagabond.Audio
             try { isFF = ServiceLocator.Get<InputManager>().IsCurrentlyFastForwarding; } catch { }
             float pitchOffset = (isFF ? 1.0f : 0.0f) + MusicPitchOffset;
 
+            _musicCrossfadeTimer += dt;
+
             if (_musicCrossfadeTimer < _musicCrossfadeDuration)
             {
-                _musicCrossfadeTimer += dt;
                 float progress = Math.Clamp(_musicCrossfadeTimer / _musicCrossfadeDuration, 0f, 1f);
 
                 if (_currentMusic != null)
@@ -689,7 +690,7 @@ namespace ProjectVagabond.Audio
                 _fadingMusic = null;
             }
 
-            if (_currentMusic != null && _musicCrossfadeTimer > 1.0f && !string.IsNullOrEmpty(_currentMusic.NextTrackId))
+            if (_currentMusic != null && _musicCrossfadeTimer > 0.1f && !string.IsNullOrEmpty(_currentMusic.NextTrackId))
             {
                 bool allStopped = true;
                 foreach (var stem in _currentMusic.Stems)

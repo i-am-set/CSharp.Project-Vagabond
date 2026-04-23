@@ -1,5 +1,14 @@
 ﻿using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Graphics;
+using Microsoft.Xna.Framework.Input;
+using MonoGame.Extended.BitmapFonts;
+using ProjectVagabond.Particles;
+using ProjectVagabond.Transitions;
+using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
+using System;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace ProjectVagabond.UI
 {
@@ -8,7 +17,6 @@ namespace ProjectVagabond.UI
         public bool IsPooled { get; set; }
         public int Number;
         public bool IsHealing;
-        public bool IsGold;
         public bool IsCrit;
         public float Timer;
         public float Duration;
@@ -21,7 +29,6 @@ namespace ProjectVagabond.UI
         {
             Number = 0;
             IsHealing = false;
-            IsGold = false;
             IsCrit = false;
             Timer = 0f;
             Duration = 0f;

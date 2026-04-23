@@ -19,8 +19,7 @@ namespace ProjectVagabond
         public int Floor { get; set; }
         public int MaxHealth { get; set; }
         public int Health { get; set; }
-        public int Gold { get; set; }
-        public float FloorTimer { get; set; }
+        public float TimeRemaining { get; set; }
         public int TotalCardsInFloor { get; set; }
         public int LastSlainValue { get; set; }
         public int CardsResolvedThisRoom { get; set; }

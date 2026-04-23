@@ -58,9 +58,6 @@ namespace ProjectVagabond.Scenes
         private float _tallyTimer = 0f;
         private int _tallyPhase = 0;
 
-        private int _pendingSpeedGold = 0;
-        private bool _speedGoldApplied = false;
-
         private float _sweepTimer = 0f;
 
         private readonly List<Card> _selectableCardsCache = new List<Card>(50);
@@ -69,6 +66,7 @@ namespace ProjectVagabond.Scenes
         private readonly Random _random = new Random();
 
         private float _rewardTimer = 0f;
+        private int _lastSecond = -1;
 
         public ScoundrelScene()
         {
@@ -133,11 +131,11 @@ namespace ProjectVagabond.Scenes
             _runContext.Floor = data.Floor;
             _runContext.MaxHealth = data.MaxHealth;
             _runContext.Health = data.Health;
-            _runContext.Gold = data.Gold;
 
-            _combat.Reset(_runContext.Health);
+            _combat.Reset(_runContext.Health, _runContext.FloorTimeLimit);
             _combat.Health = data.Health;
-            _combat.FloorTimer = data.FloorTimer;
+            _combat.TimeRemaining = data.TimeRemaining;
+            _lastSecond = (int)Math.Ceiling(_combat.TimeRemaining);
             _combat.TotalCardsInFloor = data.TotalCardsInFloor;
             _combat.CardsResolvedThisRoom = data.CardsResolvedThisRoom;
             _combat.PotionsUsedThisRoom = data.PotionsUsedThisRoom;
@@ -272,8 +270,7 @@ namespace ProjectVagabond.Scenes
                 Floor = _runContext.Floor,
                 MaxHealth = _runContext.MaxHealth,
                 Health = _combat.Health,
-                Gold = _runContext.Gold,
-                FloorTimer = _combat.FloorTimer,
+                TimeRemaining = _combat.TimeRemaining,
                 TotalCardsInFloor = _combat.TotalCardsInFloor,
                 LastSlainValue = _combat.GetLastSlainValue(_board),
                 CardsResolvedThisRoom = _combat.CardsResolvedThisRoom,
@@ -321,7 +318,8 @@ namespace ProjectVagabond.Scenes
 
         private void RestartGame()
         {
-            _combat.Reset(_runContext.Health);
+            _combat.Reset(_runContext.Health, _runContext.FloorTimeLimit);
+            _lastSecond = (int)Math.Ceiling(_combat.TimeRemaining);
             _ui.Reset();
 
             _previewFlashTimer = 0f;
@@ -361,7 +359,8 @@ namespace ProjectVagabond.Scenes
             ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().MusicPitchOffset = 0f;
 
             _runContext.Reset();
-            _combat.Reset(_runContext.Health);
+            _combat.Reset(_runContext.Health, _runContext.FloorTimeLimit);
+            _lastSecond = (int)Math.Ceiling(_combat.TimeRemaining);
             _ui.Reset();
 
             _previewFlashTimer = 0f;
@@ -465,7 +464,8 @@ namespace ProjectVagabond.Scenes
 
         private void PrepareNextFloor()
         {
-            _combat.Reset(_runContext.Health);
+            _combat.Reset(_runContext.Health, _runContext.FloorTimeLimit);
+            _lastSecond = (int)Math.Ceiling(_combat.TimeRemaining);
             _ui.Reset();
 
             _previewFlashTimer = 0f;
@@ -508,7 +508,30 @@ namespace ProjectVagabond.Scenes
 
             if (_state == ScoundrelState.Playing || _state == ScoundrelState.Focused || _state == ScoundrelState.ResolvingMonster)
             {
-                _combat.FloorTimer += dt;
+                _combat.TimeRemaining -= dt;
+                int currentSecond = (int)Math.Ceiling(_combat.TimeRemaining);
+                if (currentSecond < _lastSecond)
+                {
+                    _lastSecond = currentSecond;
+                    if (currentSecond >= 0)
+                    {
+                        _ui.TimerPlink.Start(0f, 0.2f);
+                        if (currentSecond <= 5 && currentSecond > 0)
+                        {
+                            ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlayRoutedSfx("proc:wave=0;freq=1200;atk=0.005;sus=0;dec=0.02;vol=0.05", 0.05f);
+                        }
+                        else if (currentSecond <= 10 && currentSecond > 5)
+                        {
+                            ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlayRoutedSfx("proc:wave=0;freq=800;atk=0.005;sus=0;dec=0.02;vol=0.05", 0.05f);
+                        }
+                    }
+                }
+
+                if (_combat.TimeRemaining <= 0)
+                {
+                    _combat.TimeRemaining = 0;
+                    CheckGameOver();
+                }
             }
 
             var mouseState = _inputManager.GetEffectiveMouseState();
@@ -562,14 +585,11 @@ namespace ProjectVagabond.Scenes
                 _ui.HealthBarOpacity = Math.Min(1f, _ui.HealthBarOpacity + dt * 5f);
             }
 
-            if (_state != ScoundrelState.CleaningUp || _tallyPhase < 2)
-            {
-                _ui.TimerPosition = Vector2.Lerp(_ui.TimerPosition, new Vector2(Global.VIRTUAL_WIDTH / 2f, 12f), 10f * dt);
-                _ui.TimerOverrideText = null;
-                _ui.TimerColor = _global.Palette_LightPale;
-                _ui.TimerOpacity = 1f;
-                _ui.TimerScale = 1f;
-            }
+            _ui.TimerPosition = Vector2.Lerp(_ui.TimerPosition, new Vector2(Global.VIRTUAL_WIDTH / 2f, 12f), 10f * dt);
+            _ui.TimerOverrideText = null;
+            _ui.TimerColor = _global.Palette_LightPale;
+            _ui.TimerOpacity = 1f;
+            _ui.TimerScale = 1f;
 
             switch (_state)
             {
@@ -992,7 +1012,7 @@ namespace ProjectVagabond.Scenes
         {
             if (!isFromPocket) _combat.CardsResolvedThisRoom++;
 
-            if (_combat.Health <= 0)
+            if (_combat.Health <= 0 || _combat.TimeRemaining <= 0)
             {
                 CheckGameOver();
                 return;
@@ -1058,7 +1078,6 @@ namespace ProjectVagabond.Scenes
                 _state = ScoundrelState.CleaningUp;
                 _tallyPhase = 0;
                 _tallyTimer = 0f;
-                _speedGoldApplied = false;
             }
         }
 
@@ -1085,30 +1104,14 @@ namespace ProjectVagabond.Scenes
 
                     if (card != null)
                     {
-                        if (card.Type == CardType.Weapon)
-                        {
-                            _runContext.Gold += 1;
-                            _ui.AddFloatingText(1, false, true, card.Position);
-                            ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlayRoutedSfx("proc:wave=2;freq=1600;slide=200;atk=0.01;sus=0.05;dec=0.2;vol=0.05", 0.1f);
-                        }
-                        else if (card.Type == CardType.Potion)
+                        if (card.Type == CardType.Potion)
                         {
                             int actualHeal = Math.Min(card.Value, _runContext.MaxHealth - _combat.Health);
-                            int overHeal = card.Value - actualHeal;
-                            int goldVal = overHeal / 2;
-
-                            if (actualHeal > 0 || goldVal > 0) card.FlashWhiteIntensity = 1f;
+                            if (actualHeal > 0) card.FlashWhiteIntensity = 1f;
 
                             if (actualHeal > 0)
                             {
                                 _combat.ApplyHeal(actualHeal, _runContext.MaxHealth, _ui);
-                            }
-
-                            if (goldVal > 0)
-                            {
-                                _runContext.Gold += goldVal;
-                                _ui.AddFloatingText(goldVal, false, true, card.Position);
-                                ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlayRoutedSfx("proc:wave=2;freq=1600;slide=200;atk=0.01;sus=0.05;dec=0.2;vol=0.05", 0.1f);
                             }
                         }
 
@@ -1167,45 +1170,9 @@ namespace ProjectVagabond.Scenes
                     _tallyTimer = 0f;
                 }
             }
-            else if (_tallyPhase == 2) // Speed Gold & Finish
+            else if (_tallyPhase == 2) // Finish
             {
-                Vector2 targetPos = new Vector2(Global.VIRTUAL_WIDTH / 2f, Global.VIRTUAL_HEIGHT / 2f);
-
-                if (_tallyTimer < 0.6f)
-                {
-                    float p = _tallyTimer / 0.6f;
-                    _ui.TimerPosition = Vector2.Lerp(new Vector2(Global.VIRTUAL_WIDTH / 2f, 12f), targetPos, Easing.EaseOutCubic(p));
-                    _ui.TimerScale = 1.0f + Easing.EaseOutCubic(p) * 1.0f;
-                }
-                else if (_tallyTimer < 0.8f)
-                {
-                    float p = (_tallyTimer - 0.6f) / 0.2f;
-                    _ui.TimerPosition = targetPos;
-                    _ui.TimerScale = 2.0f - Easing.EaseInCubic(p) * 1.0f;
-                }
-                else if (!_speedGoldApplied)
-                {
-                    _speedGoldApplied = true;
-                    _ui.TimerOpacity = 0f;
-                    _ui.TimerScale = 1f;
-
-                    if (_pendingSpeedGold > 0)
-                    {
-                        _runContext.Gold += _pendingSpeedGold;
-                        _ui.AddFloatingText(_pendingSpeedGold, false, true, _ui.TimerPosition);
-                        ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlayRoutedSfx("proc:wave=2;freq=1600;slide=200;atk=0.01;sus=0.05;dec=0.2;vol=0.05", 0.1f);
-
-                        var psm = ServiceLocator.Get<ParticleSystemManager>();
-                        var emitter = psm.CreateEmitter(ParticleEffects.CreateUIPlink());
-                        emitter.Position = _ui.TimerPosition;
-                        emitter.EmitBurst(15);
-                    }
-                    else
-                    {
-                        _ui.AddFloatingText(0, false, true, _ui.TimerPosition);
-                    }
-                }
-                else if (_tallyTimer > 1.8f)
+                if (_tallyTimer > 0.5f)
                 {
                     StartSweepingBoard();
                 }
@@ -1428,7 +1395,7 @@ namespace ProjectVagabond.Scenes
             _combat.CardsResolvedThisRoom++;
             _combat.CanSkip = true;
 
-            if (_combat.Health <= 0)
+            if (_combat.Health <= 0 || _combat.TimeRemaining <= 0)
             {
                 CheckGameOver();
                 return;
@@ -1466,7 +1433,7 @@ namespace ProjectVagabond.Scenes
 
         private void CheckGameOver()
         {
-            if (_combat.Health <= 0)
+            if (_combat.Health <= 0 || _combat.TimeRemaining <= 0)
             {
                 SaveManager.DeleteSave();
                 _state = ScoundrelState.GameOver;
@@ -1484,7 +1451,6 @@ namespace ProjectVagabond.Scenes
                 }
                 else
                 {
-                    _pendingSpeedGold = _combat.GetSpeedGoldAmount();
                     _state = ScoundrelState.FloorCleared;
                     _floorClearedTimer = 1.5f;
                     _ui.FloorClearedTextTimer = 0f;
@@ -1713,11 +1679,10 @@ namespace ProjectVagabond.Scenes
 
             _ui.DrawHoverIndicators(spriteBatch, _lastHoveredCard, _state, _board, _combat, _runContext.MaxHealth, _previewFlashTimer);
             _ui.DrawHealthBar(spriteBatch, _combat.Health, GetPreviewHealth(), _runContext.MaxHealth, _spriteManager);
-            _ui.DrawGold(spriteBatch, _runContext.Gold, gameTime);
 
             _ui.DrawRestartBar(spriteBatch, _restartHoldTimer, RESTART_HOLD_DURATION);
 
-            _ui.DrawTimer(spriteBatch, _combat.FloorTimer);
+            _ui.DrawTimer(spriteBatch, _combat.TimeRemaining, gameTime);
 
             if (_state == ScoundrelState.FloorCleared || _state == ScoundrelState.CleaningUp || _state == ScoundrelState.SweepingBoard)
             {
@@ -1733,7 +1698,7 @@ namespace ProjectVagabond.Scenes
             }
             else if (_state == ScoundrelState.GameOver)
             {
-                _ui.DrawGameOver(spriteBatch, gameTime, transform, _combat.Health, _combat.DisplayScore);
+                _ui.DrawGameOver(spriteBatch, gameTime, transform, _combat.Health, _combat.TimeRemaining, _combat.DisplayScore);
             }
 
             if (_isPaused)

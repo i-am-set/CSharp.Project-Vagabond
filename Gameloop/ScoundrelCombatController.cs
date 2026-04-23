@@ -14,13 +14,8 @@ namespace ProjectVagabond.Scenes
         public bool CanSkip { get; set; }
         public bool PocketLocked { get; set; }
 
-        public float FloorTimer { get; set; }
+        public float TimeRemaining { get; set; }
         public int TotalCardsInFloor { get; set; }
-
-        public float SpeedGoldTargetSecondsPerCard = 1.0f;
-        public int SpeedGoldTargetAmount = 5;
-        public float SpeedGoldZeroSecondsPerCard = 6.0f;
-        public int SpeedGoldMaxAmount = 15;
 
         public Card? ResolvingMonster { get; set; }
         public float ResolveTimer { get; set; }
@@ -43,7 +38,7 @@ namespace ProjectVagabond.Scenes
             return board.SlainPile.Last().Value;
         }
 
-        public void Reset(int startingHealth)
+        public void Reset(int startingHealth, float timeLimit)
         {
             Health = startingHealth;
             CardsResolvedThisRoom = 0;
@@ -51,7 +46,7 @@ namespace ProjectVagabond.Scenes
             CanSkip = true;
             PocketLocked = false;
 
-            FloorTimer = 0f;
+            TimeRemaining = timeLimit;
             TotalCardsInFloor = 0;
 
             ResolvingMonster = null;
@@ -119,13 +114,6 @@ namespace ProjectVagabond.Scenes
                 if (!ResolveDamageApplied)
                 {
                     if (ResolveDamage > 0) ApplyDamage(ResolveDamage, ui, core, haptics);
-                    else if (ResolveWeaponUsed && ResolveDamage == 0)
-                    {
-                        runContext.Gold += 1;
-                        Vector2 popupPos = ResolvingMonster != null ? ResolvingMonster.Position + new Vector2(0, -20) : new Vector2(Global.VIRTUAL_WIDTH / 2f, 24f);
-                        ui.AddFloatingText(1, false, true, popupPos);
-                        ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlayRoutedSfx("proc:wave=2;freq=1600;slide=200;atk=0.01;sus=0.05;dec=0.2;vol=0.05", 0.1f);
-                    }
 
                     if (ResolveWeaponUsed)
                     {
@@ -194,14 +182,6 @@ namespace ProjectVagabond.Scenes
             }
         }
 
-        public int GetSpeedGoldAmount()
-        {
-            float secondsPerCard = TotalCardsInFloor > 0 ? FloorTimer / TotalCardsInFloor : 0f;
-            float t = Math.Clamp((SpeedGoldZeroSecondsPerCard - secondsPerCard) / (SpeedGoldZeroSecondsPerCard - SpeedGoldTargetSecondsPerCard), 0f, (float)SpeedGoldMaxAmount / SpeedGoldTargetAmount);
-            int speedGold = (int)MathF.Round(t * SpeedGoldTargetAmount);
-            return Math.Clamp(speedGold, 0, SpeedGoldMaxAmount);
-        }
-
         public void ApplyDamage(int amount, ScoundrelUIController ui, Core core, HapticsManager haptics)
         {
             if (!ServiceLocator.Get<Global>().DebugGodMode)
@@ -261,7 +241,7 @@ namespace ProjectVagabond.Scenes
         public void CalculateTargetScore(ScoundrelBoardController board, int maxHealth)
         {
             TargetScore = Health;
-            if (Health <= 0)
+            if (Health <= 0 || TimeRemaining <= 0)
             {
                 int remainingMonsters = board.Deck.Concat(board.Room).Where(c => c.Type == CardType.Monster).Sum(c => c.Value);
                 TargetScore = Health - remainingMonsters;
