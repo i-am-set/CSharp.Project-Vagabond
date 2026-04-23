@@ -170,7 +170,32 @@ namespace ProjectVagabond.Scenes
 
                     if (ResolveWeaponUsed)
                     {
-                        board.MoveToSlainPile(ResolvingMonster);
+                        if (runContext.Mode == GameMode.Roguelike && board.SlainPile.Count >= 2)
+                        {
+                            // 1. Monster that broke the weapon
+                            board.MoveToDiscard(ResolvingMonster);
+
+                            // 2. Second charge monster (SlainPile[1])
+                            // 3. First charge monster (SlainPile[0])
+                            for (int i = board.SlainPile.Count - 1; i >= 0; i--)
+                            {
+                                board.MoveToDiscard(board.SlainPile[i], false);
+                            }
+                            board.SlainPile.Clear();
+
+                            // 4. The equipped weapon
+                            if (board.WeaponSlot != null)
+                            {
+                                board.MoveToDiscard(board.WeaponSlot, false);
+                                board.WeaponSlot = null;
+                            }
+
+                            ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlayRoutedSfx("proc:wave=4;freq=200;slide=-100;atk=0.01;sus=0.05;dec=0.15;detune=0.03;lpf=1000;vol=0.2", 0.2f);
+                        }
+                        else
+                        {
+                            board.MoveToSlainPile(ResolvingMonster, runContext.Mode);
+                        }
                     }
                     else
                     {
@@ -178,6 +203,7 @@ namespace ProjectVagabond.Scenes
                     }
                 }
 
+                ResolvingMonster = null;
                 onComplete?.Invoke();
             }
         }

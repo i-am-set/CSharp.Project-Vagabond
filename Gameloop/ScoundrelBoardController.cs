@@ -128,9 +128,15 @@ namespace ProjectVagabond.Scenes
             if (WeaponSlot != null)
             {
                 ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlayRoutedSfx("proc:wave=4;freq=200;slide=-100;atk=0.01;sus=0.05;dec=0.15;detune=0.03;lpf=1000;vol=0.2", 0.2f);
-                MoveToDiscard(WeaponSlot, false);
-                foreach (var c in SlainPile) MoveToDiscard(c, false);
+
+                for (int i = SlainPile.Count - 1; i >= 0; i--)
+                {
+                    MoveToDiscard(SlainPile[i], false);
+                }
                 SlainPile.Clear();
+
+                MoveToDiscard(WeaponSlot, false);
+                WeaponSlot = null;
             }
 
             Room.Remove(weapon);
@@ -160,7 +166,7 @@ namespace ProjectVagabond.Scenes
             }
         }
 
-        public void MoveToSlainPile(Card card)
+        public void MoveToSlainPile(Card card, GameMode mode)
         {
             Room.Remove(card);
             SlainPile.Add(card);

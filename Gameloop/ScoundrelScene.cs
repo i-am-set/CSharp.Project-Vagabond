@@ -132,7 +132,7 @@ namespace ProjectVagabond.Scenes
             _runContext.MaxHealth = data.MaxHealth;
             _runContext.Health = data.Health;
 
-            _combat.Reset(_runContext.Health, _runContext.FloorTimeLimit);
+            _combat.Reset(_runContext.Health, _runContext.RoomTimeLimit);
             _combat.Health = data.Health;
             _combat.TimeRemaining = data.TimeRemaining;
             _lastSecond = (int)Math.Ceiling(_combat.TimeRemaining);
@@ -192,8 +192,17 @@ namespace ProjectVagabond.Scenes
 
                 for (int i = 0; i < _board.SlainPile.Count; i++)
                 {
-                    _board.SlainPile[i].Position = _board.WeaponPos + new Vector2(7, 0);
-                    _board.SlainPile[i].TargetPosition = _board.SlainPile[i].Position;
+                    if (_runContext.Mode == GameMode.Classic)
+                    {
+                        _board.SlainPile[i].Position = _board.WeaponPos + new Vector2(7, 0);
+                        _board.SlainPile[i].TargetPosition = _board.SlainPile[i].Position;
+                    }
+                    else
+                    {
+                        if (i == 0) _board.SlainPile[i].Position = _board.WeaponPos + new Vector2(10, -7);
+                        else if (i == 1) _board.SlainPile[i].Position = _board.WeaponPos + new Vector2(10, 7);
+                        _board.SlainPile[i].TargetPosition = _board.SlainPile[i].Position;
+                    }
                     _board.SlainPile[i].Rotation = MathHelper.PiOver2;
                     _board.SlainPile[i].TargetRotation = MathHelper.PiOver2;
                     _board.SlainPile[i].ZIndex = 150 + i;
@@ -318,7 +327,7 @@ namespace ProjectVagabond.Scenes
 
         private void RestartGame()
         {
-            _combat.Reset(_runContext.Health, _runContext.FloorTimeLimit);
+            _combat.Reset(_runContext.Health, _runContext.RoomTimeLimit);
             _lastSecond = (int)Math.Ceiling(_combat.TimeRemaining);
             _ui.Reset();
 
@@ -359,7 +368,7 @@ namespace ProjectVagabond.Scenes
             ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().MusicPitchOffset = 0f;
 
             _runContext.Reset();
-            _combat.Reset(_runContext.Health, _runContext.FloorTimeLimit);
+            _combat.Reset(_runContext.Health, _runContext.RoomTimeLimit);
             _lastSecond = (int)Math.Ceiling(_combat.TimeRemaining);
             _ui.Reset();
 
@@ -464,7 +473,7 @@ namespace ProjectVagabond.Scenes
 
         private void PrepareNextFloor()
         {
-            _combat.Reset(_runContext.Health, _runContext.FloorTimeLimit);
+            _combat.Reset(_runContext.Health, _runContext.RoomTimeLimit);
             _lastSecond = (int)Math.Ceiling(_combat.TimeRemaining);
             _ui.Reset();
 
@@ -722,12 +731,28 @@ namespace ProjectVagabond.Scenes
 
             if (_board.WeaponSlot != null)
             {
-                foreach (var slain in _board.SlainPile) slain.TargetPosition = _board.WeaponSlot.TargetPosition + new Vector2(7, 0);
+                for (int i = 0; i < _board.SlainPile.Count; i++)
+                {
+                    var slain = _board.SlainPile[i];
+                    if (_runContext.Mode == GameMode.Classic)
+                    {
+                        slain.TargetPosition = _board.WeaponSlot.TargetPosition + new Vector2(7, 0);
+                    }
+                    else
+                    {
+                        if (i == 0) slain.TargetPosition = _board.WeaponSlot.TargetPosition + new Vector2(10, -7);
+                        else if (i == 1) slain.TargetPosition = _board.WeaponSlot.TargetPosition + new Vector2(10, 7);
+                    }
+                }
             }
 
             if (_state == ScoundrelState.Playing && newHovered != null && newHovered.Type == CardType.Monster && _board.WeaponSlot != null)
             {
-                if (newHovered.Value <= _combat.GetLastSlainValue(_board))
+                bool canUse = _runContext.Mode == GameMode.Classic
+                    ? newHovered.Value <= _combat.GetLastSlainValue(_board)
+                    : _board.SlainPile.Count < 3;
+
+                if (canUse)
                 {
                     _board.WeaponSlot.OutlineColor = _global.Palette_Leaf;
                     _board.WeaponSlot.ForceRenderAboveVeil = true;
@@ -877,6 +902,8 @@ namespace ProjectVagabond.Scenes
                 _combat.CardsResolvedThisRoom = 0;
                 _combat.PotionsUsedThisRoom = 0;
                 _combat.PocketLocked = false;
+                _combat.TimeRemaining = _runContext.RoomTimeLimit;
+                _lastSecond = (int)Math.Ceiling(_combat.TimeRemaining);
                 SaveCurrentState();
             }
         }
@@ -886,7 +913,7 @@ namespace ProjectVagabond.Scenes
             var mouseState = _inputManager.GetEffectiveMouseState();
             bool justRightClicked = _inputManager.IsMouseClickAvailable() && mouseState.RightButton == ButtonState.Pressed && _previousMouseState.RightButton == ButtonState.Released;
 
-            if (justRightClicked && _lastHoveredCard != null && _board.PocketSlot == null)
+            if (justRightClicked && _lastHoveredCard != null && _board.PocketSlot == null && _runContext.Mode != GameMode.Classic)
             {
                 if ((_lastHoveredCard.Type == CardType.Weapon || _lastHoveredCard.Type == CardType.Potion) && _board.Room.Contains(_lastHoveredCard))
                 {
@@ -982,7 +1009,13 @@ namespace ProjectVagabond.Scenes
             }
             else if (card.Type == CardType.Monster)
             {
-                bool canUseWeapon = _board.WeaponSlot != null && card.Value <= _combat.GetLastSlainValue(_board);
+                bool canUseWeapon = false;
+                if (_board.WeaponSlot != null)
+                {
+                    canUseWeapon = _runContext.Mode == GameMode.Classic
+                        ? card.Value <= _combat.GetLastSlainValue(_board)
+                        : _board.SlainPile.Count < 3;
+                }
 
                 if (canUseWeapon)
                 {
@@ -1060,6 +1093,54 @@ namespace ProjectVagabond.Scenes
                     _inputManager.ConsumeMouseClick();
                 }
             }
+        }
+
+        private void OnFistsClicked()
+        {
+            if (_board.FocusedCard != null)
+            {
+                if (_combat.Health - _board.FocusedCard.Value <= 0) SaveManager.DeleteSave();
+                _combat.StartMonsterResolution(_board.FocusedCard, _board.FocusedCard.Value, false);
+                _state = ScoundrelState.ResolvingMonster;
+                _board.FocusedCard = null;
+                if (SaveManager.HasSave()) SaveCurrentState();
+            }
+        }
+
+        private void OnWeaponClicked()
+        {
+            if (_board.FocusedCard == null || _board.WeaponSlot == null) return;
+
+            bool canUse = _runContext.Mode == GameMode.Classic
+                ? _board.FocusedCard.Value <= _combat.GetLastSlainValue(_board)
+                : _board.SlainPile.Count < 3;
+
+            if (!canUse)
+            {
+                ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlayRoutedSfx("proc:wave=4;freq=150;atk=0.01;sus=0.1;dec=0.1;detune=0.03;vol=0.15|wave=0;freq=150;atk=0.01;sus=0.1;dec=0.1;duty=0.2;vol=0.1", 0.2f);
+                return;
+            }
+
+            int damage = Math.Max(0, _board.FocusedCard.Value - _board.WeaponSlot.Value);
+            if (_combat.Health - damage <= 0) SaveManager.DeleteSave();
+
+            _combat.StartMonsterResolution(_board.FocusedCard, damage, true);
+            _state = ScoundrelState.ResolvingMonster;
+            _board.FocusedCard = null;
+            if (SaveManager.HasSave()) SaveCurrentState();
+        }
+
+        private void CancelFocus()
+        {
+            if (_board.FocusedCard != null)
+            {
+                _board.FocusedCard.TargetPosition = _board.RoomPositions[_board.FocusedCard.RoomSlotIndex];
+                _board.FocusedCard.ZIndex = 100 + _board.FocusedCard.RoomSlotIndex;
+                _board.FocusedCard = null;
+            }
+            _state = ScoundrelState.Playing;
+            ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlayUi("ui_hover");
+            SaveCurrentState();
         }
 
         private void UpdateResolvingMonster(float dt)
@@ -1277,50 +1358,6 @@ namespace ProjectVagabond.Scenes
             }
         }
 
-        private void ResolveCardClick(Card card)
-        {
-            if (card.Type == CardType.Potion)
-            {
-                int healAmount = _combat.PotionsUsedThisRoom == 0 ? card.Value : 0;
-                if (healAmount > 0) card.FlashWhiteIntensity = 1f;
-                _combat.ApplyHeal(healAmount, _runContext.MaxHealth, _ui);
-                _combat.PotionsUsedThisRoom++;
-                _board.MoveToDiscard(card);
-                OnCardResolved();
-            }
-            else if (card.Type == CardType.Weapon)
-            {
-                _board.EquipWeapon(card);
-                OnCardResolved();
-            }
-            else if (card.Type == CardType.Monster)
-            {
-                bool canUseWeapon = _board.WeaponSlot != null && card.Value <= _combat.GetLastSlainValue(_board);
-
-                if (canUseWeapon)
-                {
-                    _board.FocusedCard = card;
-                    _board.FocusedCard.TargetPosition = _board.RoomPositions[_board.FocusedCard.RoomSlotIndex] + new Vector2(0, -3);
-                    _board.FocusedCard.ZIndex = 500;
-                    _state = ScoundrelState.Focused;
-                    ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlayRoutedSfx("proc:wave=6;freq=1500;atk=0.01;sus=0.02;dec=0.1;hpf=800;vol=0.1|wave=2;freq=1200;slide=-400;atk=0.01;sus=0.05;dec=0.1;detune=0.02;vol=0.1", 0.2f);
-                    SaveCurrentState();
-                }
-                else
-                {
-                    if (_combat.Health - card.Value <= 0) SaveManager.DeleteSave();
-                    _combat.StartMonsterResolution(card, card.Value, false);
-                    _state = ScoundrelState.ResolvingMonster;
-                    if (_board.FocusedCard != null)
-                    {
-                        _board.FocusedCard.ZIndex = 100 + _board.FocusedCard.RoomSlotIndex;
-                        _board.FocusedCard = null;
-                    }
-                    if (SaveManager.HasSave()) SaveCurrentState();
-                }
-            }
-        }
-
         private void OnSkipClicked()
         {
             _combat.CanSkip = false;
@@ -1345,71 +1382,6 @@ namespace ProjectVagabond.Scenes
             _dealTimer = DEAL_INTERVAL;
 
             ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlayRoutedSfx("proc:wave=3;freq=1000;slide=-500;atk=0.02;sus=0.05;dec=0.15;vol=0.12|wave=4;freq=400;slide=-100;atk=0.02;sus=0.05;dec=0.15;vol=0.15", 0.2f);
-            SaveCurrentState();
-        }
-
-        private void OnFistsClicked()
-        {
-            if (_board.FocusedCard != null)
-            {
-                if (_combat.Health - _board.FocusedCard.Value <= 0) SaveManager.DeleteSave();
-                _combat.StartMonsterResolution(_board.FocusedCard, _board.FocusedCard.Value, false);
-                _state = ScoundrelState.ResolvingMonster;
-                if (SaveManager.HasSave()) SaveCurrentState();
-            }
-        }
-
-        private void OnWeaponClicked()
-        {
-            if (_board.FocusedCard == null || _board.WeaponSlot == null) return;
-
-            if (_board.FocusedCard.Value > _combat.GetLastSlainValue(_board))
-            {
-                ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlayRoutedSfx("proc:wave=4;freq=150;atk=0.01;sus=0.1;dec=0.1;detune=0.03;vol=0.15|wave=0;freq=150;atk=0.01;sus=0.1;dec=0.1;duty=0.2;vol=0.1", 0.2f);
-                return;
-            }
-
-            int damage = Math.Max(0, _board.FocusedCard.Value - _board.WeaponSlot.Value);
-            if (_combat.Health - damage <= 0) SaveManager.DeleteSave();
-
-            _combat.StartMonsterResolution(_board.FocusedCard, damage, true);
-            _state = ScoundrelState.ResolvingMonster;
-            if (SaveManager.HasSave()) SaveCurrentState();
-        }
-
-        private void CancelFocus()
-        {
-            if (_board.FocusedCard != null)
-            {
-                _board.FocusedCard.TargetPosition = _board.RoomPositions[_board.FocusedCard.RoomSlotIndex];
-                _board.FocusedCard.ZIndex = 100 + _board.FocusedCard.RoomSlotIndex;
-                _board.FocusedCard = null;
-            }
-            _state = ScoundrelState.Playing;
-            ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlayUi("ui_hover");
-            SaveCurrentState();
-        }
-
-        private void OnCardResolved()
-        {
-            _combat.CardsResolvedThisRoom++;
-            _combat.CanSkip = true;
-
-            if (_combat.Health <= 0 || _combat.TimeRemaining <= 0)
-            {
-                CheckGameOver();
-                return;
-            }
-
-            if (!HasMonsterInRoom() && !HasMonsterInDeck())
-            {
-                CheckGameOver();
-            }
-            else if (_combat.CardsResolvedThisRoom >= 3 && _board.Deck.Count > 0)
-            {
-                _state = ScoundrelState.Dealing;
-                _dealTimer = DEAL_INTERVAL;
-            }
             SaveCurrentState();
         }
 
@@ -1473,7 +1445,14 @@ namespace ProjectVagabond.Scenes
             {
                 if (_lastHoveredCard.Type == CardType.Monster)
                 {
-                    bool canUseWeapon = _board.WeaponSlot != null && _lastHoveredCard.Value <= _combat.GetLastSlainValue(_board);
+                    bool canUseWeapon = false;
+                    if (_board.WeaponSlot != null)
+                    {
+                        canUseWeapon = _runContext.Mode == GameMode.Classic
+                            ? _lastHoveredCard.Value <= _combat.GetLastSlainValue(_board)
+                            : _board.SlainPile.Count < 3;
+                    }
+
                     if (canUseWeapon)
                     {
                         return _combat.Health - Math.Max(0, _lastHoveredCard.Value - _board.WeaponSlot!.Value);
@@ -1495,19 +1474,15 @@ namespace ProjectVagabond.Scenes
 
             spriteBatch.Draw(_pixel, new Rectangle(0, 0, Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT), _global.GameBg);
 
-            // 1. Draw ALL unselectable background cards (Deck, Discard, Idle Mobs, etc.)
             foreach (var card in _unselectableCardsCache)
             {
-                // STRICT SLAIN PILE FILTER: Hide older monsters so they never bleed through or pop on top
-                if (_board.SlainPile.Contains(card))
+                if (_runContext.Mode == GameMode.Classic && _board.SlainPile.Contains(card))
                 {
                     int index = _board.SlainPile.IndexOf(card);
-                    if (index < _board.SlainPile.Count - 2) continue; // Hide anything older than the 2nd to last
-
+                    if (index < _board.SlainPile.Count - 2) continue;
                     if (index == _board.SlainPile.Count - 2)
                     {
                         var lastCard = _board.SlainPile.Last();
-                        // If the newest card has landed, hide the previous one completely
                         if (Vector2.Distance(lastCard.Position, lastCard.TargetPosition) < 2f) continue;
                     }
                 }
@@ -1515,44 +1490,43 @@ namespace ProjectVagabond.Scenes
                 card.Draw(spriteBatch, _spriteManager);
             }
 
-            // 1.1 Draw Empty Pocket Slot (Shrouded)
-            if (_board.PocketSlot == null)
+            if (_runContext.Mode != GameMode.Classic)
             {
-                Rectangle outlineSource = _spriteManager.ScoundrelCardRects[1, 0];
-                Vector2 origin = new Vector2(18f, 25f);
-                Vector2 drawPos = new Vector2(MathF.Round(_board.PocketPos.X), MathF.Round(_board.PocketPos.Y));
-                spriteBatch.DrawSnapped(_spriteManager.ScoundrelCardsSpriteSheet, drawPos, outlineSource, Color.White * 0.15f, 0f, origin, 1f, SpriteEffects.None, 0f);
+                if (_board.PocketSlot == null)
+                {
+                    Rectangle outlineSource = _spriteManager.ScoundrelCardRects[1, 0];
+                    Vector2 origin = new Vector2(18f, 25f);
+                    Vector2 drawPos = new Vector2(MathF.Round(_board.PocketPos.X), MathF.Round(_board.PocketPos.Y));
+                    spriteBatch.DrawSnapped(_spriteManager.ScoundrelCardsSpriteSheet, drawPos, outlineSource, Color.White * 0.15f, 0f, origin, 1f, SpriteEffects.None, 0f);
 
-                var secFont = _core.SecondaryFont;
-                string pocketText = "POCKET";
-                Vector2 pSize = secFont.MeasureString(pocketText);
-                Vector2 pTextPos = new Vector2(
-                    MathF.Round(_board.PocketPos.X - pSize.X / 2f),
-                    MathF.Round(_board.PocketPos.Y - 33f - pSize.Y / 2f)
-                );
-                spriteBatch.DrawStringOutlinedSnapped(secFont, pocketText, pTextPos, _global.Palette_DarkPale * 0.5f, _global.Palette_Off * 0.5f);
+                    var secFont = _core.SecondaryFont;
+                    string pocketText = "POCKET";
+                    Vector2 pSize = secFont.MeasureString(pocketText);
+                    Vector2 pTextPos = new Vector2(
+                        MathF.Round(_board.PocketPos.X - pSize.X / 2f),
+                        MathF.Round(_board.PocketPos.Y - 33f - pSize.Y / 2f)
+                    );
+                    spriteBatch.DrawStringOutlinedSnapped(secFont, pocketText, pTextPos, _global.Palette_DarkPale * 0.5f, _global.Palette_Off * 0.5f);
+                }
+
+                if (_board.PocketSlot != null && _combat.PocketLocked)
+                {
+                    var secFont = _core.SecondaryFont;
+                    string pocketText = "POCKET";
+                    Vector2 pSize = secFont.MeasureString(pocketText);
+                    Vector2 pTextPos = new Vector2(
+                        MathF.Round(_board.PocketPos.X - pSize.X / 2f),
+                        MathF.Round(_board.PocketSlot.Position.Y - 33f - pSize.Y / 2f)
+                    );
+                    spriteBatch.DrawStringOutlinedSnapped(secFont, pocketText, pTextPos, _global.Palette_LightPale, _global.Palette_Off);
+                }
             }
 
-            // 1.5 Draw Shrouded Pocket Text (If locked, it goes under the veil)
-            if (_board.PocketSlot != null && _combat.PocketLocked)
-            {
-                var secFont = _core.SecondaryFont;
-                string pocketText = "POCKET";
-                Vector2 pSize = secFont.MeasureString(pocketText);
-                Vector2 pTextPos = new Vector2(
-                    MathF.Round(_board.PocketPos.X - pSize.X / 2f),
-                    MathF.Round(_board.PocketSlot.Position.Y - 33f - pSize.Y / 2f)
-                );
-                spriteBatch.DrawStringOutlinedSnapped(secFont, pocketText, pTextPos, _global.Palette_LightPale, _global.Palette_Off);
-            }
-
-            // 2. Draw singular veil separating foreground and background strictly when engaged with active boards 
             if (_state == ScoundrelState.Playing || _state == ScoundrelState.Focused || _state == ScoundrelState.ResolvingMonster)
             {
                 spriteBatch.Draw(_pixel, new Rectangle(0, 0, Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT), _global.Palette_Off * 0.4f);
             }
 
-            // 3. Emphasized board indicators/slots drawn directly atop the veil.
             bool isHoveringWeapon = (_state == ScoundrelState.Playing || _state == ScoundrelState.Focused) && _lastHoveredCard != null && _lastHoveredCard.Type == CardType.Weapon;
             bool showWeaponOutline = isHoveringWeapon || (_board.WeaponSlot != null && _board.WeaponSlot.IsBeingReplaced);
 
@@ -1564,37 +1538,40 @@ namespace ProjectVagabond.Scenes
                 spriteBatch.DrawSnapped(_spriteManager.ScoundrelCardsSpriteSheet, drawPos, outlineSource, Color.White * 0.5f, 0f, origin, 1f, SpriteEffects.None, 0f);
             }
 
-            bool isHoveringPocketable = (_state == ScoundrelState.Playing) && _lastHoveredCard != null && _board.Room.Contains(_lastHoveredCard) && (_lastHoveredCard.Type == CardType.Weapon || _lastHoveredCard.Type == CardType.Potion) && _board.PocketSlot == null;
+            bool isHoveringPocketable = (_state == ScoundrelState.Playing) && _lastHoveredCard != null && _board.Room.Contains(_lastHoveredCard) && (_lastHoveredCard.Type == CardType.Weapon || _lastHoveredCard.Type == CardType.Potion) && _board.PocketSlot == null && _runContext.Mode != GameMode.Classic;
 
-            if (isHoveringPocketable)
+            if (_runContext.Mode != GameMode.Classic)
             {
-                Rectangle outlineSource = _spriteManager.ScoundrelCardRects[1, 0];
-                Vector2 origin = new Vector2(18f, 25f);
-                Vector2 drawPos = new Vector2(MathF.Round(_board.PocketPos.X), MathF.Round(_board.PocketPos.Y));
-                spriteBatch.DrawSnapped(_spriteManager.ScoundrelCardsSpriteSheet, drawPos, outlineSource, Color.White * 0.5f, 0f, origin, 1f, SpriteEffects.None, 0f);
+                if (isHoveringPocketable)
+                {
+                    Rectangle outlineSource = _spriteManager.ScoundrelCardRects[1, 0];
+                    Vector2 origin = new Vector2(18f, 25f);
+                    Vector2 drawPos = new Vector2(MathF.Round(_board.PocketPos.X), MathF.Round(_board.PocketPos.Y));
+                    spriteBatch.DrawSnapped(_spriteManager.ScoundrelCardsSpriteSheet, drawPos, outlineSource, Color.White * 0.5f, 0f, origin, 1f, SpriteEffects.None, 0f);
 
-                var secFont = _core.SecondaryFont;
-                string pocketText = "POCKET";
-                Vector2 pSize = secFont.MeasureString(pocketText);
-                Vector2 pTextPos = new Vector2(
-                    MathF.Round(_board.PocketPos.X - pSize.X / 2f),
-                    MathF.Round(_board.PocketPos.Y - 33f - pSize.Y / 2f)
-                );
-                spriteBatch.DrawStringOutlinedSnapped(secFont, pocketText, pTextPos, _global.Palette_LightPale, _global.Palette_Off);
-            }
-            else if (_board.PocketSlot != null && !_combat.PocketLocked && (_state == ScoundrelState.Playing || _state == ScoundrelState.Focused || _state == ScoundrelState.ResolvingMonster))
-            {
-                var secFont = _core.SecondaryFont;
-                string pocketText = "POCKET";
-                Vector2 pSize = secFont.MeasureString(pocketText);
-                float visualOffset = (_board.PocketSlot.IsHovered && !_board.PocketSlot.IsFocused) ? -1f : 0f;
-                Color pColor = _board.PocketSlot.IsHovered ? _global.Palette_Sun : _global.Palette_LightPale;
+                    var secFont = _core.SecondaryFont;
+                    string pocketText = "POCKET";
+                    Vector2 pSize = secFont.MeasureString(pocketText);
+                    Vector2 pTextPos = new Vector2(
+                        MathF.Round(_board.PocketPos.X - pSize.X / 2f),
+                        MathF.Round(_board.PocketPos.Y - 33f - pSize.Y / 2f)
+                    );
+                    spriteBatch.DrawStringOutlinedSnapped(secFont, pocketText, pTextPos, _global.Palette_LightPale, _global.Palette_Off);
+                }
+                else if (_board.PocketSlot != null && !_combat.PocketLocked && (_state == ScoundrelState.Playing || _state == ScoundrelState.Focused || _state == ScoundrelState.ResolvingMonster))
+                {
+                    var secFont = _core.SecondaryFont;
+                    string pocketText = "POCKET";
+                    Vector2 pSize = secFont.MeasureString(pocketText);
+                    float visualOffset = (_board.PocketSlot.IsHovered && !_board.PocketSlot.IsFocused) ? -1f : 0f;
+                    Color pColor = _board.PocketSlot.IsHovered ? _global.Palette_Sun : _global.Palette_LightPale;
 
-                Vector2 pTextPos = new Vector2(
-                    MathF.Round(_board.PocketPos.X - pSize.X / 2f),
-                    MathF.Round(_board.PocketSlot.Position.Y - 33f - pSize.Y / 2f + visualOffset)
-                );
-                spriteBatch.DrawStringOutlinedSnapped(secFont, pocketText, pTextPos, pColor, _global.Palette_Off);
+                    Vector2 pTextPos = new Vector2(
+                        MathF.Round(_board.PocketPos.X - pSize.X / 2f),
+                        MathF.Round(_board.PocketSlot.Position.Y - 33f - pSize.Y / 2f + visualOffset)
+                    );
+                    spriteBatch.DrawStringOutlinedSnapped(secFont, pocketText, pTextPos, pColor, _global.Palette_Off);
+                }
             }
 
             if (_board.WeaponSlot != null && _board.WeaponSlot.IsBeingReplaced)
@@ -1609,13 +1586,11 @@ namespace ProjectVagabond.Scenes
                 }
             }
 
-            // 4. Draw true Selectable or forcibly pushed Forefront Cards cleanly on top of it all
             foreach (var card in _selectableCardsCache)
             {
                 card.Draw(spriteBatch, _spriteManager);
             }
 
-            // Room Skips overlay
             if (canSkipNow)
             {
                 var secFont = _core.SecondaryFont;
@@ -1627,7 +1602,6 @@ namespace ProjectVagabond.Scenes
                 spriteBatch.DrawStringOutlinedSnapped(secFont, skipText, tPos, textColor, _global.Palette_Off);
             }
 
-            // Fists outline and text rendering correctly
             if (_state == ScoundrelState.Focused)
             {
                 Rectangle fistOutlineSource = _spriteManager.ScoundrelCardRects[1, 0];
@@ -1650,8 +1624,7 @@ namespace ProjectVagabond.Scenes
 
             foreach (var card in _unselectableCardsCache)
             {
-                // Apply the exact same filter to the flash layer
-                if (_board.SlainPile.Contains(card))
+                if (_runContext.Mode == GameMode.Classic && _board.SlainPile.Contains(card))
                 {
                     int index = _board.SlainPile.IndexOf(card);
                     if (index < _board.SlainPile.Count - 2) continue;

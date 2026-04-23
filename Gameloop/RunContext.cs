@@ -15,7 +15,7 @@ namespace ProjectVagabond
         public int MaxFloors { get; set; } = 9;
         public int Health { get; set; } = 20;
         public int MaxHealth { get; set; } = 20;
-        public float FloorTimeLimit { get; set; } = 30f;
+        public float RoomTimeLimit { get; set; } = 15f;
 
         public void Reset()
         {

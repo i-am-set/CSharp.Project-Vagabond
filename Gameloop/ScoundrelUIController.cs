@@ -233,6 +233,7 @@ namespace ProjectVagabond.Scenes
 
             var defFont = _core.DefaultFont;
             var tertFont = _core.TertiaryFont;
+            var runContext = ServiceLocator.Get<RunContext>();
 
             if (state == ScoundrelState.Focused)
             {
@@ -253,7 +254,13 @@ namespace ProjectVagabond.Scenes
             {
                 if (hoveredCard.Type == CardType.Monster)
                 {
-                    bool canUseWeapon = board.WeaponSlot != null && hoveredCard.Value <= combat.GetLastSlainValue(board);
+                    bool canUseWeapon = false;
+                    if (board.WeaponSlot != null)
+                    {
+                        canUseWeapon = runContext.Mode == GameMode.Classic
+                            ? hoveredCard.Value <= combat.GetLastSlainValue(board)
+                            : board.SlainPile.Count < 3;
+                    }
                     DrawMonsterDamageText(spriteBatch, defFont, tertFont, hoveredCard, canUseWeapon, board.WeaponSlot, previewFlashTimer);
                 }
                 else if (hoveredCard.Type == CardType.Potion)
