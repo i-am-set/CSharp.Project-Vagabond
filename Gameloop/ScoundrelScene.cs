@@ -14,7 +14,7 @@ using System.Linq;
 
 namespace ProjectVagabond.Scenes
 {
-    public enum ScoundrelState { Intro, Dealing, Playing, Focused, ResolvingMonster, GameOver, Restarting, FloorCleared, CleaningUp, SweepingBoard, Reward }
+    public enum ScoundrelState { Intro, Dealing, Playing, Focused, ResolvingMonster, GameOver, Restarting, FloorCleared, CleaningUp, SweepingBoard, Reward, ScoringTimeBonus }
 
     public class ScoundrelScene : GameScene
     {
@@ -68,6 +68,11 @@ namespace ProjectVagabond.Scenes
         private float _rewardTimer = 0f;
         private int _lastSecond = -1;
         private int _previousScore = 0;
+
+        private float _timeBonusTimer = 0f;
+        private int _timeBonusAmount = 0;
+        private ScoundrelState _timeBonusNextState;
+        private float _timerPopTimer = 1f;
 
         public ScoundrelScene()
         {
@@ -269,7 +274,7 @@ namespace ProjectVagabond.Scenes
 
         private void SaveCurrentState()
         {
-            if (_state == ScoundrelState.GameOver || _state == ScoundrelState.Restarting || _state == ScoundrelState.Intro || _state == ScoundrelState.CleaningUp || _state == ScoundrelState.SweepingBoard) return;
+            if (_state == ScoundrelState.GameOver || _state == ScoundrelState.Restarting || _state == ScoundrelState.Intro || _state == ScoundrelState.CleaningUp || _state == ScoundrelState.SweepingBoard || _state == ScoundrelState.ScoringTimeBonus) return;
 
             if (_combat.Health <= 0)
             {
@@ -340,6 +345,7 @@ namespace ProjectVagabond.Scenes
             _lastHoveredCard = null;
 
             _rewardTimer = 0f;
+            _timerPopTimer = 1f;
 
             _board.Reset();
             _board.Deck.AddRange(DeckGenerator.Generate(_runContext));
@@ -381,6 +387,7 @@ namespace ProjectVagabond.Scenes
             _lastHoveredCard = null;
 
             _rewardTimer = 0f;
+            _timerPopTimer = 1f;
 
             _board.CardsToReturn.Clear();
             _board.CardsToReturn.AddRange(_board.Room);
@@ -524,7 +531,9 @@ namespace ProjectVagabond.Scenes
 
             if (_runContext.CurrentScore > _previousScore)
             {
+                int diff = _runContext.CurrentScore - _previousScore;
                 _ui.ScorePlink.Start(0f, 0.5f);
+                _ui.AddScoreFloatingText(diff);
                 _previousScore = _runContext.CurrentScore;
             }
 
@@ -607,11 +616,28 @@ namespace ProjectVagabond.Scenes
                 _ui.HealthBarOpacity = Math.Min(1f, _ui.HealthBarOpacity + dt * 5f);
             }
 
-            _ui.TimerPosition = Vector2.Lerp(_ui.TimerPosition, new Vector2(Global.VIRTUAL_WIDTH / 2f, 12f), 10f * dt);
-            _ui.TimerOverrideText = null;
-            _ui.TimerColor = _global.Palette_LightPale;
-            _ui.TimerOpacity = 1f;
-            _ui.TimerScale = 1f;
+            if (_state == ScoundrelState.ScoringTimeBonus)
+            {
+                _ui.TimerOverrideText = _timeBonusAmount.ToString();
+            }
+            else
+            {
+                _ui.TimerPosition = new Vector2(Global.VIRTUAL_WIDTH / 2f, 12f);
+                _ui.TimerOverrideText = null;
+                _ui.TimerColor = _global.Palette_LightPale;
+                _ui.TimerOpacity = 1f;
+
+                if (_timerPopTimer < 1f)
+                {
+                    _timerPopTimer += dt * 5f;
+                    float p = Math.Clamp(_timerPopTimer, 0f, 1f);
+                    _ui.TimerScale = Easing.EaseOutBack(p);
+                }
+                else
+                {
+                    _ui.TimerScale = 1f;
+                }
+            }
 
             switch (_state)
             {
@@ -626,6 +652,7 @@ namespace ProjectVagabond.Scenes
                 case ScoundrelState.SweepingBoard: UpdateSweepingBoard(dt); break;
                 case ScoundrelState.Reward: UpdateReward(dt, justClicked, mousePos, mouseState, gameTime); break;
                 case ScoundrelState.GameOver: UpdateGameOver(dt, justClicked, mousePos, mouseState); break;
+                case ScoundrelState.ScoringTimeBonus: UpdateScoringTimeBonus(dt); break;
             }
 
             _previousMouseState = mouseState;
@@ -1076,12 +1103,18 @@ namespace ProjectVagabond.Scenes
                     int timeBonus = (int)Math.Ceiling(_combat.TimeRemaining);
                     if (timeBonus > 0)
                     {
-                        _runContext.CurrentScore += timeBonus;
+                        _timeBonusAmount = timeBonus;
+                        _timeBonusTimer = 0f;
+                        _timeBonusNextState = ScoundrelState.Dealing;
+                        _state = ScoundrelState.ScoringTimeBonus;
+                        _combat.CanSkip = true;
                     }
-
-                    _state = ScoundrelState.Dealing;
-                    _dealTimer = DEAL_INTERVAL;
-                    _combat.CanSkip = true;
+                    else
+                    {
+                        _state = ScoundrelState.Dealing;
+                        _dealTimer = DEAL_INTERVAL;
+                        _combat.CanSkip = true;
+                    }
                 }
                 else
                 {
@@ -1380,6 +1413,55 @@ namespace ProjectVagabond.Scenes
             }
         }
 
+        private void UpdateScoringTimeBonus(float dt)
+        {
+            _timeBonusTimer += dt;
+
+            float duration = 0.5f;
+            float p = Math.Clamp(_timeBonusTimer / duration, 0f, 1f);
+            float ease = p * p;
+
+            Vector2 startPos = new Vector2(Global.VIRTUAL_WIDTH / 2f, 12f);
+
+            var secFont = _core.SecondaryFont;
+            var tertFont = _core.TertiaryFont;
+            Vector2 endPos = new Vector2(Global.VIRTUAL_WIDTH - 10, 10 + tertFont.LineHeight + 2 + (secFont.LineHeight / 2f));
+
+            _ui.TimerPosition = Vector2.Lerp(startPos, endPos, ease);
+            _ui.TimerScale = MathHelper.Lerp(1f, 0.5f, p);
+            _ui.TimerOpacity = MathHelper.Lerp(1f, 0f, p * p * p);
+
+            if (_timeBonusTimer >= duration)
+            {
+                _runContext.CurrentScore += _timeBonusAmount;
+                ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlayRoutedSfx("proc:wave=2;freq=1200;atk=0.01;sus=0.0;dec=0.15;exp=1;vol=0.1", 0.1f);
+
+                _ui.TimerPosition = new Vector2(Global.VIRTUAL_WIDTH / 2f, 12f);
+                _timerPopTimer = 0f;
+
+                if (_timeBonusNextState == ScoundrelState.Dealing)
+                {
+                    _state = ScoundrelState.Dealing;
+                    _dealTimer = DEAL_INTERVAL;
+                }
+                else if (_timeBonusNextState == ScoundrelState.FloorCleared)
+                {
+                    _state = ScoundrelState.FloorCleared;
+                    _floorClearedTimer = 1.5f;
+                    _ui.FloorClearedTextTimer = 0f;
+                    SaveCurrentState();
+                    ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlayRoutedSfx("proc:wave=2;freq=523.25;atk=0.05;sus=0.1;dec=0.4;vol=0.1|wave=2;freq=659.25;atk=0.05;sus=0.1;dec=0.4;delay=0.1;vol=0.1|wave=2;freq=783.99;atk=0.05;sus=0.2;dec=0.6;delay=0.2;vol=0.1", 0.15f);
+                }
+                else if (_timeBonusNextState == ScoundrelState.GameOver)
+                {
+                    SaveManager.DeleteSave();
+                    _state = ScoundrelState.GameOver;
+                    _combat.PlayVictorySequence();
+                    _combat.CalculateTargetScore(_board, _runContext.MaxHealth, _runContext.CurrentScore);
+                }
+            }
+        }
+
         private void OnSkipClicked()
         {
             _combat.CanSkip = false;
@@ -1427,7 +1509,7 @@ namespace ProjectVagabond.Scenes
 
         private void CheckGameOver()
         {
-            if (_state == ScoundrelState.GameOver || _state == ScoundrelState.FloorCleared) return;
+            if (_state == ScoundrelState.GameOver || _state == ScoundrelState.FloorCleared || _state == ScoundrelState.ScoringTimeBonus) return;
 
             if (_combat.Health <= 0 || _combat.TimeRemaining <= 0)
             {
@@ -1441,7 +1523,18 @@ namespace ProjectVagabond.Scenes
                 int timeBonus = (int)Math.Ceiling(_combat.TimeRemaining);
                 if (timeBonus > 0)
                 {
-                    _runContext.CurrentScore += timeBonus;
+                    _timeBonusAmount = timeBonus;
+                    _timeBonusTimer = 0f;
+                    if (_runContext.Mode == GameMode.Classic || _runContext.Floor >= _runContext.MaxFloors)
+                    {
+                        _timeBonusNextState = ScoundrelState.GameOver;
+                    }
+                    else
+                    {
+                        _timeBonusNextState = ScoundrelState.FloorCleared;
+                    }
+                    _state = ScoundrelState.ScoringTimeBonus;
+                    return;
                 }
 
                 if (_runContext.Mode == GameMode.Classic || _runContext.Floor >= _runContext.MaxFloors)

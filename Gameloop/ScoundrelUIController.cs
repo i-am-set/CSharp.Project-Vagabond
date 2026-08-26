@@ -15,6 +15,13 @@ namespace ProjectVagabond.Scenes
 {
     public class ScoundrelUIController
     {
+        public class ScoreFloatingText
+        {
+            public int Amount;
+            public float Timer;
+            public Vector2 Position;
+        }
+
         public Button TryAgainButton { get; private set; }
         public Button ExitButton { get; private set; }
         public List<Button> PauseButtons { get; } = new List<Button>();
@@ -35,6 +42,7 @@ namespace ProjectVagabond.Scenes
         public float HpTextFlashTimer { get; set; }
         public Color HpTextFlashColor { get; set; } = Color.White;
         public List<FloatingText> FloatingTexts { get; } = new List<FloatingText>();
+        public List<ScoreFloatingText> ScoreFloatingTexts { get; } = new List<ScoreFloatingText>();
 
         public float[] HeartFlashTimers { get; } = new float[20];
         public int[] HeartFlashFrames { get; } = new int[20];
@@ -127,6 +135,7 @@ namespace ProjectVagabond.Scenes
         public void Reset()
         {
             FloatingTexts.Clear();
+            ScoreFloatingTexts.Clear();
             Array.Clear(HeartFlashTimers, 0, 20);
             Array.Clear(HeartFlashFrames, 0, 20);
             HpTextFlashTimer = 0f;
@@ -150,6 +159,13 @@ namespace ProjectVagabond.Scenes
                 FloatingTexts[i].Timer -= dt;
                 FloatingTexts[i].LocalOffset.Y -= 5f * dt;
                 if (FloatingTexts[i].Timer <= 0) FloatingTexts.RemoveAt(i);
+            }
+
+            for (int i = ScoreFloatingTexts.Count - 1; i >= 0; i--)
+            {
+                ScoreFloatingTexts[i].Timer -= dt;
+                ScoreFloatingTexts[i].Position.Y += 15f * dt;
+                if (ScoreFloatingTexts[i].Timer <= 0) ScoreFloatingTexts.RemoveAt(i);
             }
 
             Vector2 hpCenter = new Vector2(Global.VIRTUAL_WIDTH / 2f, 24f);
@@ -177,6 +193,20 @@ namespace ProjectVagabond.Scenes
             ft.LocalOffset = startPos;
             ft.Plink.Start(0f, 0.3f);
             FloatingTexts.Add(ft);
+        }
+
+        public void AddScoreFloatingText(int amount)
+        {
+            var secFont = _core.SecondaryFont;
+            var tertFont = _core.TertiaryFont;
+            Vector2 scorePos = new Vector2(Global.VIRTUAL_WIDTH - 10, 10 + tertFont.LineHeight + 2 + (secFont.LineHeight / 2f));
+
+            ScoreFloatingTexts.Add(new ScoreFloatingText
+            {
+                Amount = amount,
+                Timer = 1.0f,
+                Position = scorePos + new Vector2(0, 8)
+            });
         }
 
         public void GenerateRewardScreen(Action onContinue)
@@ -302,6 +332,20 @@ namespace ProjectVagabond.Scenes
 
                 spriteBatch.DrawStringOutlinedSnapped(secFont, text, drawPos, c, outline, ft.Plink.Rotation, origin, ft.Plink.Scale, SpriteEffects.None, 0f);
             }
+
+            foreach (var sft in ScoreFloatingTexts)
+            {
+                float alpha = Math.Clamp(sft.Timer / 0.5f, 0f, 1f);
+                Color c = _global.Palette_Sun * alpha;
+                Color outline = _global.Palette_Off * alpha;
+
+                string text = "+" + sft.Amount;
+                Vector2 size = secFont.MeasureString(text);
+                Vector2 origin = new Vector2(MathF.Round(size.X), MathF.Round(size.Y / 2f));
+                Vector2 drawPos = new Vector2(MathF.Round(sft.Position.X), MathF.Round(sft.Position.Y));
+
+                spriteBatch.DrawStringOutlinedSnapped(secFont, text, drawPos, c, outline, 0f, origin, 1f, SpriteEffects.None, 0f);
+            }
         }
 
         private void DrawHoverText(SpriteBatch spriteBatch, BitmapFont font, string text, Vector2 pos, Color color)
@@ -358,8 +402,11 @@ namespace ProjectVagabond.Scenes
             float rotation = TimerPlink.IsActive ? TimerPlink.Rotation : 0f;
 
             Color color = TimerColor;
-            if (timeRemaining <= 5f) color = _global.Palette_Rust;
-            else if (timeRemaining <= 10f) color = _global.Palette_DarkSun;
+            if (TimerOverrideText == null)
+            {
+                if (timeRemaining <= 5f) color = _global.Palette_Rust;
+                else if (timeRemaining <= 10f) color = _global.Palette_DarkSun;
+            }
 
             spriteBatch.DrawStringOutlinedSnapped(defFont, timeStr, drawPos, color * TimerOpacity, _global.Palette_Off * TimerOpacity, rotation, origin, scale, SpriteEffects.None, 0f);
         }
@@ -577,6 +624,27 @@ namespace ProjectVagabond.Scenes
             ExitButton.Draw(spriteBatch, secFont, gameTime, transform);
         }
 
+        public void DrawPauseMenu(SpriteBatch spriteBatch, GameTime gameTime, Matrix transform)
+        {
+            var defFont = _core.DefaultFont;
+            var secFont = _core.SecondaryFont;
+            spriteBatch.Draw(_pixel, new Rectangle(0, 0, Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT), Color.Black * 0.7f);
+
+            string pauseText = "PAUSED";
+            Vector2 pSize = secFont.MeasureString(pauseText);
+            spriteBatch.DrawStringOutlinedSnapped(secFont, pauseText, new Vector2(Global.VIRTUAL_WIDTH / 2f - pSize.X / 2f, 30), _global.Palette_Sun, _global.Palette_Off);
+
+            foreach (var btn in PauseButtons)
+            {
+                btn.Draw(spriteBatch, defFont, gameTime, transform);
+            }
+
+            if (ConfirmationDialog.IsActive)
+            {
+                ConfirmationDialog.DrawContent(spriteBatch, defFont, gameTime, transform);
+            }
+        }
+
         public void DrawRunningScore(SpriteBatch spriteBatch, int currentScore)
         {
             var secFont = _core.SecondaryFont;
@@ -597,27 +665,6 @@ namespace ProjectVagabond.Scenes
             float rotation = ScorePlink.IsActive ? ScorePlink.Rotation : 0f;
 
             spriteBatch.DrawStringOutlinedSnapped(secFont, scoreText, scorePos, _global.Palette_Sun, _global.Palette_Off, rotation, scoreOrigin, scale, SpriteEffects.None, 0f);
-        }
-
-        public void DrawPauseMenu(SpriteBatch spriteBatch, GameTime gameTime, Matrix transform)
-        {
-            var defFont = _core.DefaultFont;
-            var secFont = _core.SecondaryFont;
-            spriteBatch.Draw(_pixel, new Rectangle(0, 0, Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT), Color.Black * 0.7f);
-
-            string pauseText = "PAUSED";
-            Vector2 pSize = secFont.MeasureString(pauseText);
-            spriteBatch.DrawStringOutlinedSnapped(secFont, pauseText, new Vector2(Global.VIRTUAL_WIDTH / 2f - pSize.X / 2f, 30), _global.Palette_Sun, _global.Palette_Off);
-
-            foreach (var btn in PauseButtons)
-            {
-                btn.Draw(spriteBatch, defFont, gameTime, transform);
-            }
-
-            if (ConfirmationDialog.IsActive)
-            {
-                ConfirmationDialog.DrawContent(spriteBatch, defFont, gameTime, transform);
-            }
         }
     }
 }
