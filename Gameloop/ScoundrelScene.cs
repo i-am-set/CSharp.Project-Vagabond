@@ -14,7 +14,7 @@ using System.Linq;
 
 namespace ProjectVagabond.Scenes
 {
-    public enum ScoundrelState { Intro, Dealing, Playing, Focused, ResolvingMonster, GameOver, Restarting, FloorCleared, CleaningUp, SweepingBoard, Reward, ScoringTimeBonus }
+    public enum ScoundrelState { Intro, Dealing, Playing, Focused, ResolvingMonster, GameOver, Restarting, FloorCleared, CleaningUp, SweepingBoard, Reward }
 
     public class ScoundrelScene : GameScene
     {
@@ -68,11 +68,11 @@ namespace ProjectVagabond.Scenes
         private float _rewardTimer = 0f;
         private int _lastSecond = -1;
         private int _previousScore = 0;
+        private float _timerPopTimer = 1f;
 
         private float _timeBonusTimer = 0f;
         private int _timeBonusAmount = 0;
         private ScoundrelState _timeBonusNextState;
-        private float _timerPopTimer = 1f;
 
         public ScoundrelScene()
         {
@@ -274,7 +274,7 @@ namespace ProjectVagabond.Scenes
 
         private void SaveCurrentState()
         {
-            if (_state == ScoundrelState.GameOver || _state == ScoundrelState.Restarting || _state == ScoundrelState.Intro || _state == ScoundrelState.CleaningUp || _state == ScoundrelState.SweepingBoard || _state == ScoundrelState.ScoringTimeBonus) return;
+            if (_state == ScoundrelState.GameOver || _state == ScoundrelState.Restarting || _state == ScoundrelState.Intro || _state == ScoundrelState.CleaningUp || _state == ScoundrelState.SweepingBoard) return;
 
             if (_combat.Health <= 0)
             {
@@ -616,27 +616,20 @@ namespace ProjectVagabond.Scenes
                 _ui.HealthBarOpacity = Math.Min(1f, _ui.HealthBarOpacity + dt * 5f);
             }
 
-            if (_state == ScoundrelState.ScoringTimeBonus)
+            _ui.TimerPosition = new Vector2(Global.VIRTUAL_WIDTH / 2f, 12f);
+            _ui.TimerOverrideText = null;
+            _ui.TimerColor = _global.Palette_LightPale;
+            _ui.TimerOpacity = 1f;
+
+            if (_timerPopTimer < 1f)
             {
-                _ui.TimerOverrideText = _timeBonusAmount.ToString();
+                _timerPopTimer += dt * 5f;
+                float p = Math.Clamp(_timerPopTimer, 0f, 1f);
+                _ui.TimerScale = Easing.EaseOutBack(p);
             }
             else
             {
-                _ui.TimerPosition = new Vector2(Global.VIRTUAL_WIDTH / 2f, 12f);
-                _ui.TimerOverrideText = null;
-                _ui.TimerColor = _global.Palette_LightPale;
-                _ui.TimerOpacity = 1f;
-
-                if (_timerPopTimer < 1f)
-                {
-                    _timerPopTimer += dt * 5f;
-                    float p = Math.Clamp(_timerPopTimer, 0f, 1f);
-                    _ui.TimerScale = Easing.EaseOutBack(p);
-                }
-                else
-                {
-                    _ui.TimerScale = 1f;
-                }
+                _ui.TimerScale = 1f;
             }
 
             switch (_state)
@@ -652,7 +645,6 @@ namespace ProjectVagabond.Scenes
                 case ScoundrelState.SweepingBoard: UpdateSweepingBoard(dt); break;
                 case ScoundrelState.Reward: UpdateReward(dt, justClicked, mousePos, mouseState, gameTime); break;
                 case ScoundrelState.GameOver: UpdateGameOver(dt, justClicked, mousePos, mouseState); break;
-                case ScoundrelState.ScoringTimeBonus: UpdateScoringTimeBonus(dt); break;
             }
 
             _previousMouseState = mouseState;
@@ -1103,18 +1095,16 @@ namespace ProjectVagabond.Scenes
                     int timeBonus = (int)Math.Ceiling(_combat.TimeRemaining);
                     if (timeBonus > 0)
                     {
-                        _timeBonusAmount = timeBonus;
-                        _timeBonusTimer = 0f;
-                        _timeBonusNextState = ScoundrelState.Dealing;
-                        _state = ScoundrelState.ScoringTimeBonus;
-                        _combat.CanSkip = true;
+                        _ui.AddFlyingTimer(timeBonus, () => {
+                            _runContext.CurrentScore += timeBonus;
+                            ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlayRoutedSfx("proc:wave=2;freq=1200;atk=0.01;sus=0.0;dec=0.15;exp=1;vol=0.1", 0.1f);
+                        });
+                        _timerPopTimer = 0f;
                     }
-                    else
-                    {
-                        _state = ScoundrelState.Dealing;
-                        _dealTimer = DEAL_INTERVAL;
-                        _combat.CanSkip = true;
-                    }
+
+                    _state = ScoundrelState.Dealing;
+                    _dealTimer = DEAL_INTERVAL;
+                    _combat.CanSkip = true;
                 }
                 else
                 {
@@ -1509,7 +1499,7 @@ namespace ProjectVagabond.Scenes
 
         private void CheckGameOver()
         {
-            if (_state == ScoundrelState.GameOver || _state == ScoundrelState.FloorCleared || _state == ScoundrelState.ScoringTimeBonus) return;
+            if (_state == ScoundrelState.GameOver || _state == ScoundrelState.FloorCleared) return;
 
             if (_combat.Health <= 0 || _combat.TimeRemaining <= 0)
             {
@@ -1521,24 +1511,10 @@ namespace ProjectVagabond.Scenes
             else if (!HasMonsterInRoom() && !HasMonsterInDeck())
             {
                 int timeBonus = (int)Math.Ceiling(_combat.TimeRemaining);
-                if (timeBonus > 0)
-                {
-                    _timeBonusAmount = timeBonus;
-                    _timeBonusTimer = 0f;
-                    if (_runContext.Mode == GameMode.Classic || _runContext.Floor >= _runContext.MaxFloors)
-                    {
-                        _timeBonusNextState = ScoundrelState.GameOver;
-                    }
-                    else
-                    {
-                        _timeBonusNextState = ScoundrelState.FloorCleared;
-                    }
-                    _state = ScoundrelState.ScoringTimeBonus;
-                    return;
-                }
 
                 if (_runContext.Mode == GameMode.Classic || _runContext.Floor >= _runContext.MaxFloors)
                 {
+                    if (timeBonus > 0) _runContext.CurrentScore += timeBonus;
                     SaveManager.DeleteSave();
                     _state = ScoundrelState.GameOver;
                     _combat.PlayVictorySequence();
@@ -1546,6 +1522,14 @@ namespace ProjectVagabond.Scenes
                 }
                 else
                 {
+                    if (timeBonus > 0)
+                    {
+                        _ui.AddFlyingTimer(timeBonus, () => {
+                            _runContext.CurrentScore += timeBonus;
+                            ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlayRoutedSfx("proc:wave=2;freq=1200;atk=0.01;sus=0.0;dec=0.15;exp=1;vol=0.1", 0.1f);
+                        });
+                        _timerPopTimer = 0f;
+                    }
                     _state = ScoundrelState.FloorCleared;
                     _floorClearedTimer = 1.5f;
                     _ui.FloorClearedTextTimer = 0f;
@@ -1782,6 +1766,7 @@ namespace ProjectVagabond.Scenes
             _ui.DrawRestartBar(spriteBatch, _restartHoldTimer, RESTART_HOLD_DURATION);
 
             _ui.DrawTimer(spriteBatch, _combat.TimeRemaining, gameTime);
+            _ui.DrawFlyingTimers(spriteBatch);
 
             if (_state == ScoundrelState.FloorCleared || _state == ScoundrelState.CleaningUp || _state == ScoundrelState.SweepingBoard)
             {

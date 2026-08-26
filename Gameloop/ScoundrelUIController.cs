@@ -22,6 +22,17 @@ namespace ProjectVagabond.Scenes
             public Vector2 Position;
         }
 
+        public class FlyingTimer
+        {
+            public int Amount;
+            public float Timer;
+            public float Duration;
+            public Vector2 StartPos;
+            public Vector2 ControlPoint;
+            public Vector2 EndPos;
+            public Action OnComplete;
+        }
+
         public Button TryAgainButton { get; private set; }
         public Button ExitButton { get; private set; }
         public List<Button> PauseButtons { get; } = new List<Button>();
@@ -43,6 +54,7 @@ namespace ProjectVagabond.Scenes
         public Color HpTextFlashColor { get; set; } = Color.White;
         public List<FloatingText> FloatingTexts { get; } = new List<FloatingText>();
         public List<ScoreFloatingText> ScoreFloatingTexts { get; } = new List<ScoreFloatingText>();
+        public List<FlyingTimer> FlyingTimers { get; } = new List<FlyingTimer>();
 
         public float[] HeartFlashTimers { get; } = new float[20];
         public int[] HeartFlashFrames { get; } = new int[20];
@@ -64,6 +76,7 @@ namespace ProjectVagabond.Scenes
         private Core _core;
         private Texture2D _pixel;
         private ScoundrelScene _scene;
+        private Random _random = new Random();
 
         public ScoundrelUIController(ScoundrelScene scene)
         {
@@ -136,6 +149,7 @@ namespace ProjectVagabond.Scenes
         {
             FloatingTexts.Clear();
             ScoreFloatingTexts.Clear();
+            FlyingTimers.Clear();
             Array.Clear(HeartFlashTimers, 0, 20);
             Array.Clear(HeartFlashFrames, 0, 20);
             HpTextFlashTimer = 0f;
@@ -166,6 +180,16 @@ namespace ProjectVagabond.Scenes
                 ScoreFloatingTexts[i].Timer -= dt;
                 ScoreFloatingTexts[i].Position.Y += 15f * dt;
                 if (ScoreFloatingTexts[i].Timer <= 0) ScoreFloatingTexts.RemoveAt(i);
+            }
+
+            for (int i = FlyingTimers.Count - 1; i >= 0; i--)
+            {
+                FlyingTimers[i].Timer += dt;
+                if (FlyingTimers[i].Timer >= FlyingTimers[i].Duration)
+                {
+                    FlyingTimers[i].OnComplete?.Invoke();
+                    FlyingTimers.RemoveAt(i);
+                }
             }
 
             Vector2 hpCenter = new Vector2(Global.VIRTUAL_WIDTH / 2f, 24f);
@@ -207,6 +231,55 @@ namespace ProjectVagabond.Scenes
                 Timer = 1.0f,
                 Position = scorePos + new Vector2(0, 8)
             });
+        }
+
+        public void AddFlyingTimer(int amount, Action onComplete)
+        {
+            var secFont = _core.SecondaryFont;
+            var tertFont = _core.TertiaryFont;
+
+            Vector2 startPos = new Vector2(Global.VIRTUAL_WIDTH / 2f, 12f);
+            Vector2 endPos = new Vector2(Global.VIRTUAL_WIDTH - 10, 10 + tertFont.LineHeight + 2 + (secFont.LineHeight / 2f));
+
+            Vector2 mid = (startPos + endPos) / 2f;
+            float offsetX = (float)(_random.NextDouble() * 60 - 30);
+            float offsetY = (float)(_random.NextDouble() * 40 - 20);
+            Vector2 controlPoint = mid + new Vector2(offsetX, offsetY);
+
+            FlyingTimers.Add(new FlyingTimer
+            {
+                Amount = amount,
+                Timer = 0f,
+                Duration = 0.5f,
+                StartPos = startPos,
+                ControlPoint = controlPoint,
+                EndPos = endPos,
+                OnComplete = onComplete
+            });
+        }
+
+        public void DrawFlyingTimers(SpriteBatch spriteBatch)
+        {
+            var defFont = _core.DefaultFont;
+            foreach (var ft in FlyingTimers)
+            {
+                float p = Math.Clamp(ft.Timer / ft.Duration, 0f, 1f);
+                float ease = p * p;
+
+                float u = 1f - ease;
+                float tt = ease * ease;
+                float uu = u * u;
+                Vector2 pos = uu * ft.StartPos + 2f * u * ease * ft.ControlPoint + tt * ft.EndPos;
+
+                string text = ft.Amount.ToString();
+                Vector2 size = defFont.MeasureString(text);
+                Vector2 origin = new Vector2(MathF.Round(size.X / 2f), MathF.Round(size.Y / 2f));
+
+                float scale = MathHelper.Lerp(1f, 0.5f, ease);
+                float opacity = MathHelper.Lerp(1f, 0f, ease * ease * ease);
+
+                spriteBatch.DrawStringOutlinedSnapped(defFont, text, pos, _global.Palette_LightPale * opacity, _global.Palette_Off * opacity, 0f, origin, scale, SpriteEffects.None, 0f);
+            }
         }
 
         public void GenerateRewardScreen(Action onContinue)
