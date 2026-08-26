@@ -30,6 +30,7 @@ namespace ProjectVagabond.Scenes
         public PlinkAnimator DiscardCountPlink { get; } = new PlinkAnimator { MaxScale = 1.5f, RestScale = 1.0f };
         public PlinkAnimator HealthPlink { get; } = new PlinkAnimator { MaxScale = 1.5f, RestScale = 1.0f };
         public PlinkAnimator TimerPlink { get; } = new PlinkAnimator { MaxScale = 1.5f, RestScale = 1.0f };
+        public PlinkAnimator ScorePlink { get; } = new PlinkAnimator { MaxScale = 2.0f, RestScale = 1.0f };
 
         public float HpTextFlashTimer { get; set; }
         public Color HpTextFlashColor { get; set; } = Color.White;
@@ -161,6 +162,9 @@ namespace ProjectVagabond.Scenes
             float discardTopY = discardPos.Y - (discardCount * 0.5f) - 25f;
             Vector2 discardCounterPos = new Vector2(discardPos.X, discardTopY - 3f - (_core.SecondaryFont.LineHeight / 2f));
             DiscardCountPlink.Update(gameTime, discardCounterPos);
+
+            Vector2 scorePos = new Vector2(Global.VIRTUAL_WIDTH - 10, 10 + _core.TertiaryFont.LineHeight + 2 + (_core.SecondaryFont.LineHeight / 2f));
+            ScorePlink.Update(gameTime, scorePos);
         }
 
         public void AddFloatingText(int amount, bool isHealing, Vector2? position = null)
@@ -576,10 +580,23 @@ namespace ProjectVagabond.Scenes
         public void DrawRunningScore(SpriteBatch spriteBatch, int currentScore)
         {
             var secFont = _core.SecondaryFont;
-            string text = $"SCORE: {currentScore}";
-            Vector2 size = secFont.MeasureString(text);
-            Vector2 pos = new Vector2(Global.VIRTUAL_WIDTH - size.X - 10, 10);
-            spriteBatch.DrawStringOutlinedSnapped(secFont, text, pos, _global.Palette_Sun, _global.Palette_Off);
+            var tertFont = _core.TertiaryFont;
+
+            string labelText = "SCORE";
+            Vector2 labelSize = tertFont.MeasureString(labelText);
+            Vector2 labelPos = new Vector2(Global.VIRTUAL_WIDTH - labelSize.X - 10, 10);
+            spriteBatch.DrawStringOutlinedSnapped(tertFont, labelText, labelPos, _global.Palette_DarkPale, _global.Palette_Off);
+
+            string scoreText = currentScore.ToString();
+            Vector2 scoreSize = secFont.MeasureString(scoreText);
+
+            Vector2 scoreOrigin = new Vector2(MathF.Round(scoreSize.X), MathF.Round(scoreSize.Y / 2f));
+            Vector2 scorePos = new Vector2(Global.VIRTUAL_WIDTH - 10, 10 + tertFont.LineHeight + 2 + scoreOrigin.Y);
+
+            float scale = ScorePlink.IsActive ? ScorePlink.Scale : 1f;
+            float rotation = ScorePlink.IsActive ? ScorePlink.Rotation : 0f;
+
+            spriteBatch.DrawStringOutlinedSnapped(secFont, scoreText, scorePos, _global.Palette_Sun, _global.Palette_Off, rotation, scoreOrigin, scale, SpriteEffects.None, 0f);
         }
 
         public void DrawPauseMenu(SpriteBatch spriteBatch, GameTime gameTime, Matrix transform)

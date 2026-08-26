@@ -67,6 +67,7 @@ namespace ProjectVagabond.Scenes
 
         private float _rewardTimer = 0f;
         private int _lastSecond = -1;
+        private int _previousScore = 0;
 
         public ScoundrelScene()
         {
@@ -120,6 +121,7 @@ namespace ProjectVagabond.Scenes
                 RestartGame();
             }
 
+            _previousScore = _runContext.CurrentScore;
             _previousMouseState = _inputManager.GetEffectiveMouseState();
         }
 
@@ -154,7 +156,7 @@ namespace ProjectVagabond.Scenes
 
             for (int i = 0; i < _board.Deck.Count; i++)
             {
-                _board.Deck[i].Position = _board.DeckPos + new Vector2(0, -i * 0.5f);
+                _board.Deck[i].Position = _board.DeckPos + new Vector2(0, -i * 0.25f);
                 _board.Deck[i].TargetPosition = _board.Deck[i].Position;
                 _board.Deck[i].ZIndex = i;
                 _board.Deck[i].IsFaceUp = false;
@@ -174,7 +176,7 @@ namespace ProjectVagabond.Scenes
 
             for (int i = 0; i < _board.Discard.Count; i++)
             {
-                _board.Discard[i].Position = _board.DiscardPos + new Vector2(0, -i * 0.5f);
+                _board.Discard[i].Position = _board.DiscardPos + new Vector2(0, -i * 0.25f);
                 _board.Discard[i].TargetPosition = _board.Discard[i].Position;
                 _board.Discard[i].ZIndex = 50 + i;
                 _board.Discard[i].IsFaceUp = true;
@@ -261,6 +263,7 @@ namespace ProjectVagabond.Scenes
             _ui.DiscardCountPlink.Start(0.6f, 0.3f);
             _ui.HealthPlink.Start(0.7f, 0.4f);
 
+            _previousScore = _runContext.CurrentScore;
             SaveManager.CurrentSave = null;
         }
 
@@ -409,6 +412,8 @@ namespace ProjectVagabond.Scenes
             _state = ScoundrelState.Restarting;
             _returnTimer = 0f;
             _restartHoldTimer = 0f;
+
+            _previousScore = _runContext.CurrentScore;
         }
 
         public override void Exit()
@@ -516,6 +521,12 @@ namespace ProjectVagabond.Scenes
         {
             base.Update(gameTime);
             float dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
+
+            if (_runContext.CurrentScore > _previousScore)
+            {
+                _ui.ScorePlink.Start(0f, 0.5f);
+                _previousScore = _runContext.CurrentScore;
+            }
 
             if (_state == ScoundrelState.Playing || _state == ScoundrelState.Focused || _state == ScoundrelState.ResolvingMonster)
             {
@@ -791,7 +802,7 @@ namespace ProjectVagabond.Scenes
 
                 while (_cardsLanded < targetLanded && _cardsLanded < _board.Deck.Count)
                 {
-                    _board.Deck[_cardsLanded].TargetPosition = _board.DeckPos + new Vector2(0, -_cardsLanded * 0.5f);
+                    _board.Deck[_cardsLanded].TargetPosition = _board.DeckPos + new Vector2(0, -_cardsLanded * 0.25f);
                     ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlayUi("ui_plink");
                     _cardsLanded++;
                 }
@@ -800,7 +811,7 @@ namespace ProjectVagabond.Scenes
                 {
                     for (int i = _cardsLanded; i < _board.Deck.Count; i++)
                     {
-                        _board.Deck[i].TargetPosition = _board.DeckPos + new Vector2(0, -i * 0.5f);
+                        _board.Deck[i].TargetPosition = _board.DeckPos + new Vector2(0, -i * 0.25f);
                     }
                     _cardsLanded = _board.Deck.Count;
 
@@ -838,7 +849,7 @@ namespace ProjectVagabond.Scenes
                     _board.CardsToReturn.RemoveAt(_board.CardsToReturn.Count - 1);
 
                     card.IsFaceUp = false;
-                    card.TargetPosition = _board.DeckPos + new Vector2(0, -_board.Deck.Count * 0.5f);
+                    card.TargetPosition = _board.DeckPos + new Vector2(0, -_board.Deck.Count * 0.25f);
                     card.TargetScale = Vector2.One;
                     card.TargetRotation = 0f;
                     card.ZIndex = _board.Deck.Count;
@@ -856,7 +867,7 @@ namespace ProjectVagabond.Scenes
                     _combat.TotalCardsInFloor = _board.Deck.Count;
                     for (int i = 0; i < _board.Deck.Count; i++)
                     {
-                        _board.Deck[i].TargetPosition = _board.DeckPos + new Vector2(0, -i * 0.5f);
+                        _board.Deck[i].TargetPosition = _board.DeckPos + new Vector2(0, -i * 0.25f);
                         _board.Deck[i].Position = _board.Deck[i].TargetPosition;
                         _board.Deck[i].ZIndex = i;
                     }
@@ -1062,6 +1073,12 @@ namespace ProjectVagabond.Scenes
             {
                 if (_board.Deck.Count > 0)
                 {
+                    int timeBonus = (int)Math.Ceiling(_combat.TimeRemaining);
+                    if (timeBonus > 0)
+                    {
+                        _runContext.CurrentScore += timeBonus;
+                    }
+
                     _state = ScoundrelState.Dealing;
                     _dealTimer = DEAL_INTERVAL;
                     _combat.CanSkip = true;
@@ -1302,7 +1319,7 @@ namespace ProjectVagabond.Scenes
                     {
                         _board.CardsToReturn.RemoveAt(_board.CardsToReturn.Count - 1);
 
-                        card.TargetPosition = _board.DeckPos + new Vector2(0, -_board.Deck.Count * 0.5f);
+                        card.TargetPosition = _board.DeckPos + new Vector2(0, -_board.Deck.Count * 0.25f);
                         card.TargetRotation = (float)(_random.NextDouble() - 0.5) * 0.5f;
                         card.ZIndex = _board.Deck.Count;
 
@@ -1379,7 +1396,7 @@ namespace ProjectVagabond.Scenes
 
             for (int i = 0; i < _board.Deck.Count; i++)
             {
-                _board.Deck[i].TargetPosition = _board.DeckPos + new Vector2(0, -i * 0.5f);
+                _board.Deck[i].TargetPosition = _board.DeckPos + new Vector2(0, -i * 0.25f);
                 _board.Deck[i].ZIndex = i;
             }
 
@@ -1410,6 +1427,8 @@ namespace ProjectVagabond.Scenes
 
         private void CheckGameOver()
         {
+            if (_state == ScoundrelState.GameOver || _state == ScoundrelState.FloorCleared) return;
+
             if (_combat.Health <= 0 || _combat.TimeRemaining <= 0)
             {
                 SaveManager.DeleteSave();
@@ -1419,6 +1438,12 @@ namespace ProjectVagabond.Scenes
             }
             else if (!HasMonsterInRoom() && !HasMonsterInDeck())
             {
+                int timeBonus = (int)Math.Ceiling(_combat.TimeRemaining);
+                if (timeBonus > 0)
+                {
+                    _runContext.CurrentScore += timeBonus;
+                }
+
                 if (_runContext.Mode == GameMode.Classic || _runContext.Floor >= _runContext.MaxFloors)
                 {
                     SaveManager.DeleteSave();
@@ -1436,7 +1461,7 @@ namespace ProjectVagabond.Scenes
                 }
             }
         }
-        
+
 
         private int GetPreviewHealth()
         {

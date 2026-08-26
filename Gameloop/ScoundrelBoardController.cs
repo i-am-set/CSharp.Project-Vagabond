@@ -156,7 +156,7 @@ namespace ProjectVagabond.Scenes
             Discard.Add(card);
             card.RoomSlotIndex = -1;
             card.IsHovered = false;
-            card.TargetPosition = DiscardPos + new Vector2(0, -Discard.Count * 0.5f);
+            card.TargetPosition = DiscardPos + new Vector2(0, -Discard.Count * 0.25f);
             card.TargetScale = Vector2.One;
             card.TargetRotation = 0f;
             card.ZIndex = 50 + Discard.Count;
