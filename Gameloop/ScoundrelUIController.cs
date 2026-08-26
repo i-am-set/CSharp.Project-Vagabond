@@ -26,8 +26,10 @@ namespace ProjectVagabond.Scenes
         {
             public int Amount;
             public float Timer;
-            public float Duration;
+            public float PlinkDuration;
+            public float FlightDuration;
             public Vector2 StartPos;
+            public Vector2 HopPos;
             public Vector2 ControlPoint;
             public Vector2 EndPos;
             public Action OnComplete;
@@ -185,7 +187,7 @@ namespace ProjectVagabond.Scenes
             for (int i = FlyingTimers.Count - 1; i >= 0; i--)
             {
                 FlyingTimers[i].Timer += dt;
-                if (FlyingTimers[i].Timer >= FlyingTimers[i].Duration)
+                if (FlyingTimers[i].Timer >= FlyingTimers[i].PlinkDuration + FlyingTimers[i].FlightDuration)
                 {
                     FlyingTimers[i].OnComplete?.Invoke();
                     FlyingTimers.RemoveAt(i);
@@ -241,7 +243,11 @@ namespace ProjectVagabond.Scenes
             Vector2 startPos = new Vector2(Global.VIRTUAL_WIDTH / 2f, 12f);
             Vector2 endPos = new Vector2(Global.VIRTUAL_WIDTH - 10, 10 + tertFont.LineHeight + 2 + (secFont.LineHeight / 2f));
 
-            Vector2 mid = (startPos + endPos) / 2f;
+            float hopX = (float)(_random.NextDouble() * 60 - 30);
+            float hopY = (float)(_random.NextDouble() * 15 + 10);
+            Vector2 hopPos = startPos + new Vector2(hopX, hopY);
+
+            Vector2 mid = (hopPos + endPos) / 2f;
             float offsetX = (float)(_random.NextDouble() * 60 - 30);
             float offsetY = (float)(_random.NextDouble() * 40 - 20);
             Vector2 controlPoint = mid + new Vector2(offsetX, offsetY);
@@ -250,8 +256,10 @@ namespace ProjectVagabond.Scenes
             {
                 Amount = amount,
                 Timer = 0f,
-                Duration = 0.5f,
+                PlinkDuration = 0.3f,
+                FlightDuration = 0.5f,
                 StartPos = startPos,
+                HopPos = hopPos,
                 ControlPoint = controlPoint,
                 EndPos = endPos,
                 OnComplete = onComplete
@@ -260,25 +268,41 @@ namespace ProjectVagabond.Scenes
 
         public void DrawFlyingTimers(SpriteBatch spriteBatch)
         {
-            var defFont = _core.DefaultFont;
+            var secFont = _core.SecondaryFont;
             foreach (var ft in FlyingTimers)
             {
-                float p = Math.Clamp(ft.Timer / ft.Duration, 0f, 1f);
-                float ease = p * p;
-
-                float u = 1f - ease;
-                float tt = ease * ease;
-                float uu = u * u;
-                Vector2 pos = uu * ft.StartPos + 2f * u * ease * ft.ControlPoint + tt * ft.EndPos;
-
                 string text = ft.Amount.ToString();
-                Vector2 size = defFont.MeasureString(text);
+                Vector2 size = secFont.MeasureString(text);
                 Vector2 origin = new Vector2(MathF.Round(size.X / 2f), MathF.Round(size.Y / 2f));
 
-                float scale = MathHelper.Lerp(1f, 0.5f, ease);
-                float opacity = MathHelper.Lerp(1f, 0f, ease * ease * ease);
+                Vector2 pos;
+                float scale;
+                float opacity = 1f;
 
-                spriteBatch.DrawStringOutlinedSnapped(defFont, text, pos, _global.Palette_LightPale * opacity, _global.Palette_Off * opacity, 0f, origin, scale, SpriteEffects.None, 0f);
+                if (ft.Timer < ft.PlinkDuration)
+                {
+                    float p = ft.Timer / ft.PlinkDuration;
+                    float ease = Easing.EaseOutCubic(p);
+                    float arc = MathF.Sin(p * MathF.PI) * 15f;
+
+                    pos = Vector2.Lerp(ft.StartPos, ft.HopPos, ease) - new Vector2(0, arc);
+                    scale = 1f + MathF.Sin(p * MathF.PI) * 0.5f;
+                }
+                else
+                {
+                    float p = Math.Clamp((ft.Timer - ft.PlinkDuration) / ft.FlightDuration, 0f, 1f);
+                    float ease = p * p;
+
+                    float u = 1f - ease;
+                    float tt = ease * ease;
+                    float uu = u * u;
+                    pos = uu * ft.HopPos + 2f * u * ease * ft.ControlPoint + tt * ft.EndPos;
+
+                    scale = 1f;
+                    opacity = MathHelper.Lerp(1f, 0f, ease * ease * ease);
+                }
+
+                spriteBatch.DrawStringOutlinedSnapped(secFont, text, pos, _global.Palette_Sun * opacity, _global.Palette_Off * opacity, 0f, origin, scale, SpriteEffects.None, 0f);
             }
         }
 

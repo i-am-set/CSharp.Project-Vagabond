@@ -623,7 +623,7 @@ namespace ProjectVagabond.Scenes
 
             if (_timerPopTimer < 1f)
             {
-                _timerPopTimer += dt * 5f;
+                _timerPopTimer += dt * 1.5f;
                 float p = Math.Clamp(_timerPopTimer, 0f, 1f);
                 _ui.TimerScale = Easing.EaseOutBack(p);
             }
