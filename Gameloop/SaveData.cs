@@ -17,6 +17,7 @@ namespace ProjectVagabond
     {
         public GameMode Mode { get; set; }
         public int Floor { get; set; }
+        public int CurrentScore { get; set; }
         public int MaxHealth { get; set; }
         public int Health { get; set; }
         public float TimeRemaining { get; set; }

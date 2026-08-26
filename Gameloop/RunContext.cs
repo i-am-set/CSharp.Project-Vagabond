@@ -16,12 +16,14 @@ namespace ProjectVagabond
         public int Health { get; set; } = 20;
         public int MaxHealth { get; set; } = 20;
         public float RoomTimeLimit { get; set; } = 15f;
+        public int CurrentScore { get; set; }
 
         public void Reset()
         {
             Floor = 1;
             MaxHealth = 20;
             Health = MaxHealth;
+            CurrentScore = 0;
         }
     }
 }

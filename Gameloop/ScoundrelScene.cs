@@ -129,6 +129,7 @@ namespace ProjectVagabond.Scenes
 
             _runContext.Mode = data.Mode;
             _runContext.Floor = data.Floor;
+            _runContext.CurrentScore = data.CurrentScore;
             _runContext.MaxHealth = data.MaxHealth;
             _runContext.Health = data.Health;
 
@@ -277,6 +278,7 @@ namespace ProjectVagabond.Scenes
             {
                 Mode = _runContext.Mode,
                 Floor = _runContext.Floor,
+                CurrentScore = _runContext.CurrentScore,
                 MaxHealth = _runContext.MaxHealth,
                 Health = _combat.Health,
                 TimeRemaining = _combat.TimeRemaining,
@@ -463,7 +465,7 @@ namespace ProjectVagabond.Scenes
                 SaveManager.DeleteSave();
                 _state = ScoundrelState.GameOver;
                 _combat.PlayDefeatSequence();
-                _combat.CalculateTargetScore(_board, _runContext.MaxHealth);
+                _combat.CalculateTargetScore(_board, _runContext.MaxHealth, _runContext.CurrentScore);
                 return;
             }
 
@@ -999,12 +1001,13 @@ namespace ProjectVagabond.Scenes
                 if (healAmount > 0) card.FlashWhiteIntensity = 1f;
                 _combat.ApplyHeal(healAmount, _runContext.MaxHealth, _ui);
                 _combat.PotionsUsedThisRoom++;
+                _runContext.CurrentScore += card.Value;
                 _board.MoveToDiscard(card);
                 OnCardResolved(isFromPocket);
             }
             else if (card.Type == CardType.Weapon)
             {
-                _board.EquipWeapon(card);
+                _board.EquipWeapon(card, _runContext);
                 OnCardResolved(isFromPocket);
             }
             else if (card.Type == CardType.Monster)
@@ -1166,7 +1169,7 @@ namespace ProjectVagabond.Scenes
         {
             _tallyTimer += dt;
 
-            if (_tallyPhase == 0) // Process Room
+            if (_tallyPhase == 0)
             {
                 if (_tallyTimer > 0.3f)
                 {
@@ -1209,6 +1212,7 @@ namespace ProjectVagabond.Scenes
                             _board.PocketSlot = null;
                         }
 
+                        _runContext.CurrentScore += card.Value;
                         _board.MoveToDiscard(card);
                         _tallyTimer = 0f;
                     }
@@ -1219,7 +1223,7 @@ namespace ProjectVagabond.Scenes
                     }
                 }
             }
-            else if (_tallyPhase == 1) // Deal from Deck
+            else if (_tallyPhase == 1)
             {
                 if (_board.Deck.Count > 0)
                 {
@@ -1241,7 +1245,7 @@ namespace ProjectVagabond.Scenes
 
                         if (_board.Room.Count == 4 || _board.Deck.Count == 0)
                         {
-                            _tallyPhase = 0; // Go back to processing room
+                            _tallyPhase = 0;
                         }
                     }
                 }
@@ -1251,7 +1255,7 @@ namespace ProjectVagabond.Scenes
                     _tallyTimer = 0f;
                 }
             }
-            else if (_tallyPhase == 2) // Finish
+            else if (_tallyPhase == 2)
             {
                 if (_tallyTimer > 0.5f)
                 {
@@ -1273,6 +1277,7 @@ namespace ProjectVagabond.Scenes
             _board.Room.Clear();
             _board.Discard.Clear();
             _board.SlainPile.Clear();
+            if (_board.WeaponSlot != null) _runContext.CurrentScore += _board.WeaponSlot.Value;
             _board.WeaponSlot = null;
             _board.PocketSlot = null;
 
@@ -1410,7 +1415,7 @@ namespace ProjectVagabond.Scenes
                 SaveManager.DeleteSave();
                 _state = ScoundrelState.GameOver;
                 _combat.PlayDefeatSequence();
-                _combat.CalculateTargetScore(_board, _runContext.MaxHealth);
+                _combat.CalculateTargetScore(_board, _runContext.MaxHealth, _runContext.CurrentScore);
             }
             else if (!HasMonsterInRoom() && !HasMonsterInDeck())
             {
@@ -1419,7 +1424,7 @@ namespace ProjectVagabond.Scenes
                     SaveManager.DeleteSave();
                     _state = ScoundrelState.GameOver;
                     _combat.PlayVictorySequence();
-                    _combat.CalculateTargetScore(_board, _runContext.MaxHealth);
+                    _combat.CalculateTargetScore(_board, _runContext.MaxHealth, _runContext.CurrentScore);
                 }
                 else
                 {
@@ -1431,6 +1436,7 @@ namespace ProjectVagabond.Scenes
                 }
             }
         }
+        
 
         private int GetPreviewHealth()
         {
@@ -1618,6 +1624,8 @@ namespace ProjectVagabond.Scenes
                 Color fColor = _board.FistCard.IsHovered ? _global.Palette_Sun : _global.Palette_LightPale;
                 spriteBatch.DrawStringOutlinedSnapped(secFont, fistText, textPos, fColor, _global.Palette_Off);
             }
+
+            _ui.DrawRunningScore(spriteBatch, _runContext.CurrentScore);
 
             spriteBatch.End();
             spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.Additive, SamplerState.PointClamp, null, null, null, transform);

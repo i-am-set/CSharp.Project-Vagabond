@@ -55,12 +55,20 @@ namespace ProjectVagabond.Scenes
             ResolveDamageApplied = false;
             ResolveWeaponUsed = false;
 
-            DisplayScore = -208;
+            DisplayScore = 0;
             TargetScore = 0;
             ScoreAnimTimer = 0f;
             ScoreSlamPlayed = false;
 
             _audioQueue.Clear();
+        }
+
+        public void CalculateTargetScore(ScoundrelBoardController board, int maxHealth, int currentScore)
+        {
+            TargetScore = currentScore;
+            DisplayScore = 0;
+            ScoreAnimTimer = 0f;
+            ScoreSlamPlayed = false;
         }
 
         public void Update(float dt)
@@ -172,20 +180,17 @@ namespace ProjectVagabond.Scenes
                     {
                         if (runContext.Mode == GameMode.Roguelike && board.SlainPile.Count >= 2)
                         {
-                            // 1. Monster that broke the weapon
                             board.MoveToDiscard(ResolvingMonster);
 
-                            // 2. Second charge monster (SlainPile[1])
-                            // 3. First charge monster (SlainPile[0])
                             for (int i = board.SlainPile.Count - 1; i >= 0; i--)
                             {
                                 board.MoveToDiscard(board.SlainPile[i], false);
                             }
                             board.SlainPile.Clear();
 
-                            // 4. The equipped weapon
                             if (board.WeaponSlot != null)
                             {
+                                runContext.CurrentScore += board.WeaponSlot.Value;
                                 board.MoveToDiscard(board.WeaponSlot, false);
                                 board.WeaponSlot = null;
                             }
@@ -203,6 +208,10 @@ namespace ProjectVagabond.Scenes
                     }
                 }
 
+                if (ResolvingMonster != null)
+                {
+                    runContext.CurrentScore += ResolvingMonster.Value;
+                }
                 ResolvingMonster = null;
                 onComplete?.Invoke();
             }
@@ -295,7 +304,7 @@ namespace ProjectVagabond.Scenes
                     ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().MusicPitchOffset = MathHelper.Lerp(0f, -1f, ease);
                 }
 
-                int newScore = (int)MathF.Round(MathHelper.Lerp(-208, TargetScore, ease));
+                int newScore = (int)MathF.Round(MathHelper.Lerp(0, TargetScore, ease));
 
                 if (newScore != DisplayScore)
                 {

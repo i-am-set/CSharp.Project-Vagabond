@@ -573,6 +573,15 @@ namespace ProjectVagabond.Scenes
             ExitButton.Draw(spriteBatch, secFont, gameTime, transform);
         }
 
+        public void DrawRunningScore(SpriteBatch spriteBatch, int currentScore)
+        {
+            var secFont = _core.SecondaryFont;
+            string text = $"SCORE: {currentScore}";
+            Vector2 size = secFont.MeasureString(text);
+            Vector2 pos = new Vector2(Global.VIRTUAL_WIDTH - size.X - 10, 10);
+            spriteBatch.DrawStringOutlinedSnapped(secFont, text, pos, _global.Palette_Sun, _global.Palette_Off);
+        }
+
         public void DrawPauseMenu(SpriteBatch spriteBatch, GameTime gameTime, Matrix transform)
         {
             var defFont = _core.DefaultFont;

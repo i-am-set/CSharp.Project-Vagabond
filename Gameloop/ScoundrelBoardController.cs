@@ -123,7 +123,7 @@ namespace ProjectVagabond.Scenes
             }
         }
 
-        public void EquipWeapon(Card weapon)
+        public void EquipWeapon(Card weapon, RunContext runContext)
         {
             if (WeaponSlot != null)
             {
@@ -135,6 +135,7 @@ namespace ProjectVagabond.Scenes
                 }
                 SlainPile.Clear();
 
+                runContext.CurrentScore += WeaponSlot.Value;
                 MoveToDiscard(WeaponSlot, false);
                 WeaponSlot = null;
             }
