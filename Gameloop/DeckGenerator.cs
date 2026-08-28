@@ -26,7 +26,11 @@ namespace ProjectVagabond.Scenes
             for (int i = 2; i <= 14; i++) deck.Add(CreateCard(context, CardSuit.Spades, CardType.Monster, i, i));
             for (int i = 2; i <= 14; i++) deck.Add(CreateCard(context, CardSuit.Clubs, CardType.Monster, i, i));
 
-            return deck.OrderBy(x => _random.Next()).ToList();
+            var shuffled = deck.OrderBy(x => _random.Next()).ToList();
+            var treasureCard = CreateCard(context, CardSuit.None, CardType.Treasure, 0, 0);
+            shuffled.Insert(shuffled.Count / 2, treasureCard);
+
+            return shuffled;
         }
     }
 }

@@ -40,10 +40,6 @@ namespace ProjectVagabond.Scenes
         public List<Button> PauseButtons { get; } = new List<Button>();
         public NavigationGroup PauseNavGroup { get; } = new NavigationGroup(wrapNavigation: true);
 
-        public List<Button> RewardButtons { get; } = new List<Button>();
-        public NavigationGroup RewardNavGroup { get; } = new NavigationGroup(wrapNavigation: true);
-        public Button RewardContinueButton { get; private set; }
-
         public ConfirmationDialog ConfirmationDialog { get; private set; }
 
         public PlinkAnimator DeckCountPlink { get; } = new PlinkAnimator { MaxScale = 1.5f, RestScale = 1.0f };
@@ -303,34 +299,6 @@ namespace ProjectVagabond.Scenes
                 }
 
                 spriteBatch.DrawStringOutlinedSnapped(secFont, text, pos, _global.Palette_Sun * opacity, _global.Palette_Off * opacity, 0f, origin, scale, SpriteEffects.None, 0f);
-            }
-        }
-
-        public void GenerateRewardScreen(Action onContinue)
-        {
-            RewardButtons.Clear();
-            RewardNavGroup.Clear();
-
-            var defFont = _core.DefaultFont;
-            int btnWidth = 120;
-            int btnHeight = 20;
-            int startY = Global.VIRTUAL_HEIGHT - 40;
-            int centerX = Global.VIRTUAL_WIDTH / 2 - btnWidth / 2;
-
-            RewardContinueButton = new Button(new Rectangle(centerX, startY, btnWidth, btnHeight), "CONTINUE", font: defFont);
-            RewardContinueButton.OnClick += onContinue;
-            RewardButtons.Add(RewardContinueButton);
-            RewardNavGroup.Add(RewardContinueButton);
-
-            RewardContinueButton.PlayEntrance(0f);
-
-            if (ServiceLocator.Get<InputManager>().CurrentInputDevice != InputDeviceType.Mouse)
-            {
-                RewardNavGroup.SelectFirst();
-            }
-            else
-            {
-                RewardNavGroup.DeselectAll();
             }
         }
 
@@ -672,33 +640,6 @@ namespace ProjectVagabond.Scenes
             }
         }
 
-        public void DrawRewardScreen(SpriteBatch spriteBatch, GameTime gameTime, Matrix transform)
-        {
-            var defFont = _core.DefaultFont;
-
-            float alpha = Math.Clamp(RewardFadeTimer / 0.3f, 0f, 1f);
-            spriteBatch.Draw(_pixel, new Rectangle(0, 0, Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT), Color.Black * (0.8f * alpha));
-
-            string text = "REWARDS";
-            Vector2 size = defFont.MeasureString(text);
-
-            TextAnimator.DrawTextWithEffectOutlined(
-                spriteBatch,
-                defFont,
-                text,
-                new Vector2(Global.VIRTUAL_WIDTH / 2f - size.X / 2f, 30),
-                _global.Palette_Sun * alpha,
-                _global.Palette_Off * alpha,
-                TextEffectType.TypewriterPop,
-                RewardFadeTimer
-            );
-
-            foreach (var btn in RewardButtons)
-            {
-                btn.Draw(spriteBatch, defFont, gameTime, transform);
-            }
-        }
-
         public void DrawGameOver(SpriteBatch spriteBatch, GameTime gameTime, Matrix transform, int health, float timeRemaining, int displayScore)
         {
             var defFont = _core.DefaultFont;
@@ -762,6 +703,106 @@ namespace ProjectVagabond.Scenes
             float rotation = ScorePlink.IsActive ? ScorePlink.Rotation : 0f;
 
             spriteBatch.DrawStringOutlinedSnapped(secFont, scoreText, scorePos, _global.Palette_Sun, _global.Palette_Off, rotation, scoreOrigin, scale, SpriteEffects.None, 0f);
+        }
+
+        public void DrawRouletteModal(SpriteBatch spriteBatch, List<int> belt, float offset, float alpha, float winPlinkTimer, float needleRotation)
+        {
+            if (alpha <= 0.01f) return;
+
+            spriteBatch.Draw(_pixel, new Rectangle(0, 0, Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT), Color.Black * (0.8f * alpha));
+
+            var font = _core.DefaultFont;
+            string text = "ROLLING RELIC...";
+            Vector2 size = font.MeasureString(text);
+            Vector2 pos = new Vector2(MathF.Round(Global.VIRTUAL_WIDTH / 2f - size.X / 2f), 40);
+            spriteBatch.DrawStringOutlinedSnapped(font, text, pos, _global.Palette_Sun * alpha, _global.Palette_Off * alpha);
+
+            int itemWidth = 40;
+            int itemHeight = 40;
+            int spacing = 10;
+            int totalItemWidth = itemWidth + spacing;
+
+            float startX = (Global.VIRTUAL_WIDTH / 2f) - (itemWidth / 2f);
+            float startY = (Global.VIRTUAL_HEIGHT / 2f) - (itemHeight / 2f);
+
+            int winningIndex = (int)MathF.Round(offset / totalItemWidth);
+            float centerScreenX = Global.VIRTUAL_WIDTH / 2f;
+            float closestDist = totalItemWidth;
+
+            for (int i = 0; i < belt.Count; i++)
+            {
+                float itemX = startX + (i * totalItemWidth) - offset;
+                float itemCenterX = itemX + (itemWidth / 2f);
+
+                if (itemX + itemWidth < -20 || itemX > Global.VIRTUAL_WIDTH + 20) continue;
+
+                Color rarityColor = Color.White;
+                switch (belt[i])
+                {
+                    case 0: rarityColor = Color.LightGray; break;
+                    case 1: rarityColor = Color.LimeGreen; break;
+                    case 2: rarityColor = Color.DeepSkyBlue; break;
+                    case 3: rarityColor = Color.MediumPurple; break;
+                }
+
+                float scale = 1f;
+                float yOffset = 0f;
+                float flashAlpha = 0f;
+
+                float distFromCenter = Math.Abs(itemCenterX - centerScreenX);
+                if (distFromCenter < closestDist) closestDist = distFromCenter;
+
+                if (distFromCenter < totalItemWidth)
+                {
+                    float bump = 1f - (distFromCenter / totalItemWidth);
+                    bump = MathHelper.SmoothStep(0f, 1f, bump);
+                    scale += bump * 0.1f;
+                    yOffset -= bump * 4f;
+                }
+
+                if (i == winningIndex && winPlinkTimer > 0f)
+                {
+                    float p = 1f - (winPlinkTimer / 0.2f);
+                    float pop = p < 0.2f ? (p / 0.2f) : (1f - ((p - 0.2f) / 0.8f));
+                    pop = Easing.EaseOutQuad(pop);
+
+                    scale += pop * 0.3f;
+                    yOffset -= pop * 8f;
+                    flashAlpha = pop;
+                }
+
+                int currentWidth = (int)(itemWidth * scale);
+                int currentHeight = (int)(itemHeight * scale);
+                int currentX = (int)MathF.Round(itemX + (itemWidth / 2f) - (currentWidth / 2f));
+                int currentY = (int)MathF.Round(startY + (itemHeight / 2f) - (currentHeight / 2f) + yOffset);
+
+                Rectangle rect = new Rectangle(currentX, currentY, currentWidth, currentHeight);
+
+                spriteBatch.Draw(_pixel, rect, rarityColor * (0.8f * alpha));
+                spriteBatch.Draw(_pixel, new Rectangle(rect.X + 2, rect.Y + 2, rect.Width - 4, rect.Height - 4), Color.Black * (0.2f * alpha));
+
+                if (flashAlpha > 0f)
+                {
+                    spriteBatch.Draw(_pixel, rect, Color.White * (flashAlpha * alpha));
+                }
+
+                spriteBatch.Draw(_pixel, new Rectangle(rect.X, rect.Y, rect.Width, 2), _global.Palette_Off * alpha);
+                spriteBatch.Draw(_pixel, new Rectangle(rect.X, rect.Bottom - 2, rect.Width, 2), _global.Palette_Off * alpha);
+                spriteBatch.Draw(_pixel, new Rectangle(rect.X, rect.Y, 2, rect.Height), _global.Palette_Off * alpha);
+                spriteBatch.Draw(_pixel, new Rectangle(rect.Right - 2, rect.Y, 2, rect.Height), _global.Palette_Off * alpha);
+            }
+
+            Vector2 needlePos = new Vector2(Global.VIRTUAL_WIDTH / 2f, startY - 10);
+
+            spriteBatch.DrawSnapped(_pixel, needlePos, new Rectangle(0, 0, 6, 8), _global.Palette_Off * alpha, needleRotation, new Vector2(3, 2), 1f, SpriteEffects.None, 0f);
+            spriteBatch.DrawSnapped(_pixel, needlePos, new Rectangle(0, 0, 4, 4), _global.Palette_Off * alpha, needleRotation, new Vector2(2, -6), 1f, SpriteEffects.None, 0f);
+            spriteBatch.DrawSnapped(_pixel, needlePos, new Rectangle(0, 0, 2, 2), _global.Palette_Off * alpha, needleRotation, new Vector2(1, -10), 1f, SpriteEffects.None, 0f);
+
+            spriteBatch.DrawSnapped(_pixel, needlePos, new Rectangle(0, 0, 4, 6), _global.Palette_Sun * alpha, needleRotation, new Vector2(2, 1), 1f, SpriteEffects.None, 0f);
+            spriteBatch.DrawSnapped(_pixel, needlePos, new Rectangle(0, 0, 2, 4), _global.Palette_Sun * alpha, needleRotation, new Vector2(1, -5), 1f, SpriteEffects.None, 0f);
+
+            spriteBatch.DrawSnapped(_pixel, needlePos, new Rectangle(0, 0, 4, 4), _global.Palette_Off * alpha, 0f, new Vector2(2, 2), 1f, SpriteEffects.None, 0f);
+            spriteBatch.DrawSnapped(_pixel, needlePos, new Rectangle(0, 0, 2, 2), _global.Palette_DarkestPale * alpha, 0f, new Vector2(1, 1), 1f, SpriteEffects.None, 0f);
         }
     }
 }

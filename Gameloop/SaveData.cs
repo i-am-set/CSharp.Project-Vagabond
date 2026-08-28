@@ -32,6 +32,7 @@ namespace ProjectVagabond
         public int ResolvingMonsterRoomSlotIndex { get; set; }
         public int ResolveDamage { get; set; }
         public bool ResolveWeaponUsed { get; set; }
+        public int RelicSeed { get; set; }
 
         public List<CardData> Deck { get; set; } = new List<CardData>();
         public List<CardData> Room { get; set; } = new List<CardData>();

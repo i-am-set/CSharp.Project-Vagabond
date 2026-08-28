@@ -12,6 +12,7 @@ namespace ProjectVagabond.Scenes
         public List<Card> Discard { get; } = new List<Card>();
         public List<Card> SlainPile { get; } = new List<Card>();
         public List<Card> CardsToReturn { get; } = new List<Card>();
+        public List<Card> RewardCards { get; } = new List<Card>();
 
         public Card? WeaponSlot { get; set; }
         public Card? PocketSlot { get; set; }
@@ -62,6 +63,7 @@ namespace ProjectVagabond.Scenes
             Discard.Clear();
             SlainPile.Clear();
             CardsToReturn.Clear();
+            RewardCards.Clear();
             WeaponSlot = null;
             PocketSlot = null;
             FocusedCard = null;
@@ -80,6 +82,7 @@ namespace ProjectVagabond.Scenes
             foreach (var card in Discard) card.Update(dt);
             foreach (var card in SlainPile) card.Update(dt);
             foreach (var card in CardsToReturn) card.Update(dt);
+            foreach (var card in RewardCards) card.Update(dt);
             WeaponSlot?.Update(dt);
             PocketSlot?.Update(dt);
             FistCard.Update(dt);
@@ -165,6 +168,15 @@ namespace ProjectVagabond.Scenes
             {
                 ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlayRoutedSfx("proc:wave=3;freq=1200;slide=-800;atk=0.01;sus=0.01;dec=0.05;vol=0.08|wave=4;freq=600;slide=-200;atk=0.01;sus=0.02;dec=0.05;vol=0.12", 0.15f);
             }
+        }
+
+        public void ConsumeCard(Card card)
+        {
+            Room.Remove(card);
+            RewardCards.Remove(card);
+            card.RoomSlotIndex = -1;
+            ServiceLocator.Get<ProjectVagabond.Particles.ParticleSystemManager>().CreateEmitter(ProjectVagabond.Particles.ParticleEffects.CreateUIPlink()).EmitBurst(15);
+            ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlayUi("ui_plink");
         }
 
         public void MoveToSlainPile(Card card, GameMode mode)

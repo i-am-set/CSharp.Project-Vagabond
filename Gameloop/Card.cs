@@ -7,7 +7,7 @@ using System;
 namespace ProjectVagabond.Scenes
 {
     public enum CardSuit { Hearts, Diamonds, Spades, Clubs, None }
-    public enum CardType { Potion, Weapon, Monster, Blank, Outline, BackRed, BackBlue }
+    public enum CardType { Potion, Weapon, Monster, Blank, Outline, BackRed, BackBlue, Treasure }
 
     public class Card
     {
@@ -133,6 +133,10 @@ namespace ProjectVagabond.Scenes
             {
                 sourceRect = spriteManager.ScoundrelCardRects[1, 0];
             }
+            else if (Type == CardType.Treasure)
+            {
+                sourceRect = spriteManager.ScoundrelCardRects[3, 0];
+            }
             else
             {
                 int row = 0;
@@ -188,6 +192,10 @@ namespace ProjectVagabond.Scenes
             else if (Type == CardType.Outline)
             {
                 sourceRect = spriteManager.ScoundrelCardRects[1, 0];
+            }
+            else if (Type == CardType.Treasure)
+            {
+                sourceRect = spriteManager.ScoundrelCardRects[3, 0];
             }
             else
             {

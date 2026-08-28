@@ -17,6 +17,7 @@ namespace ProjectVagabond
         public int MaxHealth { get; set; } = 20;
         public float RoomTimeLimit { get; set; } = 15f;
         public int CurrentScore { get; set; }
+        public int RelicSeed { get; set; }
 
         public void Reset()
         {
@@ -24,6 +25,7 @@ namespace ProjectVagabond
             MaxHealth = 20;
             Health = MaxHealth;
             CurrentScore = 0;
+            RelicSeed = new System.Random().Next();
         }
     }
 }

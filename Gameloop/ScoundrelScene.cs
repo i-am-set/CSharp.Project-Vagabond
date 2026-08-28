@@ -14,7 +14,7 @@ using System.Linq;
 
 namespace ProjectVagabond.Scenes
 {
-    public enum ScoundrelState { Intro, Dealing, Playing, Focused, ResolvingMonster, GameOver, Restarting, FloorCleared, CleaningUp, SweepingBoard, Reward }
+    public enum ScoundrelState { Intro, Dealing, Playing, Focused, ResolvingMonster, GameOver, Restarting, FloorCleared, CleaningUp, SweepingBoard, Reward, TreasureOpening, Roulette, RouletteFinished }
 
     public class ScoundrelScene : GameScene
     {
@@ -59,6 +59,25 @@ namespace ProjectVagabond.Scenes
         private int _tallyPhase = 0;
 
         private float _sweepTimer = 0f;
+
+        // --- Roulette Tuning ---
+        private const float ROULETTE_BASE_SPIN_DURATION = 10.0f;
+        private const int ROULETTE_BELT_LENGTH = 300;
+
+        private List<int> _rouletteBelt = new List<int>();
+        private float _rouletteOffset = 0f;
+        private float _rouletteTargetOffset = 0f;
+        private float _rouletteSpinTimer = 0f;
+        private float _rouletteSpinDuration = ROULETTE_BASE_SPIN_DURATION;
+
+        private Card _activeTreasureCard;
+        private float _treasureAnimTimer = 0f;
+        private float _rouletteModalAlpha = 0f;
+        private float _rouletteWinPlinkTimer = 0f;
+        private float _roulettePhaseTimer = 0f;
+        private bool _isRouletteFromReward = false;
+        private float _rouletteNeedleRotation = 0f;
+        private float _rouletteNeedleVelocity = 0f;
 
         private readonly List<Card> _selectableCardsCache = new List<Card>(50);
         private readonly List<Card> _unselectableCardsCache = new List<Card>(50);
@@ -139,6 +158,7 @@ namespace ProjectVagabond.Scenes
             _runContext.CurrentScore = data.CurrentScore;
             _runContext.MaxHealth = data.MaxHealth;
             _runContext.Health = data.Health;
+            _runContext.RelicSeed = data.RelicSeed;
 
             _combat.Reset(_runContext.Health, _runContext.RoomTimeLimit);
             _combat.Health = data.Health;
@@ -261,7 +281,18 @@ namespace ProjectVagabond.Scenes
             else if (_state == ScoundrelState.Reward)
             {
                 _rewardTimer = 0f;
-                _ui.GenerateRewardScreen(OnRewardContinueClicked);
+                _board.RewardCards.Clear();
+
+                var treasure = new Card(CardSuit.None, CardType.Treasure, 0, 0) { IsFaceUp = false };
+                treasure.Position = new Vector2(Global.VIRTUAL_WIDTH / 2f - 40, Global.VIRTUAL_HEIGHT / 2f);
+                treasure.TargetPosition = treasure.Position;
+
+                var potion = new Card(CardSuit.Hearts, CardType.Potion, 14, 20) { IsFaceUp = false };
+                potion.Position = new Vector2(Global.VIRTUAL_WIDTH / 2f + 40, Global.VIRTUAL_HEIGHT / 2f);
+                potion.TargetPosition = potion.Position;
+
+                _board.RewardCards.Add(treasure);
+                _board.RewardCards.Add(potion);
             }
 
             _ui.DeckCountPlink.Start(0.5f, 0.3f);
@@ -301,6 +332,7 @@ namespace ProjectVagabond.Scenes
                 ResolvingMonsterRoomSlotIndex = _combat.ResolvingMonster?.RoomSlotIndex ?? -1,
                 ResolveDamage = _combat.ResolveDamage,
                 ResolveWeaponUsed = _combat.ResolveWeaponUsed,
+                RelicSeed = _runContext.RelicSeed,
                 WeaponSlot = _board.WeaponSlot != null ? CreateDataFromCard(_board.WeaponSlot) : null,
                 PocketSlot = _board.PocketSlot != null ? CreateDataFromCard(_board.PocketSlot) : null
             };
@@ -645,6 +677,9 @@ namespace ProjectVagabond.Scenes
                 case ScoundrelState.SweepingBoard: UpdateSweepingBoard(dt); break;
                 case ScoundrelState.Reward: UpdateReward(dt, justClicked, mousePos, mouseState, gameTime); break;
                 case ScoundrelState.GameOver: UpdateGameOver(dt, justClicked, mousePos, mouseState); break;
+                case ScoundrelState.TreasureOpening: UpdateTreasureOpening(dt); break;
+                case ScoundrelState.Roulette: UpdateRoulette(dt); break;
+                case ScoundrelState.RouletteFinished: UpdateRouletteFinished(dt); break;
             }
 
             _previousMouseState = mouseState;
@@ -665,7 +700,7 @@ namespace ProjectVagabond.Scenes
                 if (_state != ScoundrelState.ResolvingMonster || c != _combat.ResolvingMonster) c.VisualYOffset = 0f;
             }
 
-            if (_state == ScoundrelState.Playing || _state == ScoundrelState.ResolvingMonster)
+            if (_state == ScoundrelState.Playing || _state == ScoundrelState.ResolvingMonster || _state == ScoundrelState.TreasureOpening || _state == ScoundrelState.Roulette || _state == ScoundrelState.RouletteFinished)
             {
                 foreach (var c in _board.Room) c.ForceRenderAboveVeil = true;
                 if (_board.WeaponSlot != null) _board.WeaponSlot.ForceRenderAboveVeil = true;
@@ -712,6 +747,8 @@ namespace ProjectVagabond.Scenes
 
             _selectableCardsCache.Sort((a, b) => a.ZIndex.CompareTo(b.ZIndex));
             _unselectableCardsCache.Sort((a, b) => a.ZIndex.CompareTo(b.ZIndex));
+
+            if (_state == ScoundrelState.Roulette || _state == ScoundrelState.TreasureOpening || _state == ScoundrelState.RouletteFinished) return;
 
             Card? newHovered = null;
             if ((_state == ScoundrelState.Playing || _state == ScoundrelState.Focused) && _inputManager.IsMouseClickAvailable())
@@ -1040,6 +1077,17 @@ namespace ProjectVagabond.Scenes
                 _board.EquipWeapon(card, _runContext);
                 OnCardResolved(isFromPocket);
             }
+            else if (card.Type == CardType.Treasure)
+            {
+                _activeTreasureCard = card;
+                _activeTreasureCard.ZIndex = 500;
+                _activeTreasureCard.TargetPosition = _activeTreasureCard.Position + new Vector2(0, -30);
+                _isRouletteFromReward = false;
+                _state = ScoundrelState.TreasureOpening;
+                _treasureAnimTimer = 0f;
+                ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlayRoutedSfx("proc:wave=2;freq=880;atk=0.01;sus=0.05;dec=0.2;vol=0.15");
+                SaveCurrentState();
+            }
             else if (card.Type == CardType.Monster)
             {
                 bool canUseWeapon = false;
@@ -1070,6 +1118,164 @@ namespace ProjectVagabond.Scenes
                         _board.FocusedCard = null;
                     }
                     if (SaveManager.HasSave()) SaveCurrentState();
+                }
+            }
+        }
+
+        private void UpdateTreasureOpening(float dt)
+        {
+            _treasureAnimTimer += dt;
+            if (_treasureAnimTimer > 0.02f && _treasureAnimTimer - dt <= 0.02f)
+            {
+                _activeTreasureCard.TargetScale = new Vector2(1.5f, 1.5f);
+                _activeTreasureCard.FlashWhiteIntensity = 1f;
+                ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlayRoutedSfx("proc:wave=2;freq=1108.73;slide=200;atk=0.02;sus=0.05;dec=0.2;vol=0.15");
+                ServiceLocator.Get<ParticleSystemManager>().CreateEmitter(ParticleEffects.CreateUIPlink()).EmitBurst(20);
+            }
+            if (_treasureAnimTimer > 0.12f && _treasureAnimTimer - dt <= 0.12f)
+            {
+                _activeTreasureCard.TargetScale = Vector2.One;
+            }
+            if (_treasureAnimTimer > 0.2f)
+            {
+                StartRoulette();
+            }
+        }
+
+        private void StartRoulette()
+        {
+            _state = ScoundrelState.Roulette;
+            _rouletteBelt.Clear();
+            var rng = new Random(_runContext.RelicSeed);
+
+            for (int i = 0; i < ROULETTE_BELT_LENGTH; i++)
+            {
+                int roll = rng.Next(100);
+                int rarity = roll < 50 ? 0 : (roll < 80 ? 1 : (roll < 95 ? 2 : 3));
+                _rouletteBelt.Add(rarity);
+            }
+
+            int winningIndex = rng.Next(120, 170);
+            float itemTotalWidth = 50f;
+
+            _rouletteTargetOffset = winningIndex * itemTotalWidth;
+
+            _rouletteOffset = 0f;
+            _rouletteSpinTimer = 0f;
+            _rouletteSpinDuration = ROULETTE_BASE_SPIN_DURATION + (float)rng.NextDouble() * 1.5f;
+            _rouletteModalAlpha = 0f;
+            _roulettePhaseTimer = 0f;
+            _rouletteWinPlinkTimer = 0f;
+            _rouletteNeedleRotation = 0f;
+            _rouletteNeedleVelocity = 0f;
+        }
+
+        private void UpdateRoulette(float dt)
+        {
+            _rouletteModalAlpha = Math.Min(1f, _rouletteModalAlpha + dt * 10f);
+
+            float springForce = -_rouletteNeedleRotation * 500f;
+            if (_rouletteNeedleRotation > 0.5f)
+            {
+                springForce -= (_rouletteNeedleRotation - 0.5f) * 20000f;
+            }
+
+            float dampingForce = -_rouletteNeedleVelocity * 25f;
+            _rouletteNeedleVelocity += (springForce + dampingForce) * dt;
+            _rouletteNeedleRotation += _rouletteNeedleVelocity * dt;
+
+            if (_rouletteNeedleRotation < 0f)
+            {
+                _rouletteNeedleRotation = 0f;
+                _rouletteNeedleVelocity = 0f;
+            }
+
+            if (_rouletteSpinTimer < _rouletteSpinDuration)
+            {
+                _rouletteSpinTimer += dt;
+                float p = Math.Clamp(_rouletteSpinTimer / _rouletteSpinDuration, 0f, 1f);
+
+                float ease = 1f - MathF.Pow(1f - p, 4f);
+
+                float previousOffset = _rouletteOffset;
+                _rouletteOffset = _rouletteTargetOffset * ease;
+
+                int prevIndex = (int)((previousOffset + 20f) / 50f);
+                int currIndex = (int)((_rouletteOffset + 20f) / 50f);
+                if (currIndex > prevIndex && p < 1f)
+                {
+                    ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlayUi("ui_hover", 0.4f);
+                    _rouletteNeedleVelocity = 25f;
+                }
+
+                if (_rouletteSpinTimer >= _rouletteSpinDuration)
+                {
+                    _rouletteOffset = _rouletteTargetOffset;
+                    ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlayRoutedSfx("proc:wave=2;freq=1046.5;atk=0.01;sus=0.05;dec=0.3;vol=0.15|wave=2;freq=1567.98;atk=0.01;sus=0.05;dec=0.3;delay=0.05;vol=0.15");
+                    _rouletteWinPlinkTimer = 0.2f;
+                }
+            }
+            else
+            {
+                _roulettePhaseTimer += dt;
+                if (_rouletteWinPlinkTimer > 0) _rouletteWinPlinkTimer -= dt;
+
+                if (_roulettePhaseTimer > 0.8f)
+                {
+                    _state = ScoundrelState.RouletteFinished;
+                    _roulettePhaseTimer = 0f;
+                }
+            }
+        }
+
+        private void UpdateRouletteFinished(float dt)
+        {
+            _rouletteModalAlpha = Math.Max(0f, _rouletteModalAlpha - dt * 15f);
+            _roulettePhaseTimer += dt;
+
+            if (_activeTreasureCard != null)
+            {
+                if (_roulettePhaseTimer < 0.05f)
+                {
+                    float p = _roulettePhaseTimer / 0.05f;
+                    float ease = Easing.EaseOutCubic(p);
+                    _activeTreasureCard.Scale = Vector2.Lerp(Vector2.One, new Vector2(1.2f, 1.2f), ease);
+                    _activeTreasureCard.TargetScale = _activeTreasureCard.Scale;
+                }
+                else if (_roulettePhaseTimer < 0.15f)
+                {
+                    if (_roulettePhaseTimer - dt < 0.05f)
+                    {
+                        ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlayRoutedSfx("proc:wave=2;freq=600;slide=-300;atk=0.01;sus=0.05;dec=0.15;vol=0.1");
+                    }
+                    float p = (_roulettePhaseTimer - 0.05f) / 0.1f;
+                    float ease = Easing.EaseInBack(p);
+                    _activeTreasureCard.Scale = Vector2.Lerp(new Vector2(1.2f, 1.2f), Vector2.Zero, ease);
+                    _activeTreasureCard.TargetScale = _activeTreasureCard.Scale;
+                }
+                else
+                {
+                    _activeTreasureCard.Scale = Vector2.Zero;
+                    _activeTreasureCard.TargetScale = Vector2.Zero;
+                }
+            }
+
+            if (_rouletteModalAlpha <= 0f && _roulettePhaseTimer >= 0.15f)
+            {
+                _runContext.RelicSeed = new Random(_runContext.RelicSeed).Next();
+
+                _board.ConsumeCard(_activeTreasureCard);
+                _activeTreasureCard = null;
+
+                if (_isRouletteFromReward)
+                {
+                    ApplyRewardAndAdvance(null);
+                }
+                else
+                {
+                    _combat.CardsResolvedThisRoom++;
+                    _state = ScoundrelState.Playing;
+                    OnCardResolved(false);
                 }
             }
         }
@@ -1359,7 +1565,19 @@ namespace ProjectVagabond.Scenes
                     _state = ScoundrelState.Reward;
                     _rewardTimer = 0f;
                     _ui.RewardFadeTimer = 0f;
-                    _ui.GenerateRewardScreen(OnRewardContinueClicked);
+
+                    _board.RewardCards.Clear();
+
+                    var treasure = new Card(CardSuit.None, CardType.Treasure, 0, 0) { IsFaceUp = false };
+                    treasure.Position = new Vector2(Global.VIRTUAL_WIDTH / 2f - 40, -60);
+                    treasure.TargetPosition = new Vector2(Global.VIRTUAL_WIDTH / 2f - 40, Global.VIRTUAL_HEIGHT / 2f);
+
+                    var potion = new Card(CardSuit.Hearts, CardType.Potion, 14, 20) { IsFaceUp = false };
+                    potion.Position = new Vector2(Global.VIRTUAL_WIDTH / 2f + 40, -60);
+                    potion.TargetPosition = new Vector2(Global.VIRTUAL_WIDTH / 2f + 40, Global.VIRTUAL_HEIGHT / 2f);
+
+                    _board.RewardCards.Add(treasure);
+                    _board.RewardCards.Add(potion);
 
                     foreach (var c in _board.Deck) c.TargetRotation = 0f;
 
@@ -1368,24 +1586,47 @@ namespace ProjectVagabond.Scenes
             }
         }
 
-        private void OnRewardContinueClicked()
-        {
-            ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlayUi("ui_click");
-            ApplyRewardAndAdvance(null);
-        }
-
         private void UpdateReward(float dt, bool justClicked, Vector2 mousePos, MouseState mouseState, GameTime gameTime)
         {
             _rewardTimer += dt;
 
-            for (int i = 0; i < _ui.RewardButtons.Count; i++)
+            if (_rewardTimer > 0.5f && _board.RewardCards.Count > 0 && !_board.RewardCards[0].IsFaceUp && !_board.RewardCards[0].IsFlipping)
             {
-                _ui.RewardButtons[i].Update(mouseState);
+                foreach (var card in _board.RewardCards) card.Flip();
+                ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlayRoutedSfx("proc:wave=2;freq=900;atk=0.01;sus=0.0;dec=0.15;exp=1;vol=0.05", 0.1f);
             }
 
-            if (_inputManager.CurrentInputDevice != InputDeviceType.Mouse)
+            Card hoveredCard = null;
+            foreach (var card in _board.RewardCards)
             {
-                _ui.RewardNavGroup.UpdateInput(_inputManager);
+                card.IsHovered = card.GetBounds().Contains(mousePos);
+                if (card.IsHovered) hoveredCard = card;
+            }
+
+            if (justClicked && hoveredCard != null && hoveredCard.IsFaceUp)
+            {
+                if (hoveredCard.Type == CardType.Potion)
+                {
+                    _combat.ApplyHeal(20, _runContext.MaxHealth, _ui);
+                    ApplyRewardAndAdvance(null);
+                }
+                else if (hoveredCard.Type == CardType.Treasure)
+                {
+                    _activeTreasureCard = hoveredCard;
+                    _activeTreasureCard.ZIndex = 500;
+                    _activeTreasureCard.TargetPosition = new Vector2(Global.VIRTUAL_WIDTH / 2f, Global.VIRTUAL_HEIGHT / 2f - 30);
+
+                    foreach (var c in _board.RewardCards)
+                    {
+                        if (c != _activeTreasureCard) c.TargetPosition = new Vector2(c.Position.X, Global.VIRTUAL_HEIGHT + 100);
+                    }
+
+                    _isRouletteFromReward = true;
+                    _state = ScoundrelState.TreasureOpening;
+                    _treasureAnimTimer = 0f;
+                    ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlayRoutedSfx("proc:wave=2;freq=880;atk=0.01;sus=0.05;dec=0.2;vol=0.15");
+                    SaveCurrentState();
+                }
             }
         }
 
@@ -1538,7 +1779,6 @@ namespace ProjectVagabond.Scenes
                 }
             }
         }
-
 
         private int GetPreviewHealth()
         {
@@ -1696,6 +1936,7 @@ namespace ProjectVagabond.Scenes
 
             foreach (var card in _selectableCardsCache)
             {
+                if (card == _activeTreasureCard) continue;
                 card.Draw(spriteBatch, _spriteManager);
             }
 
@@ -1749,13 +1990,14 @@ namespace ProjectVagabond.Scenes
             }
             foreach (var card in _selectableCardsCache)
             {
+                if (card == _activeTreasureCard) continue;
                 card.DrawFlash(spriteBatch, _spriteManager);
             }
 
             spriteBatch.End();
             spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp, null, null, null, transform);
 
-            if (_state != ScoundrelState.Reward)
+            if (_state != ScoundrelState.Reward && !(_isRouletteFromReward && (_state == ScoundrelState.TreasureOpening || _state == ScoundrelState.Roulette || _state == ScoundrelState.RouletteFinished)))
             {
                 _ui.DrawCounters(spriteBatch, _board.Deck.Count, _board.Discard.Count, _board.DeckPos, _board.DiscardPos);
             }
@@ -1772,9 +2014,14 @@ namespace ProjectVagabond.Scenes
             {
                 _ui.DrawFloorCleared(spriteBatch);
             }
-            else if (_state == ScoundrelState.Reward)
+            else if (_state == ScoundrelState.Reward || (_isRouletteFromReward && (_state == ScoundrelState.TreasureOpening || _state == ScoundrelState.Roulette || _state == ScoundrelState.RouletteFinished)))
             {
-                _ui.DrawRewardScreen(spriteBatch, gameTime, transform);
+                spriteBatch.Draw(_pixel, new Rectangle(0, 0, Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT), Color.Black * 0.8f);
+                foreach (var c in _board.RewardCards)
+                {
+                    if (c == _activeTreasureCard) continue;
+                    c.Draw(spriteBatch, _spriteManager);
+                }
 
                 foreach (var c in _board.Deck) c.Draw(spriteBatch, _spriteManager);
                 foreach (var c in _board.Discard) c.Draw(spriteBatch, _spriteManager);
@@ -1783,6 +2030,25 @@ namespace ProjectVagabond.Scenes
             else if (_state == ScoundrelState.GameOver)
             {
                 _ui.DrawGameOver(spriteBatch, gameTime, transform, _combat.Health, _combat.TimeRemaining, _combat.DisplayScore);
+            }
+
+            if (_activeTreasureCard != null && (_state == ScoundrelState.TreasureOpening || _state == ScoundrelState.Roulette || _state == ScoundrelState.RouletteFinished))
+            {
+                _activeTreasureCard.Draw(spriteBatch, _spriteManager);
+
+                if (_activeTreasureCard.FlashWhiteIntensity > 0f)
+                {
+                    spriteBatch.End();
+                    spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.Additive, SamplerState.PointClamp, null, null, null, transform);
+                    _activeTreasureCard.DrawFlash(spriteBatch, _spriteManager);
+                    spriteBatch.End();
+                    spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp, null, null, null, transform);
+                }
+            }
+
+            if (_state == ScoundrelState.Roulette || _state == ScoundrelState.RouletteFinished)
+            {
+                _ui.DrawRouletteModal(spriteBatch, _rouletteBelt, _rouletteOffset, _rouletteModalAlpha, _rouletteWinPlinkTimer, _rouletteNeedleRotation);
             }
 
             if (_isPaused)
