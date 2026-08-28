@@ -342,7 +342,7 @@ namespace ProjectVagabond.Scenes
 
         private void ConfirmExit()
         {
-            _hapticsManager.TriggerZoomPulse(_global.HapticZoomPulseStrength, _global.HapticZoomPulseDuration);
+            _hapticsManager.TriggerZoomPulse(_global.LightHapticZoomPulseStrength, _global.HapticZoomPulseDuration);
             _confirmationDialog.Show(
                 "Are you sure you want to exit?",
                 new List<Tuple<string, Action>>

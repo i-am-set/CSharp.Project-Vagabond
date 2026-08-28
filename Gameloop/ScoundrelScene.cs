@@ -1208,6 +1208,7 @@ namespace ProjectVagabond.Scenes
                 {
                     ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlayUi("ui_hover", 0.4f);
                     _rouletteNeedleVelocity = 25f;
+                    _hapticsManager.TriggerZoomPulse(1.005f, 0.05f);
                 }
 
                 if (_rouletteSpinTimer >= _rouletteSpinDuration)
