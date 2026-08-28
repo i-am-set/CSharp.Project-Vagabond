@@ -1174,13 +1174,15 @@ namespace ProjectVagabond.Scenes
         {
             _rouletteModalAlpha = Math.Min(1f, _rouletteModalAlpha + dt * 10f);
 
-            float springForce = -_rouletteNeedleRotation * 500f;
+            float springForce = -_rouletteNeedleRotation * 150f;
             if (_rouletteNeedleRotation > 0.5f)
             {
                 springForce -= (_rouletteNeedleRotation - 0.5f) * 20000f;
             }
 
-            float dampingForce = -_rouletteNeedleVelocity * 25f;
+            float damping = _rouletteNeedleVelocity > 0 ? 45f : 25f;
+            float dampingForce = -_rouletteNeedleVelocity * damping;
+
             _rouletteNeedleVelocity += (springForce + dampingForce) * dt;
             _rouletteNeedleRotation += _rouletteNeedleVelocity * dt;
 
