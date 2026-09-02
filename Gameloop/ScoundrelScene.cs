@@ -914,7 +914,8 @@ namespace ProjectVagabond.Scenes
 
                     ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlayRoutedSfx("proc:wave=2;freq=900;atk=0.01;sus=0.0;dec=0.15;exp=1;vol=0.05", 0.1f);
 
-                    _returnTimer = _board.CardsToReturn.Count > 4 ? 0.02f : 0.1f;
+                    float p = Math.Clamp(_board.CardsToReturn.Count / 15f, 0f, 1f);
+                    _returnTimer = MathHelper.Lerp(0.075f, 0.005f, p);
                 }
                 else
                 {
@@ -1545,7 +1546,7 @@ namespace ProjectVagabond.Scenes
                     if (card.IsFaceUp && !card.IsFlipping)
                     {
                         card.Flip();
-                        _sweepTimer = 0.15f;
+                        _sweepTimer = 0.075f;
                     }
                     else if (!card.IsFlipping)
                     {
@@ -1559,7 +1560,8 @@ namespace ProjectVagabond.Scenes
 
                         ServiceLocator.Get<ProjectVagabond.Audio.AudioManager>().PlayRoutedSfx("proc:wave=5;freq=200;atk=0.02;sus=0.0;dec=0.1;lpf=800;vol=0.05", 0.1f);
 
-                        _sweepTimer = _board.CardsToReturn.Count > 4 ? 0.02f : 0.1f;
+                        float p = Math.Clamp(_board.CardsToReturn.Count / 15f, 0f, 1f);
+                        _sweepTimer = MathHelper.Lerp(0.075f, 0.005f, p);
                     }
                 }
                 else
@@ -2024,6 +2026,31 @@ namespace ProjectVagabond.Scenes
                 {
                     if (c == _activeTreasureCard) continue;
                     c.Draw(spriteBatch, _spriteManager);
+
+                    if (_state == ScoundrelState.Reward && c.IsHovered)
+                    {
+                        Rectangle outlineSource = _spriteManager.ScoundrelCardRects[1, 0];
+                        Vector2 outlineOrigin = new Vector2(18f, 25f);
+                        Vector2 drawPos = new Vector2(MathF.Round(c.Position.X), MathF.Round(c.Position.Y));
+                        if (!c.IsFocused) drawPos.Y -= 1f;
+                        spriteBatch.DrawSnapped(_spriteManager.ScoundrelCardsSpriteSheet, drawPos, outlineSource, Color.White * 0.5f, 0f, outlineOrigin, 1f, SpriteEffects.None, 0f);
+                    }
+
+                    if (_state == ScoundrelState.Reward)
+                    {
+                        string text = c.Type == CardType.Treasure ? "RELIC" : "FULL HEAL";
+                        var reward_font = c.IsHovered ? _core.DefaultFont : _core.SecondaryFont;
+                        Vector2 size = reward_font.MeasureString(text);
+
+                        float time = (float)gameTime.TotalGameTime.TotalSeconds;
+                        float idleY = MathF.Sin(time * (c.IsHovered ? 6f : 3f) + (c.Type == CardType.Treasure ? 0f : 1f)) * 2f;
+                        Color textColor = c.IsHovered ? _global.Palette_Sun : _global.Palette_LightPale;
+
+                        Vector2 textPos = new Vector2(MathF.Round(c.Position.X), MathF.Round(c.Position.Y - 39f + idleY));
+                        Vector2 origin = new Vector2(MathF.Round(size.X / 2f), MathF.Round(size.Y / 2f));
+
+                        spriteBatch.DrawStringOutlinedSnapped(font, text, textPos, textColor, _global.Palette_Off, 0f, origin, 1f, SpriteEffects.None, 0f);
+                    }
                 }
 
                 foreach (var c in _board.Deck) c.Draw(spriteBatch, _spriteManager);
